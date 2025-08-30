@@ -50,7 +50,7 @@
     <script>
       // === CONFIGURACIÓN ===
       // 1) Publica tu hoja de MENÚ como CSV (Archivo → Compartir → Publicar en la web → seleccionar la hoja del menú) y pega la URL aquí.
-          //    También funciona con la URL de gviz CSV: https://docs.google.com/spreadsheets/d/ID/gviz/tq?tqx=out:csv&sheet=NombreHoja
+      //    También funciona con la URL de gviz CSV: https://docs.google.com/spreadsheets/d/ID/gviz/tq?tqx=out:csv&sheet=NombreHoja
       const MENU_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTOCWWvu8KMMGhuRlTtbvCMEaJIWb9l3DYMi7281gfgncS5tGeO81BRpcCMk-SJIWtNyvWckt2bV4U-/pub?output=csv";
 
       // 2) Implementa el WebApp de Apps Script (ver instrucciones) que recibe los pedidos con método POST y pega la URL aquí.
@@ -61,60 +61,25 @@
     </script>
 
 
-     <!-- Filters & Customer -->
-<section class="mb-6 grid grid-cols-1 lg:grid-cols-3 gap-4">
-  <!-- Toggle de modo -->
-  <div class="rounded-2xl bg-white shadow p-4 lg:col-span-3">
-    <div class="flex items-center gap-3">
-      <span class="text-sm text-gray-600">Modo de filtros:</span>
-      <div class="inline-flex rounded-xl overflow-hidden border">
-        <button id="modoBotones" class="px-3 py-1.5 text-sm font-medium bg-emerald-600 text-white">Botones</button>
-        <button id="modoDesplegable" class="px-3 py-1.5 text-sm font-medium bg-white text-gray-700">Desplegables</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Modo DESPLEGABLES (como ya tenías) -->
-  <div id="filtrosDesplegables" class="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:col-span-3">
-    <div class="rounded-2xl bg-white shadow p-4">
-      <label class="block text-sm font-medium mb-1" for="categoria">Categoría</label>
-      <select id="categoria" class="w-full rounded-xl border-gray-300 focus:ring-2 focus:ring-emerald-500">
-        <option value="">Todas</option>
-      </select>
-    </div>
-    <div class="rounded-2xl bg-white shadow p-4">
-      <label class="block text-sm font-medium mb-1" for="subcategoria">Subcategoría</label>
-      <select id="subcategoria" class="w-full rounded-xl border-gray-300 focus:ring-2 focus:ring-emerald-500">
-        <option value="">Todas</option>
-      </select>
-    </div>
-    <div class="rounded-2xl bg-white shadow p-4">
-      <label class="block text-sm font-medium mb-1" for="cliente">Nombre del cliente</label>
-      <input id="cliente" type="text" placeholder="Ej: Juan Pérez" class="w-full rounded-xl border-gray-300 focus:ring-2 focus:ring-emerald-500" />
-    </div>
-  </div>
-
-  <!-- Modo BOTONES -->
-  <div id="filtrosBotones" class="lg:col-span-3 hidden">
-    <!-- Categorías -->
-    <div class="rounded-2xl bg-white shadow p-4 mb-4">
-      <div class="flex items-center justify-between mb-3">
-        <h3 class="font-semibold">Elegí una categoría</h3>
-        <button id="btnCatTodas" class="text-sm px-3 py-1.5 rounded-xl bg-gray-100 hover:bg-gray-200">Todas</button>
-      </div>
-      <div id="gridCategorias" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3"></div>
-    </div>
-    <!-- Subcategorías -->
-    <div class="rounded-2xl bg-white shadow p-4">
-      <div class="flex items-center justify-between mb-3">
-        <h3 class="font-semibold">Subcategoría</h3>
-        <button id="btnSubTodas" class="text-sm px-3 py-1.5 rounded-xl bg-gray-100 hover:bg-gray-200">Todas</button>
-      </div>
-      <div id="gridSubcategorias" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3"></div>
-    </div>
-  </div>
-</section>
-
+      <!-- Filters & Customer -->
+      <section class="mb-6 grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div class="rounded-2xl bg-white shadow p-4">
+          <label class="block text-sm font-medium mb-1" for="categoria">Categoría</label>
+          <select id="categoria" class="w-full rounded-xl border-gray-300 focus:ring-2 focus:ring-emerald-500">
+            <option value="">Todas</option>
+          </select>
+        </div>
+        <div class="rounded-2xl bg-white shadow p-4">
+          <label class="block text-sm font-medium mb-1" for="subcategoria">Subcategoría</label>
+          <select id="subcategoria" class="w-full rounded-xl border-gray-300 focus:ring-2 focus:ring-emerald-500">
+            <option value="">Todas</option>
+          </select>
+        </div>
+        <div class="rounded-2xl bg-white shadow p-4">
+          <label class="block text-sm font-medium mb-1" for="cliente">Nombre del cliente</label>
+          <input id="cliente" type="text" placeholder="Ej: Juan Pérez" class="w-full rounded-xl border-gray-300 focus:ring-2 focus:ring-emerald-500" />
+        </div>
+      </section>
 
       <!-- Products & Cart -->
       <section class="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -250,104 +215,6 @@
     function cambiarColorActual(color){ const m=mesaActual(); if(!m) return; m.color=color; $('#cartWrapper').css('border-color', color); saveState(); renderMesas(); }
 
     // ===== Productos y filtros =====
-    // ===== Filtros: modo botones vs desplegables =====
-let FILTRO_MODO = 'botones'; // 'botones' | 'desplegables'
-let CAT_SELECCIONADA = '';
-let SUB_SELECCIONADA = '';
-
-const categoriaIcon = (name='')=>{
-  const n = name.toLowerCase();
-  if(n.includes('hamb')) return '🍔';
-  if(n.includes('sand') || n.includes('tost') || n.includes('sang')) return '🥪';
-  if(n.includes('pizza')) return '🍕';
-  if(n.includes('papa') || n.includes('frit')) return '🍟';
-  if(n.includes('postre') || n.includes('dulce')) return '🍰';
-  if(n.includes('bebida') || n.includes('gaseosa') || n.includes('agua')) return '🥤';
-  if(n.includes('cerve') || n.includes('ipa') || n.includes('birra')) return '🍺';
-  if(n.includes('trago') || n.includes('cocktail') || n.includes('coctel')) return '🍸';
-  if(n.includes('cafe') || n.includes('espresso') || n.includes('latte')) return '☕️';
-  if(n.includes('ensal')) return '🥗';
-  return '🧾';
-};
-
-function pillButton(label, pressed=false){
-  return `
-    <button class="catpill ${pressed?'ring-2 ring-emerald-500':''} w-full text-left px-3 py-3 rounded-2xl bg-gray-50 hover:bg-gray-100 border border-gray-200"
-      data-label="${label}">
-      <div class="flex items-center gap-2">
-        <span class="text-xl">${categoriaIcon(label)}</span>
-        <span class="font-medium truncate">${label}</span>
-      </div>
-    </button>`;
-}
-
-// Redibuja combos (modo desplegables) con datos del menú
-function renderFilters(){
-  const cats = groupUnique(MENU, 'categoria');
-  const catSel = $('#categoria');
-  catSel.find('option:not(:first)').remove();
-  cats.forEach(c => catSel.append(`<option value="${c}">${c}</option>`));
-  renderSubcats();
-}
-
-// Subcats para desplegable
-function renderSubcats(){
-  const cat = $('#categoria').val();
-  let list = MENU; if(cat) list = MENU.filter(x => x.categoria === cat);
-  const subs = groupUnique(list, 'subcategoria');
-  const subSel = $('#subcategoria');
-  subSel.find('option:not(:first)').remove();
-  subs.forEach(s => subSel.append(`<option value="${s}">${s}</option>`));
-}
-
-// Construye botones de categorías (modo botones)
-function renderCategoryButtons(){
-  const cats = groupUnique(MENU, 'categoria');
-  const grid = $('#gridCategorias');
-  grid.empty();
-  cats.forEach(c=>{
-    grid.append(pillButton(c, CAT_SELECCIONADA===c));
-  });
-}
-
-// Construye botones de subcategorías en base a la categoría elegida
-function renderSubcategoryButtons(){
-  let list = MENU;
-  if(CAT_SELECCIONADA) list = MENU.filter(x=>x.categoria===CAT_SELECCIONADA);
-  const subs = groupUnique(list, 'subcategoria');
-  const grid = $('#gridSubcategorias');
-  grid.empty();
-  subs.forEach(s=>{
-    grid.append(pillButton(s, SUB_SELECCIONADA===s));
-  });
-}
-
-// Cambia de modo visual
-function setFiltroModo(modo){
-  FILTRO_MODO = modo;
-  if(modo==='botones'){
-    $('#filtrosBotones').removeClass('hidden');
-    $('#filtrosDesplegables').addClass('hidden');
-    $('#modoBotones').removeClass('bg-white text-gray-700').addClass('bg-emerald-600 text-white');
-    $('#modoDesplegable').removeClass('bg-emerald-600 text-white').addClass('bg-white text-gray-700');
-    // Sincronizar estado actual de combos hacia botones
-    CAT_SELECCIONADA = $('#categoria').val() || '';
-    SUB_SELECCIONADA = $('#subcategoria').val() || '';
-    renderCategoryButtons();
-    renderSubcategoryButtons();
-  }else{
-    $('#filtrosDesplegables').removeClass('hidden');
-    $('#filtrosBotones').addClass('hidden');
-    $('#modoDesplegable').removeClass('bg-white text-gray-700').addClass('bg-emerald-600 text-white');
-    $('#modoBotones').removeClass('bg-emerald-600 text-white').addClass('bg-white text-gray-700');
-    // Sincronizar desde botones hacia combos
-    $('#categoria').val(CAT_SELECCIONADA || '');
-    renderSubcats();
-    $('#subcategoria').val(SUB_SELECCIONADA || '');
-  }
-  renderProducts();
-}
-
     function groupUnique(arr, key){ return [...new Set(arr.map(x => (x[key]||"").trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b)); }
 
     function renderFilters(){
@@ -366,19 +233,11 @@ function setFiltroModo(modo){
       subs.forEach(s => subSel.append(`<option value="${s}">${s}</option>`));
     }
 
-   function productMatches(p){
-  const q = $('#buscar').val().trim().toLowerCase();
-
-  // Si estoy en modo BOTONES uso el estado local, si no, leo de los <select>
-  const cat = (FILTRO_MODO==='botones') ? (CAT_SELECCIONADA||'') : ($('#categoria').val()||'');
-  const sub = (FILTRO_MODO==='botones') ? (SUB_SELECCIONADA||'') : ($('#subcategoria').val()||'');
-
-  if(cat && p.categoria!==cat) return false;
-  if(sub && p.subcategoria!==sub) return false;
-  if(!q) return true;
-  return [p.nombre,p.categoria,p.subcategoria].join(' ').toLowerCase().includes(q);
-}
-
+    function productMatches(p){
+      const q=$('#buscar').val().trim().toLowerCase(); const cat=$('#categoria').val(); const sub=$('#subcategoria').val();
+      if(cat && p.categoria!==cat) return false; if(sub && p.subcategoria!==sub) return false; if(!q) return true;
+      return [p.nombre,p.categoria,p.subcategoria].join(' ').toLowerCase().includes(q);
+    }
 
     function renderProducts(){
       const cont=$('#listaProductos'); cont.empty(); const list=MENU.filter(productMatches); $('#countProductos').text(list.length);
@@ -464,126 +323,52 @@ function setFiltroModo(modo){
     }
 
     // ===== Eventos UI =====
-    // Toggle de modo
-$('#modoBotones').on('click', ()=> setFiltroModo('botones'));
-$('#modoDesplegable').on('click', ()=> setFiltroModo('desplegables'));
+    function bindEvents(){
+      // Sidebar
+      $('#btnNuevaMesa').on('click', ()=> nuevaMesa());
+      $('#listaMesas').on('click','[data-action="switch"]', function(){ MESA_ACTUAL=$(this).data('id'); renderMesas(); });
+      $('#listaMesas').on('click','[data-action="rename"]', function(){ const id=$(this).data('id'); const m=MESAS.find(x=>x.id===id); if(!m) return; const nv = prompt('Nuevo nombre', m.nombre); if(nv){ m.nombre=nv; if(MESA_ACTUAL===id) $('#mesaTitulo').text(nv); renderMesas(); } });
+      $('#listaMesas').on('click','[data-action="dup"]', function(){ duplicarMesa($(this).data('id')); });
+      $('#listaMesas').on('click','[data-action="del"]', function(){ eliminarMesa($(this).data('id')); });
+      $('#colorMesa').on('input', function(){ cambiarColorActual($(this).val()); });
 
-// Botones "Todas"
-$('#btnCatTodas').on('click', ()=>{
-  CAT_SELECCIONADA=''; SUB_SELECCIONADA='';
-  renderCategoryButtons(); renderSubcategoryButtons(); renderProducts();
-});
-$('#btnSubTodas').on('click', ()=>{
-  SUB_SELECCIONADA=''; renderSubcategoryButtons(); renderProducts();
-});
+      // Filtros
+      $('#categoria').on('change', function(){ renderSubcats(); renderProducts(); });
+      $('#subcategoria, #buscar').on('input change', renderProducts);
 
-// Clicks en grid de categorías
-$('#gridCategorias').on('click', '.catpill', function(){
-  const label = $(this).data('label');
-  CAT_SELECCIONADA = (CAT_SELECCIONADA===label ? '' : label);
-  // Al cambiar categoría, reseteo subcategoría
-  SUB_SELECCIONADA = '';
-  renderCategoryButtons();
-  renderSubcategoryButtons();
-  renderProducts();
-});
+      // Productos
+      $('#listaProductos').on('click','button[data-action="add"]', function(){ addToCart($(this).data('id')); });
 
-// Clicks en grid de subcategorías
-$('#gridSubcategorias').on('click', '.catpill', function(){
-  const label = $(this).data('label');
-  SUB_SELECCIONADA = (SUB_SELECCIONADA===label ? '' : label);
-  renderSubcategoryButtons();
-  renderProducts();
-});
+      // Carrito
+      $('#cartTable').on('click','button[data-action="del"]', function(){ removeFromCart($(this).data('id')); });
+      $('#cartTable').on('input','input[data-action="qty"]', function(){ setQty($(this).data('id'), $(this).val()); });
 
-// Mantener los eventos existentes de combos:
-$('#categoria').on('change', function(){
-  renderSubcats(); // para combos
-  // Sincronizo el estado de botones por si se cambia en modo desplegable
-  CAT_SELECCIONADA = $(this).val() || '';
-  SUB_SELECCIONADA = '';
-  renderProducts();
-});
-$('#subcategoria, #buscar').on('input change', function(){
-  SUB_SELECCIONADA = (FILTRO_MODO==='botones') ? SUB_SELECCIONADA : ($('#subcategoria').val()||'');
-  renderProducts();
-});
+      // Cliente / Pago por mesa
+      $('#cliente').on('input', function(){ const m=mesaActual(); if(!m) return; m.cliente=$(this).val(); saveState(); });
+      $('#pago').on('input', function(){ const m=mesaActual(); if(!m) return; m.pago=Number($(this).val()||0); renderCart(); saveState(); });
 
+      // Acciones
+      $('#btnVaciar').on('click', function(){ const m=mesaActual(); if(!m) return; m.items=[]; renderCart(); saveState(); });
+      $('#btnDuplicarMesa').on('click', function(){ duplicarMesa(MESA_ACTUAL); });
+      $('#btnGuardar').on('click', saveOrder);
+      $('#btnComanda').on('click', printTicket);
+    }
 
     // ===== Carga de menú =====
     function normalizeRow(row, idx){
       return { _rowId:`r${idx}`, categoria:(row.categoria||row.Categoria||row.categoría||row.Categoría||'').toString().trim(), subcategoria:(row.subcategoria||row.Subcategoria||row.Subcategoría||row['Sub-categoria']||'').toString().trim(), nombre:(row.nombre||row.producto||row.Producto||row.Nombre||'').toString().trim(), precio:Number(row.precio||row.Precio||row.price||0), costo:Number(row.costo||row.Costo||row.cost||0), stock:(row.stock||row.Stock||'') };
     }
 
-  async function loadMenu(){
-  // buen estado visual del badge
-  $('#statusBadge')
-    .attr('class','inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700')
-    .text('Cargando menú…');
-
-  try{
-    if (WEBAPP_URL) {
-      // lee desde tu WebApp (GET ?action=menu)
-      const res = await fetch(`${WEBAPP_URL}?action=menu`, {mode:'cors'});
-      if(!res.ok) throw new Error(`HTTP ${res.status}`);
-      const { ok, rows, error } = await res.json();
-      if (!ok) throw new Error(error || 'No se pudo leer menú');
-
-      MENU = rows.map((r,idx)=>({
-        _rowId: 'r'+idx,
-        categoria: String(r.categoria||'').trim(),
-        subcategoria: String(r.subcategoria||'').trim(),
-        nombre: String(r.nombre||r.Producto||'').trim(),
-        precio: Number(r.precio||0),
-        costo: Number(r.costo||0),
-        stock: r.stock==='' ? '' : Number(r.stock||0),
-        min: Number(r.min||0),
-        sku: r.sku || r.SKU || ''
-      }));
-    } else {
-      // Fallback: leer CSV publicado (tu constante MENU_CSV_URL)
-      await new Promise((resolve, reject)=>{
-        Papa.parse(MENU_CSV_URL, {
-          download:true, header:true,
-          complete: (results)=>{
-            MENU = (results.data||[])
-              .filter(r=>r && Object.keys(r).length)
-              .map((row, idx)=>({
-                _rowId:'r'+idx,
-                categoria:(row.categoria||row.Categoria||'').toString().trim(),
-                subcategoria:(row.subcategoria||row.Subcategoria||'').toString().trim(),
-                nombre:(row.nombre||row.producto||row.Producto||row.Nombre||'').toString().trim(),
-                precio:Number(row.precio||row.Precio||0),
-                costo:Number(row.costo||row.Costo||0),
-                stock:(row.stock||row.Stock||''),
-                min:Number(row.min||row.Min||0),
-                sku: row.sku || row.SKU || ''
-              }));
-            resolve();
-          },
-          error: (err)=> reject(err)
-        });
+    async function loadMenu(){
+      if(!MENU_CSV_URL || MENU_CSV_URL.startsWith('PASTE_')){ $('#statusBadge').attr('class','inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700').text('Configura MENU_CSV_URL'); return; }
+      $('#statusBadge').attr('class','inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700').text('Cargando menú…');
+      return new Promise((resolve)=>{
+        Papa.parse(MENU_CSV_URL,{ download:true, header:true, complete:(results)=>{ MENU = results.data.filter(r=>r && Object.keys(r).length).map(normalizeRow).filter(x=>x.nombre && !isNaN(x.precio)); renderFilters(); renderProducts(); renderCart(); $('#statusBadge').attr('class','inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700').text('Menú sincronizado'); resolve(); }, error:()=>{ $('#statusBadge').attr('class','inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700').text('Error al cargar menú'); resolve(); } });
       });
     }
 
-    renderFilters();
-    renderProducts();
-    renderCart();
-
-    $('#statusBadge')
-      .attr('class','inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700')
-      .text('Menú sincronizado');
-  }catch(err){
-    console.error(err);
-    $('#statusBadge')
-      .attr('class','inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700')
-      .text('Error al cargar menú');
-    alert('No se pudo cargar el menú: ' + err.message);
-  }
-}
-
     // ===== Init =====
-    $(async function(){ loadState(); bindEvents(); renderMesas(); await loadMenu(); setFiltroModo('botones');  });
+    $(async function(){ loadState(); bindEvents(); renderMesas(); await loadMenu(); });
   </script>
 </body>
 </html>
