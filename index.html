@@ -3,881 +3,372 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Reporte de Ventas — OnceyDoce</title>
+  <title>POS OnceyDoce — Multi‑Carritos + Google Sheets</title>
+  <!-- TailwindCSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
+  <!-- jQuery -->
   <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  <!-- PapaParse for CSV parsing (from Google Sheets published CSV) -->
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <style>
-    .chip{display:inline-flex;align-items:center;padding:.125rem .5rem;border-radius:9999px;font-size:.75rem;line-height:1rem;background:#f3f4f6;color:#374151}
-    .btn{padding:.375rem .75rem;border-radius:.75rem;background:#f3f4f6}
-    .btn:hover{background:#e5e7eb}
+    @media print { .no-print { display:none!important } .print\:block{display:block!important} }
   </style>
 </head>
 <body class="bg-gray-100 text-gray-900">
-  <div class="max-w-7xl mx-auto p-4 sm:p-6 space-y-6">
-    <header class="rounded-2xl bg-white shadow p-6 flex items-center justify-between">
-      <h1 class="text-2xl sm:text-3xl font-extrabold">Reporte de Ventas</h1>
-      <div id="statusBadge" class="text-xs px-3 py-1 rounded-full bg-gray-100">Sincronizando…</div>
-    </header>
+  <div class="max-w-7xl mx-auto p-4 sm:p-6 grid grid-cols-1 lg:grid-cols-12 gap-4">
+    <!-- SIDEBAR: Carritos/Mesas -->
+    <aside class="lg:col-span-3 bg-white rounded-2xl shadow p-4 h-fit sticky top-4">
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="text-lg font-semibold">Mesas / Carritos</h2>
+        <button id="btnNuevaMesa" class="px-3 py-1.5 rounded-xl text-sm bg-emerald-600 text-white hover:bg-emerald-700">+ Nueva</button>
+      </div>
 
-    <!-- Config -->
-    <section class="rounded-2xl bg-white shadow p-4">
-      <label class="block text-sm font-medium mb-1">URL CSV publicada (hoja POSOnceyDoce)</label>
-      <input id="csvUrl" type="text" class="w-full rounded-xl border-gray-300"
-        value="https://docs.google.com/spreadsheets/d/e/2PACX-1vTNZmwzwN0zHiYYSEpk0N11IIRouQUu85lzE6eYe4DoR1WbtnV239mtGRXPfBdbbVbSI9Scx3LVcww-/pub?gid=474194648&single=true&output=csv" />
-      <div id="diag" class="text-xs text-gray-500 mt-2"></div>
-      <button id="btnReload" class="mt-3 px-3 py-1.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-sm">Recargar</button>
-    </section>
+      <div id="listaMesas" class="space-y-2"></div>
 
-    <section class="grid grid-cols-1 lg:grid-cols-12 gap-4">
-      <!-- Filtros -->
-      <aside class="lg:col-span-3 bg-white rounded-2xl shadow p-4 space-y-4">
-        <div>
-          <label class="block text-sm font-medium mb-1">Mes</label>
-          <select id="mesFiltro" class="w-full rounded-xl border-gray-300"></select>
-        </div>
+      <div class="mt-4 p-3 rounded-xl bg-gray-50">
+        <label class="block text-xs text-gray-500 mb-1">Color de la mesa seleccionada</label>
+        <input id="colorMesa" type="color" class="w-full h-10 rounded cursor-pointer" />
+      </div>
 
-        <div>
-          <label class="block text-sm font-medium mb-1">Día</label>
-          <input id="diaFiltro" type="date" class="w-full rounded-xl border-gray-300" />
-          <div class="flex gap-2 mt-2">
-            <button type="button" class="btn" id="btnHoy">Hoy</button>
-            <button type="button" class="btn" id="btnAyer">Ayer</button>
-            <button type="button" class="btn" id="btnMenos2">-2 días</button>
+      <p class="text-xs text-gray-500 mt-4">Consejo: duplicá una mesa para armar pedidos similares y acelerar la carga.</p>
+    </aside>
+
+    <!-- MAIN -->
+    <main class="lg:col-span-9">
+      <header class="mb-4">
+        <div class="rounded-2xl bg-white shadow p-6 flex items-center justify-between">
+          <div>
+            <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight">POS OnceyDoce</h1>
+            <p class="text-sm text-gray-500">Multi‑carritos · Google Sheets</p>
           </div>
-          <p class="text-xs text-gray-500 mt-2">Afecta los KPIs diarios (Ganancia/Ingresos/Unidades del día).</p>
+          <div class="text-right">
+            <div id="statusBadge" class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600">Sincronizando…</div>
+          </div>
         </div>
+      </header>
+      <!-- CONFIG PLACEHOLDERS -->
+    <script>
+      // === CONFIGURACIÓN ===
+      // 1) Publica tu hoja de MENÚ como CSV (Archivo → Compartir → Publicar en la web → seleccionar la hoja del menú) y pega la URL aquí.
+      //    También funciona con la URL de gviz CSV: https://docs.google.com/spreadsheets/d/ID/gviz/tq?tqx=out:csv&sheet=NombreHoja
+      const MENU_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTOCWWvu8KMMGhuRlTtbvCMEaJIWb9l3DYMi7281gfgncS5tGeO81BRpcCMk-SJIWtNyvWckt2bV4U-/pub?output=csv";
 
-        <div>
-          <label class="block text-sm font-medium mb-1">Buscar</label>
-          <input id="buscar" type="text" placeholder="producto, cliente…" class="w-full rounded-xl border-gray-300" />
-        </div>
+      // 2) Implementa el WebApp de Apps Script (ver instrucciones) que recibe los pedidos con método POST y pega la URL aquí.
+      const ORDERS_WEBAPP_URL = "https://script.google.com/macros/s/AKfycbzDOjveLDLPJI344Z9nm4DGfjytidwisPt3hU01lFzDK6siuI9GhFzhPxrdw-t2JD8u/exec";
 
-        <div>
-          <label class="block text-sm font-medium mb-1">Filtrar por Categoría</label>
-          <select id="catFiltro" class="w-full rounded-xl border-gray-300">
+      // 3) Opcional: nombre del local para imprimir comanda
+      const STORE_NAME = "OnceyDoce";
+    </script>
+
+
+      <!-- Filters & Customer -->
+      <section class="mb-6 grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div class="rounded-2xl bg-white shadow p-4">
+          <label class="block text-sm font-medium mb-1" for="categoria">Categoría</label>
+          <select id="categoria" class="w-full rounded-xl border-gray-300 focus:ring-2 focus:ring-emerald-500">
             <option value="">Todas</option>
-            <option value="Café">Café</option>
-            <option value="Comida">Comida</option>
-            <option value="Cerveza">Cerveza</option>
-            <option value="Gaseosa">Gaseosa</option>
-            <option value="Agua">Agua</option>
-            <option value="Vino">Vino</option>
-            <option value="Whisky">Whisky</option>
-            <option value="Tragos">Tragos</option>
           </select>
-          <p class="text-xs text-gray-500 mt-2">Por ejemplo: solo “Vino”, “Whisky” o “Tragos”.</p>
         </div>
-      </aside>
-
-      <main class="lg:col-span-9 space-y-4">
-        <!-- KPIs Mensuales -->
-        <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
-          <div class="bg-white rounded-2xl shadow p-4"><div class="text-xs text-gray-500">Ventas (mes)</div><div id="kpiVentas" class="text-2xl font-bold">0</div></div>
-          <div class="bg-white rounded-2xl shadow p-4"><div class="text-xs text-gray-500">Unidades (mes)</div><div id="kpiUnidades" class="text-2xl font-bold">0</div></div>
-          <div class="bg-white rounded-2xl shadow p-4"><div class="text-xs text-gray-500">Ingresos (mes)</div><div id="kpiIngresos" class="text-2xl font-bold">$0</div></div>
+        <div class="rounded-2xl bg-white shadow p-4">
+          <label class="block text-sm font-medium mb-1" for="subcategoria">Subcategoría</label>
+          <select id="subcategoria" class="w-full rounded-xl border-gray-300 focus:ring-2 focus:ring-emerald-500">
+            <option value="">Todas</option>
+          </select>
         </div>
+        <div class="rounded-2xl bg-white shadow p-4">
+          <label class="block text-sm font-medium mb-1" for="cliente">Nombre del cliente</label>
+          <input id="cliente" type="text" placeholder="Ej: Juan Pérez" class="w-full rounded-xl border-gray-300 focus:ring-2 focus:ring-emerald-500" />
+        </div>
+      </section>
 
-        <!-- KPIs del Día -->
-        <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
-          <div class="bg-white rounded-2xl shadow p-4">
-            <div class="text-xs text-gray-500">Ganancia (día)</div>
-            <div id="kpiGanDia" class="text-2xl font-bold">$0</div>
-            <div id="kpiGanDiaLbl" class="text-xs text-gray-500 mt-1"></div>
+      <!-- Products & Cart -->
+      <section class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Products -->
+        <div class="rounded-2xl bg-white shadow overflow-hidden">
+          <div class="p-4 border-b flex items-center gap-3">
+            <input id="buscar" type="text" placeholder="Buscar producto…" class="flex-1 rounded-xl border-gray-300 focus:ring-2 focus:ring-emerald-500" />
+            <span class="text-sm text-gray-500">Productos: <b id="countProductos">0</b></span>
           </div>
-          <div class="bg-white rounded-2xl shadow p-4">
-            <div class="text-xs text-gray-500">Ingresos (día)</div>
-            <div id="kpiIngDia" class="text-2xl font-bold">$0</div>
-          </div>
-          <div class="bg-white rounded-2xl shadow p-4">
-            <div class="text-xs text-gray-500">Unidades (día)</div>
-            <div id="kpiUniDia" class="text-2xl font-bold">0</div>
-          </div>
+          <div class="divide-y max-h-[520px] overflow-auto" id="listaProductos"></div>
         </div>
 
-        <!-- Análisis por Categoría -->
-        <div class="bg-white rounded-2xl shadow p-4 space-y-4">
-          <div class="flex items-center justify-between">
-            <h2 class="text-lg font-semibold">Análisis por Categoría</h2>
-            <div class="flex gap-2">
-              <span class="chip">Café</span>
-              <span class="chip">Comida</span>
-              <span class="chip">Cerveza</span>
-              <span class="chip">Gaseosa</span>
-              <span class="chip">Agua</span>
-              <span class="chip">Vino</span>
-              <span class="chip">Whisky</span>
-              <span class="chip">Tragos</span>
+        <!-- Cart -->
+        <div id="cartWrapper" class="rounded-2xl bg-white shadow overflow-hidden border-2" style="border-color:#e5e7eb">
+          <div class="p-4 border-b flex items-center justify-between">
+            <h2 class="text-xl font-semibold"><span id="mesaTitulo">Mesa 1</span></h2>
+            <div class="flex gap-2 items-center">
+              <button id="btnDuplicarMesa" class="no-print px-3 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-sm">Duplicar</button>
+              <button id="btnVaciar" class="no-print px-3 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-sm">Vaciar</button>
             </div>
           </div>
-
-          <!-- NUEVOS CONTROLES DE ALCANCE -->
-          <div class="flex flex-wrap gap-3 items-end">
-            <div>
-              <label class="block text-xs text-gray-600 mb-1">Alcance</label>
-              <select id="alcanceSel" class="rounded-xl border-gray-300">
-                <option value="mes">Mes completo (seleccionado)</option>
-                <option value="dia">Día (usa el selector de la izquierda)</option>
-                <option value="rango">Rango de fechas</option>
-              </select>
-            </div>
-            <div id="rangoWrap" class="hidden flex items-end gap-2">
-              <div>
-                <label class="block text-xs text-gray-600 mb-1">Desde</label>
-                <input id="desdeFecha" type="date" class="rounded-xl border-gray-300">
+          <div class="p-4">
+            <div id="cartTable" class="w-full text-sm"></div>
+            <hr class="my-4" />
+            <div class="grid grid-cols-2 gap-4 text-sm">
+              <div class="space-y-2">
+                <div class="flex items-center justify-between"><span>Total bruto</span><span id="totalBruto" class="font-semibold">$0</span></div>
+                <div class="flex items-center justify-between"><span>Costo</span><span id="totalCosto" class="font-semibold">$0</span></div>
+                <div class="flex items-center justify-between"><span>Ganancia</span><span id="totalGanancia" class="font-semibold">$0</span></div>
               </div>
-              <div>
-                <label class="block text-xs text-gray-600 mb-1">Hasta</label>
-                <input id="hastaFecha" type="date" class="rounded-xl border-gray-300">
+              <div class="space-y-2">
+                <label class="block text-sm" for="pago">Pago ($)</label>
+                <input id="pago" type="number" min="0" class="w-full rounded-xl border-gray-300 focus:ring-2 focus:ring-emerald-500"/>
+                <div class="flex items-center justify-between"><span>Vuelto</span><span id="vuelto" class="font-semibold">$0</span></div>
               </div>
-              <button id="btnAplicarRango" class="btn">Aplicar</button>
-            </div>
-            <label class="inline-flex items-center gap-2 ml-auto">
-              <input id="chkDiaDia" type="checkbox" class="rounded">
-              <span class="text-sm text-gray-700">Día a día (serie)</span>
-            </label>
-          </div>
-
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-6" id="aggWrap">
-            <div class="rounded-xl border p-3">
-              <div class="text-sm text-gray-500 mb-2">Participación por Unidades (%)</div>
-              <canvas id="chartPie"></canvas>
-            </div>
-            <div class="rounded-xl border p-3">
-              <div class="text-sm text-gray-500 mb-2">Unidades por Categoría</div>
-              <canvas id="chartBarQty"></canvas>
-            </div>
-            <div class="rounded-xl border p-3">
-              <div class="text-sm text-gray-500 mb-2">Ganancia por Categoría (ARS)</div>
-              <canvas id="chartBarProfit"></canvas>
             </div>
           </div>
-
-          <!-- NUEVO: gráfico día a día -->
-          <div id="dailyWrap" class="rounded-xl border p-3 hidden">
-            <div class="text-sm text-gray-500 mb-2">Unidades — Día a día (apilado por categoría)</div>
-            <canvas id="chartDailyQty"></canvas>
-          </div>
-
-          <div class="overflow-x-auto">
-            <table class="w-full text-sm mt-2">
-              <thead class="bg-gray-50 text-gray-600">
-                <tr>
-                  <th class="text-left p-2">Categoría</th>
-                  <th class="text-right p-2">Unidades</th>
-                  <th class="text-right p-2">Veces</th>
-                  <th class="text-right p-2">Ganancia</th>
-                </tr>
-              </thead>
-              <tbody id="tbodyResumenCat" class="divide-y"></tbody>
-            </table>
+          <div class="p-4 border-t flex flex-col sm:flex-row gap-3 sm:gap-4">
+            <button id="btnGuardar" class="no-print flex-1 px-4 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold">Guardar Pedido</button>
+            <button id="btnComanda" class="no-print flex-1 px-4 py-3 rounded-2xl bg-amber-500 hover:bg-amber-600 text-white font-semibold">Imprimir Comanda</button>
           </div>
         </div>
+      </section>
 
-        <!-- Tabla -->
-        <div class="bg-white rounded-2xl shadow p-4">
-          <div class="flex items-center justify-between mb-3">
-            <h2 class="text-lg font-semibold">Ventas</h2>
-            <div class="flex gap-2">
-              <button id="btnExcel" class="text-sm px-3 py-1.5 rounded-xl bg-gray-100 hover:bg-gray-200">Descargar Excel</button>
-              <button id="btnExcelFact" class="text-sm px-3 py-1.5 rounded-xl bg-gray-100 hover:bg-gray-200">Exportar Facturación</button>
-              <button id="btnExpandir" class="text-sm px-3 py-1.5 rounded-xl bg-gray-100 hover:bg-gray-200">Expandir items</button>
-            </div>
+      <!-- Printable ticket (hidden) -->
+      <section id="ticket" class="hidden print:block p-6">
+        <div class="max-w-sm mx-auto">
+          <h2 class="text-center text-xl font-bold mb-2">{{STORE}}</h2>
+          <div class="text-xs text-center mb-4" id="ticketMeta"></div>
+          <div id="ticketItems" class="text-sm"></div>
+          <hr class="my-2"/>
+          <div class="text-sm">
+            <div class="flex justify-between"><span>Total</span><span id="ticketTotal"></span></div>
+            <div class="flex justify-between"><span>Pago</span><span id="ticketPago"></span></div>
+            <div class="flex justify-between"><span>Vuelto</span><span id="ticketVuelto"></span></div>
           </div>
-          <div class="overflow-x-auto">
-            <table class="w-full text-sm">
-              <thead class="bg-gray-50 text-gray-600">
-                <tr>
-                  <th class="text-left p-2">Fecha</th>
-                  <th class="text-left p-2">Cliente</th>
-                  <th class="text-left p-2">Mesa</th>
-                  <th class="text-left p-2">Método</th>
-                  <th class="text-left p-2">Items</th>
-                  <th class="text-right p-2">Total</th>
-                  <th class="text-right p-2">Ganancia</th>
-                </tr>
-              </thead>
-              <tbody id="tbodyVentas" class="divide-y"></tbody>
-            </table>
-          </div>
+          <p class="text-center text-xs mt-4">¡Gracias por su compra!</p>
         </div>
-      </main>
-    </section>
+      </section>
+    </main>
   </div>
 
   <script>
-    // Utils
-    const $fmt = n => new Intl.NumberFormat('es-AR',{style:'currency',currency:'ARS',maximumFractionDigits:0}).format(Number(n||0));
-    const monthKey = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
-    const dayKey   = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-    const toNumber = x => (typeof x==='number') ? x :
-      Number(String(x??'').replace(/[^\d,.\-]/g,'').replace(/\.(?=.*\.)/g,'').replace(',', '.')) || 0;
+    // ===== Menú / productos =====
+    let MENU = [];
 
-    function diag(m){ const el=document.getElementById('diag'); el.innerHTML += `<div>• ${m}</div>`; }
+    // ===== Multi‑Carritos =====
+    // Estructura de mesa: { id, nombre, color, items:[], cliente:'', pago:0 }
+    let MESAS = [];
+    let MESA_ACTUAL = null; // id
 
-    function parseJSONSafely(s){ try{ return JSON.parse(s); }catch{ return null; } }
-    function parseDateSmart(s){
-      if(!s) return null;
-      if(!isNaN(Number(s)) && String(s).trim()!==''){ const base=new Date(Date.UTC(1899,11,30)); return new Date(base.getTime()+Number(s)*86400000); }
-      const d=new Date(s); return isNaN(d)? null : d;
+    // ===== Utils =====
+    const $fmt = (n) => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(Number(n||0));
+    const uid = () => 'm' + Math.random().toString(36).slice(2,9);
+
+    // --- Storage ---
+    function loadState(){
+      try{ const raw = localStorage.getItem('pos-1112-mesas'); if(raw){ const data = JSON.parse(raw); MESAS = data.mesas||[]; MESA_ACTUAL = data.actual||null; } }catch{ }
+      if(MESAS.length===0){ const id = uid(); MESAS=[{id, nombre:'Mesa 1', color:'#22c55e', items:[], cliente:'', pago:0}]; MESA_ACTUAL=id; }
     }
-    const safeDateOrToday = s => parseDateSmart(s) || new Date();
+    function saveState(){ localStorage.setItem('pos-1112-mesas', JSON.stringify({mesas:MESAS, actual:MESA_ACTUAL})); }
 
-    function findItemsJSON(row){
-      const pref = ['items(json)','items','detalle'];
-      for(const k of pref){ if(row[k]) return String(row[k]); }
-      for(const [k,v] of Object.entries(row)){
-        if(typeof v === 'string' && /[\[\{].*[\]\}]/.test(v)) return v;
-      }
-      return '';
-    }
+    function mesaActual(){ return MESAS.find(m=>m.id===MESA_ACTUAL); }
 
-    function ensureItemsArray(raw){
-      if(Array.isArray(raw)) return raw;
-      if(typeof raw==='string'){
-        const cleaned = raw.trim().replace(/""/g,'"');
-        const parsed = parseJSONSafely(cleaned);
-        if(Array.isArray(parsed)) return parsed;
-        if(parsed && typeof parsed==='object'){
-          if(Array.isArray(parsed.items)) return parsed.items;
-          const out=[]; for(const [k,v] of Object.entries(parsed)){ const q=toNumber(v); if(k && q){ out.push({nombre:k, qty:q}); } }
-          return out;
-        }
-        return [];
-      }
-      if(raw && typeof raw==='object'){
-        if(Array.isArray(raw.items)) return raw.items;
-        const out=[]; for(const [k,v] of Object.entries(raw)){ const q=toNumber(v); if(k && q){ out.push({nombre:k, qty:q}); } }
-        return out;
-      }
-      return [];
-    }
-
-    /* ====== CANONIZACIÓN + MERGE ====== */
-    const stripAccents = s => s.normalize('NFD').replace(/[\u0300-\u036f]/g,'');
-    const normKey = s => stripAccents(String(s||'').toLowerCase()).replace(/[^a-z0-9]+/g,' ').replace(/\s+/g,' ').trim();
-
-    const CANON = {
-      "promo 2 medialunas y cafe c leche": "PROMO: 2 Medialunas + Café con leche",
-      "promo dona con cafe con leche": "PROMO: Dona + Café con leche",
-      "promo cafe con leche y muffin": "PROMO: Café con leche + Muffin",
-      "promo burguer bacon papas pinta": "PROMO: Burger bacon + Papas + Pinta",
-      "2 cervezas x 7000": "HAPPY HOUR — 2 cervezas x 7000",
-      "chessburger": "Chessburger",
-      "chessburguer": "Chessburger",
-      "clasica onceydoce": "Clásica Onceydoce",
-      "onceydoce": "Clásica Onceydoce",
-      "burger bacon": "Burger bacon",
-      "burguer bacon": "Burger bacon",
-      "pechuga grille": "Pechuga Grillé",
-      "sandwich de pechuga grille": "Pechuga Grillé",
-      "sandwich de milanesa": "Sandwich de Milanesa",
-      "bondiola": "Bondiola a la cerveza negra",
-      "bondiola a la cerveza negra": "Bondiola a la cerveza negra",
-      "sandwich ciabata": "Clásico (Pan Ciabatta)",
-      "sand ciabata": "Clásico (Pan Ciabatta)",
-      "sandwich de langostinos": "Sandwich de Langostinos",
-      "sandwich veggie": "Pan Bagel Vegetariano",
-      "papas grandes": "PAPAS GRANDES",
-      "papas chicas": "PAPAS CHICAS",
-      "papas pequenas": "PAPAS CHICAS",
-      "papas con cheddar": "Papas con cheddar / Provenzal",
-      "papas con cheddar bacon": "Papas con cheddar y bacon",
-      "porcion grande de papas": "PAPAS GRANDES",
-      "cafe con leche": "Café con leche",
-      "cafe c leche": "Café con leche",
-      "cafe solo": "Café solo",
-      "cafe": "Café solo",
-      "cafe con tia maria": "Café con leche con Tía María",
-      "moka": "MOKA",
-      "muffin": "Muffin",
-      "muffing": "Muffin",
-      "medialuna sola": "Medialuna sola",
-      "medialunas": "Medialuna sola",
-      "luneta con j&q": "Luneta con J&Q",
-      "luneta": "Luneta con J&Q",
-      "tostado": "Sandwich Tostado Árabe",
-      "tostado arabe": "Sandwich Tostado Árabe",
-      "sandwich tostado arabe": "Sandwich Tostado Árabe",
-      "cheescake": "Cheesecake",
-      "cheescacke": "Cheesecake",
-      "lemon pie": "Lemon Pie",
-      "porcion de lemon": "Lemon Pie",
-      "porciones de lemon": "Lemon Pie",
-      "red velvet": "Red Velvet",
-      "postre": "Postre",
-      "postrecitos": "Postre",
-      "postresitos": "Postre",
-      "te": "Té Negro",
-      "te negro": "Té Negro",
-      "te verde naranja y limon": "Té verde naranja y Limón",
-      "te frio hibiscus": "Té frio hibiscus",
-      "jugo": "Jugo Baggio (vaso)",
-      "baggio vaso de baggio": "Jugo Baggio (vaso)",
-      "limonada": "Limonada",
-      "gaseosa": "Gaseosa 600 ML",
-      "coca": "Coca-Cola 600 ML",
-      "coca grande": "Coca-Cola 1.25L",
-      "sprite": "Sprite 600 ML",
-      "gaseosa sprite": "Sprite 600 ML",
-      "coca sprite": "Gaseosa 600 ML",
-      "botella de agua": "Agua 600ML",
-      "agua": "Agua 600ML",
-      "agua 600ml": "Agua 600ML",
-      "pinta": "Pinta",
-      "pintas": "Pinta",
-      "honey": "Cerveza tirada — Honey",
-      "golden": "Cerveza tirada — Golden",
-      "ipa": "Cerveza tirada — Ipa",
-      "fernet": "Fernet con Coca",
-      "happy": "HAPPY HOUR — 2 cervezas x 7000",
-      "gintonic": "Gin Tonic",
-      "gin tonic": "Gin Tonic",
-      "negroni": "Negroni",
-      "tia maria": "Tia Maria",
-      "vodka": "Vodka con jugo de naranja",
-      "campari": "Campari con jugo de naranja",
-      "pizza muza": "Pizza Muzza",
-      "pizza napo": "Pizza Napo",
-      "pizza individual": "Pizza Individual",
-      "onceydoce combo": "Clásica Onceydoce"
-    };
-
-    const CANON_RULES = [
-      {re: /(promo|promos?).*medialuna.*cafe/i, to: "PROMO: 2 Medialunas + Café con leche"},
-      {re: /(promo|promos?).*(cafe|café).*(torta|lemon|red velvet|porcion)/i, to: "PROMO: Café + Torta"},
-      {re: /(promo|promos?).*(cafe|café).*(muffin|muffing)/i, to: "PROMO: Café con leche + Muffin"},
-      {re: /(promo|promos?).*(bacon).*papa.*pinta/i, to: "PROMO: Burger bacon + Papas + Pinta"},
-      {re: /2\s*cervezas\s*x\s*7000/i, to: "HAPPY HOUR — 2 cervezas x 7000"},
-      {re: /cafe.?con.?leche.*tia.?maria/i, to: "Café con leche con Tía María"},
-      {re: /cafe.?con.?leche/i, to: "Café con leche"},
-      {re: /cafe(?!.*(leche))/i, to: "Café solo"},
-      {re: /pechuga.*grille/i, to: "Pechuga Grillé"},
-      {re: /sand.*milanesa|mila\b/i, to: "Sandwich de Milanesa"},
-      {re: /bondiola.*cerveza.*negra|bondiola\b/i, to: "Bondiola a la cerveza negra"},
-      {re: /papas.*grandes|porcion grande.*papas/i, to: "PAPAS GRANDES"},
-      {re: /papas.*chicas|papas.*peque/i, to: "PAPAS CHICAS"},
-      {re: /papas.*cheddar.*bacon/i, to: "Papas con cheddar y bacon"},
-      {re: /papas.*(cheddar|provenzal)/i, to: "Papas con cheddar / Provenzal"},
-      {re: /lemon.*pie|porcion.*lemon/i, to: "Lemon Pie"},
-      {re: /red\s*velvet/i, to: "Red Velvet"},
-      {re: /chees?c(a|a)ke/i, to: "Cheesecake"},
-      {re: /\bcoca\b.*1\.?25|coca.*grande/i, to: "Coca-Cola 1.25L"},
-      {re: /\bcoca\b|coca.*600/i, to: "Coca-Cola 600 ML"},
-      {re: /sprite/i, to: "Sprite 600 ML"},
-      {re: /gaseosa/i, to: "Gaseosa 600 ML"},
-      {re: /agua(?!.*tonica)|botella.*agua/i, to: "Agua 600ML"},
-      {re: /\bpintas?\b/i, to: "Pinta"},
-      {re: /\bhoney\b/i, to: "Cerveza tirada — Honey"},
-      {re: /\bgolden\b/i, to: "Cerveza tirada — Golden"},
-      {re: /\bipa\b/i, to: "Cerveza tirada — Ipa"},
-      {re: /fernet/i, to: "Fernet con Coca"},
-      {re: /gin.?tonic|gintonic/i, to: "Gin Tonic"},
-      {re: /negroni/i, to: "Negroni"},
-      {re: /whisky|whiskey/i, to: "Whisky"},
-      {re: /campari.*naranja/i, to: "Campari con jugo de naranja"},
-      {re: /vodka.*naranja/i, to: "Vodka con jugo de naranja"},
-    ];
-
-    function isNoiseItemName(nRaw){
-      const n = normKey(nRaw);
-      if(!n) return true;
-      if(/^gasto\b/.test(n)) return true;
-      if(/^(turno|cerramos el turno|pero fue|—|->)/.test(nRaw.toLowerCase())) return true;
-      if(/^\d+(\.\d+)?$/.test(n)) return true;
-      if(n.length <= 1) return true;
-      return false;
-    }
-    function canonizarNombre(nRaw){
-      if(!nRaw) return '';
-      const key = normKey(nRaw);
-      if(CANON[key]) return CANON[key];
-      for(const {re,to} of CANON_RULES){ if(re.test(nRaw)) return to; }
-      if(/cafe.*(medialuna|jyq)/i.test(nRaw)) return "PROMO: 2 Medialunas + Café con leche";
-      return nRaw.replace(/\s+/g,' ').trim();
-    }
-    function canonicalizeAndMerge(items){
-      const map = new Map();
-      for(const it of (items||[])){
-        const nombre = (it.nombre||'').toString();
-        if(isNoiseItemName(nombre)) continue;
-        const canon = canonizarNombre(nombre);
-        const qty   = toNumber(it.qty);
-        const precio= toNumber(it.precio);
-        const costo = toNumber(it.costo);
-        if(!canon || !qty) continue;
-        if(!map.has(canon)){
-          map.set(canon, { nombre: canon, qty: 0, ingreso: 0, costo: 0 });
-        }
-        const acc = map.get(canon);
-        acc.qty    += qty;
-        acc.ingreso+= precio * qty;
-        acc.costo  += costo  * qty;
-      }
-      return Array.from(map.values()).map(r => ({
-        nombre: r.nombre,
-        qty: r.qty,
-        precio: r.qty ? r.ingreso / r.qty : 0,
-        costo:  r.qty ? r.costo   / r.qty : 0
-      }));
-    }
-    /* ====== FIN CANONIZACIÓN ====== */
-
-    function normalizeRow(row){
-      const timestamp = row.timestamp || row.fecha || row.Timestamp || '';
-      let cliente   = row.cliente || row.Cliente || '';
-      let mesa      = row.mesa || row.Mesa || '';
-      let metodo    = row.metodoPago || row.metodo || row.Metodo || '';
-
-      if(!mesa && /^mesa\s*\d+/i.test(String(cliente))) { mesa = cliente; cliente = ''; }
-
-      let total = toNumber(row.total);
-      if(!total) total = toNumber(row.ganancia);
-      if(!total) total = toNumber(row.totalCosto);
-      if(!total) total = toNumber(row.pago);
-
-      let totalCosto = toNumber(row.totalCosto || row.costoTotal || 0);
-      let ganancia   = toNumber(row.ganancia || 0);
-
-      const itemsStr = findItemsJSON(row);
-      let items = ensureItemsArray(itemsStr).map(it=>({
-        nombre: it.nombre || it.producto || it.item || '',
-        qty: toNumber(it.qty || it.cantidad || 0),
-        precio: toNumber(it.precio || it.price || 0),
-        costo: toNumber(it.costo || it.cost || 0)
-      })).filter(x=>x.nombre && x.qty);
-
-      items = canonicalizeAndMerge(items);
-
-      if(!totalCosto && items.length){
-        totalCosto = items.reduce((a,i)=> a + toNumber(i.costo)*toNumber(i.qty), 0);
-      }
-      if(!ganancia){
-        ganancia = total - totalCosto;
-      }
-
-      if(!metodo){
-        const candidates = [row.metodoPago, row.totalCosto, row.forma, row.Forma];
-        const m = (candidates.find(x => typeof x==='string' && x.length && x.length<25) || '').toString();
-        metodo = m;
-      }
-
-      const date = safeDateOrToday(timestamp);
-      return { date, timestamp, cliente, mesa, metodo, total, totalCosto, ganancia, items };
-    }
-
-    let VENTAS=[], VENTAS_FILTRADAS=[], expandir=false;
-
-    // --- Día
-    function setDia(dateObj){
-      const yyyy = dateObj.getFullYear();
-      const mm = String(dateObj.getMonth()+1).padStart(2,'0');
-      const dd = String(dateObj.getDate()).padStart(2,'0');
-      $('#diaFiltro').val(`${yyyy}-${mm}-${dd}`);
-      renderKPIs();
-      renderCharts();
-    }
-    function getDiaKeySeleccionado(){
-      const v = $('#diaFiltro').val();
-      if(!v) return dayKey(new Date());
-      const d = new Date(v+'T00:00:00');
-      return dayKey(d);
-    }
-
-    function cargarMeses(){
-      const sel=$('#mesFiltro'); sel.empty();
-      const keys=[...new Set(VENTAS.map(v=>monthKey(v.date)))].sort().reverse();
-      keys.forEach(k=> sel.append(`<option value="${k}">${k}</option>`));
-      if(keys.length) sel.val(keys[0]);
-    }
-
-    // ======= Categorización =======
-    const CAT_LABELS = ['Café','Comida','Cerveza','Gaseosa','Agua','Vino','Whisky','Tragos'];
-
-    function categorizar(nombre){
-      const n = (nombre||'').toLowerCase();
-      if (/(agua (?!t[oó]nica)|agua$|botella de agua|eco de los andes|villavicencio|bonaqu|glaciar)/.test(n)) return 'Agua';
-      if (/(cafe|café|espresso|expreso|americano|latte|capuch|cortado|moka|macchiato|frapp|flat white|ristretto)/.test(n)) return 'Café';
-      if (/(cerveza|birra|ipa|apa|stout|golden|pale|lager|porter|pilsen|pinta|media pinta|sch(opp)?|330ml|473ml|500ml|600ml)/.test(n)) return 'Cerveza';
-      if (/(vino|malbec|cabernet|merlot|syrah|pinot|blend|rioja|tempranillo|chardonnay|sauvignon|torrontés|espumante|champ|prosecco)/.test(n)) return 'Vino';
-      if (/(whisky|whiskey|bourbon|scotch|jack daniels|johnnie walker|jb|chivas|ballantines|old parr)/.test(n)) return 'Whisky';
-      if (/(trago|c[oó]ctel|cocktail|gin tonic|gintonic|fernet|aperol|campari|negroni|mojito|caipiri|daikiri|margarita|ron cola|cuba libre|destornillador|vodka|tequila|gancia|cynar|spritz)/.test(n)) return 'Tragos';
-      if (/(gaseosa|coca|sprite|fanta|pepsi|manaos|pomelo|cola|ginger ale|agua t[oó]nica|t[oó]nica|schweppes|pesi)/.test(n)) return 'Gaseosa';
-      if (/(hamburg|burger|sandw|tostado|papas|papitas|fritas|pollo|milanesa|pizza|empanada|lomito|wrap|ensalada|taco|nacho|arepa|pancho|picada|tarta|tortilla|postre|alfajor|torta|budin|budín|brownie|medialuna|factura)/.test(n)) return 'Comida';
-      return 'Comida';
-    }
-
-    // ======= Agregados y filtros visuales (tabla/KPIs siguen por mes) =======
-    function aplicarFiltros(){
-      const mes=$('#mesFiltro').val();
-      const q=($('#buscar').val()||'').toLowerCase();
-      const catSel = $('#catFiltro').val();
-
-      VENTAS_FILTRADAS = VENTAS.filter(v => {
-        const okMes = monthKey(v.date)===mes;
-        const texto = `${v.cliente} ${v.mesa} ${(v.items||[]).map(i=>i.nombre).join(' ')}`.toLowerCase();
-        const okBuscar = !q || texto.includes(q);
-        const okCat = !catSel || (v.items||[]).some(i => categorizar(i.nombre)===catSel);
-        return okMes && okBuscar && okCat;
+    // --- Sidebar render ---
+    function renderMesas(){
+      const cont = $('#listaMesas');
+      cont.empty();
+      MESAS.forEach(m=>{
+        const active = m.id===MESA_ACTUAL;
+        cont.append(`
+          <div class="group flex items-center justify-between gap-2 p-2 rounded-xl border ${active?'border-emerald-500 bg-emerald-50':'border-gray-200 hover:bg-gray-50'}">
+            <button class="flex items-center gap-2 flex-1 text-left" data-action="switch" data-id="${m.id}">
+              <span class="inline-block w-3 h-3 rounded-full" style="background:${m.color}"></span>
+              <span class="font-medium truncate">${m.nombre}</span>
+              <span class="text-xs text-gray-500 ml-auto">${m.items.reduce((a,x)=>a+x.qty,0)} ítems</span>
+            </button>
+            <div class="opacity-0 group-hover:opacity-100 transition flex gap-1">
+              <button class="px-2 py-1 text-xs rounded-lg bg-gray-100" title="Renombrar" data-action="rename" data-id="${m.id}">✎</button>
+              <button class="px-2 py-1 text-xs rounded-lg bg-gray-100" title="Duplicar" data-action="dup" data-id="${m.id}">⧉</button>
+              <button class="px-2 py-1 text-xs rounded-lg bg-gray-100" title="Eliminar" data-action="del" data-id="${m.id}">✕</button>
+            </div>
+          </div>`);
       });
-
-      renderKPIs();
-      renderTabla();
-      renderCharts();
+      const m = mesaActual();
+      $('#mesaTitulo').text(m.nombre);
+      $('#cliente').val(m.cliente);
+      $('#pago').val(m.pago);
+      $('#colorMesa').val(m.color);
+      $('#cartWrapper').css('border-color', m.color);
+      renderCart();
+      saveState();
     }
 
-    // ======= ALCANCE para Análisis por Categoría =======
-    function getVentasAlcance(){
-      const alcance = $('#alcanceSel').val();
-      if(alcance==='dia'){
-        const clave = getDiaKeySeleccionado();
-        return VENTAS.filter(v => dayKey(v.date)===clave);
-      }
-      if(alcance==='rango'){
-        const d1 = $('#desdeFecha').val();
-        const d2 = $('#hastaFecha').val();
-        if(!d1 || !d2) return []; // pide que apliques el rango
-        const from = new Date(d1+'T00:00:00');
-        const to   = new Date(d2+'T23:59:59');
-        return VENTAS.filter(v => v.date>=from && v.date<=to);
-      }
-      // mes (por defecto): usa el mes seleccionado
-      const mesSel = $('#mesFiltro').val();
-      return VENTAS.filter(v => monthKey(v.date)===mesSel);
+    function nuevaMesa(nombre='Mesa '+(MESAS.length+1), color='#22c55e'){
+      const m = { id:uid(), nombre, color, items:[], cliente:'', pago:0 };
+      MESAS.push(m); MESA_ACTUAL=m.id; renderMesas();
     }
 
-    function aggregateByCategory(ventas){
-      const base = Object.fromEntries(CAT_LABELS.map(c=>[c, {unidades:0, veces:0, ganancia:0}]));
-      ventas.forEach(v=>{
-        const items = v.items||[];
-        const totalImporteItems = items.reduce((a,i)=> a + toNumber(i.precio)*toNumber(i.qty), 0);
-        const gananciaTicket = toNumber(v.ganancia);
-
-        items.forEach(i=>{
-          const cat = categorizar(i.nombre);
-          const qty = toNumber(i.qty);
-          const precio = toNumber(i.precio);
-          const costo = toNumber(i.costo);
-          const importe = precio * qty;
-
-          let gan = 0;
-          if(costo){ gan = (precio - costo) * qty; }
-          else if(totalImporteItems>0 && gananciaTicket){
-            gan = gananciaTicket * (importe / totalImporteItems);
-          }
-
-          base[cat].unidades += qty;
-          base[cat].veces    += 1;        // ← renglones (si querés por ticket, te lo cambio)
-          base[cat].ganancia += gan;
-        });
-      });
-      CAT_LABELS.forEach(c=>{
-        base[c].unidades = Math.round(base[c].unidades);
-        base[c].ganancia = Math.round(base[c].ganancia);
-      });
-      return base;
+    function duplicarMesa(id){
+      const src = MESAS.find(m=>m.id===id); if(!src) return;
+      const copy = { ...src, id:uid(), nombre: src.nombre+" (copia)", items: JSON.parse(JSON.stringify(src.items)) };
+      MESAS.push(copy); MESA_ACTUAL=copy.id; renderMesas();
     }
 
-    // Día a día: devuelve { 'YYYY-MM-DD': {Café:{unidades..}, ...} }
-    function aggregateByDayAndCategory(ventas){
-      const byDay = {};
-      ventas.forEach(v=>{
-        const dk = dayKey(v.date);
-        if(!byDay[dk]) byDay[dk] = Object.fromEntries(CAT_LABELS.map(c=>[c,{unidades:0}]));
-        (v.items||[]).forEach(i=>{
-          const cat = categorizar(i.nombre);
-          byDay[dk][cat].unidades += toNumber(i.qty);
-        });
-      });
-      return byDay;
+    function eliminarMesa(id){
+      if(MESAS.length===1){ alert('Debe quedar al menos una mesa.'); return; }
+      MESAS = MESAS.filter(m=>m.id!==id);
+      if(MESA_ACTUAL===id){ MESA_ACTUAL = MESAS[0].id; }
+      renderMesas();
     }
 
-    // ======= Tabla & KPIs =======
-    function renderKPIs(){
-      $('#kpiVentas').text(VENTAS_FILTRADAS.length);
-      const unidadesMes=VENTAS_FILTRADAS.reduce((a,v)=>a+(v.items||[]).reduce((s,i)=>s+toNumber(i.qty),0),0);
-      $('#kpiUnidades').text(unidadesMes);
-      const ingresosMes=VENTAS_FILTRADAS.reduce((a,v)=>a+toNumber(v.total),0);
-      $('#kpiIngresos').text($fmt(ingresosMes));
+    function cambiarColorActual(color){ const m=mesaActual(); if(!m) return; m.color=color; $('#cartWrapper').css('border-color', color); saveState(); renderMesas(); }
 
-      const claveDia = getDiaKeySeleccionado();
-      const delDia = VENTAS.filter(v => dayKey(v.date) === claveDia);
-      const ganDia = delDia.reduce((a,v)=> a + toNumber(v.ganancia), 0);
-      const ingDia = delDia.reduce((a,v)=> a + toNumber(v.total), 0);
-      const uniDia = delDia.reduce((a,v)=> a + (v.items||[]).reduce((s,i)=> s + toNumber(i.qty), 0), 0);
+    // ===== Productos y filtros =====
+    function groupUnique(arr, key){ return [...new Set(arr.map(x => (x[key]||"").trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b)); }
 
-      $('#kpiGanDia').text($fmt(ganDia));
-      $('#kpiIngDia').text($fmt(ingDia));
-      $('#kpiUniDia').text(uniDia);
-      $('#kpiGanDiaLbl').text(`Fecha: ${claveDia}`);
+    function renderFilters(){
+      const cats = groupUnique(MENU, 'categoria');
+      const catSel = $('#categoria');
+      catSel.find('option:not(:first)').remove();
+      cats.forEach(c => catSel.append(`<option value="${c}">${c}</option>`));
+      renderSubcats();
+    }
+    function renderSubcats(){
+      const cat = $('#categoria').val();
+      let list = MENU; if(cat) list = MENU.filter(x => x.categoria === cat);
+      const subs = groupUnique(list, 'subcategoria');
+      const subSel = $('#subcategoria');
+      subSel.find('option:not(:first)').remove();
+      subs.forEach(s => subSel.append(`<option value="${s}">${s}</option>`));
     }
 
-    function renderTabla(){
-      const tb=$('#tbodyVentas'); tb.empty();
-      if(!VENTAS_FILTRADAS.length){
-        tb.append(`<tr><td colspan="7" class="p-4 text-center text-sm text-gray-500">Sin datos</td></tr>`);
-        return;
-      }
-      VENTAS_FILTRADAS.forEach(v=>{
-        const itemsTxt=(v.items&&v.items.length)
-          ? v.items.map(i=> expandir? `${toNumber(i.qty)}× ${i.nombre} ($${toNumber(i.precio)})` : `${toNumber(i.qty)}× ${i.nombre}`).join(expandir? '\n' : ', ')
-          : '-';
-        tb.append(`<tr>
-          <td class="p-2 align-top">${v.date.toLocaleString('es-AR')}</td>
-          <td class="p-2 align-top">${v.cliente||'-'}</td>
-          <td class="p-2 align-top">${v.mesa||'-'}</td>
-          <td class="p-2 align-top">${v.metodo||'-'}</td>
-          <td class="p-2 whitespace-pre-wrap">${itemsTxt}</td>
-          <td class="p-2 align-top text-right font-semibold">${$fmt(toNumber(v.total))}</td>
-          <td class="p-2 align-top text-right">${$fmt(toNumber(v.ganancia))}</td>
-        </tr>`);
+    function productMatches(p){
+      const q=$('#buscar').val().trim().toLowerCase(); const cat=$('#categoria').val(); const sub=$('#subcategoria').val();
+      if(cat && p.categoria!==cat) return false; if(sub && p.subcategoria!==sub) return false; if(!q) return true;
+      return [p.nombre,p.categoria,p.subcategoria].join(' ').toLowerCase().includes(q);
+    }
+
+    function renderProducts(){
+      const cont=$('#listaProductos'); cont.empty(); const list=MENU.filter(productMatches); $('#countProductos').text(list.length);
+      list.forEach(p=>{
+        const disp=(p.stock!==undefined && p.stock!==""?`<span class='text-xs text-gray-500'>Stock: ${p.stock}</span>`:"");
+        cont.append(`
+          <div class="p-3 flex items-center gap-3 hover:bg-gray-50">
+            <div class="flex-1">
+              <div class="font-medium">${p.nombre}</div>
+              <div class="text-xs text-gray-500">${p.categoria}${p.subcategoria?" · "+p.subcategoria:""}</div>
+              ${disp}
+            </div>
+            <div class="text-right">
+              <div class="text-base font-semibold">${$fmt(p.precio)}</div>
+              ${p.costo?`<div class="text-[11px] text-gray-500">Costo ${$fmt(p.costo)}</div>`:""}
+            </div>
+            <div>
+              <button class="px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm" data-id="${p._rowId}" data-action="add">Agregar</button>
+            </div>
+          </div>`);
       });
     }
 
-    // ======= Charts =======
-    let PIE, BAR_QTY, BAR_PROF, DAILY_QTY;
-    function destroyCharts(){
-      [PIE,BAR_QTY,BAR_PROF,DAILY_QTY].forEach(ch=>{ if(ch){ ch.destroy(); }});
-      PIE = BAR_QTY = BAR_PROF = DAILY_QTY = null;
+    // ===== Carrito (por mesa) =====
+    function addToCart(rowId){ const m=mesaActual(); const p=MENU.find(x=>x._rowId===rowId); if(!m||!p) return; const ex=m.items.find(x=>x._rowId===rowId); if(ex){ex.qty+=1}else{m.items.push({_rowId:rowId,nombre:p.nombre,precio:Number(p.precio)||0,costo:Number(p.costo)||0,qty:1})} renderCart(); saveState(); }
+    function removeFromCart(rowId){ const m=mesaActual(); if(!m) return; m.items = m.items.filter(x=>x._rowId!==rowId); renderCart(); saveState(); }
+    function setQty(rowId,qty){ const m=mesaActual(); if(!m) return; const it=m.items.find(x=>x._rowId===rowId); if(it){ it.qty=Math.max(1,Number(qty)||1); renderCart(); saveState(); } }
+
+    function renderCart(){
+      const m=mesaActual(); const cont=$('#cartTable'); cont.empty(); if(!m){return}
+      const CART=m.items;
+      if(CART.length===0){ cont.html('<p class="text-sm text-gray-500">No hay ítems en el carrito.</p>'); }
+      else{ CART.forEach(it=>{ const linea=it.precio*it.qty; cont.append(`
+          <div class="grid grid-cols-12 gap-2 items-center py-2">
+            <div class="col-span-5">
+              <div class="font-medium">${it.nombre}</div>
+              <div class="text-xs text-gray-500">${$fmt(it.precio)} c/u</div>
+            </div>
+            <div class="col-span-3">
+              <input type="number" min="1" value="${it.qty}" data-id="${it._rowId}" data-action="qty" class="w-24 rounded-xl border-gray-300"/>
+            </div>
+            <div class="col-span-3 text-right font-semibold">${$fmt(linea)}</div>
+            <div class="col-span-1 text-right">
+              <button class="px-2 py-1 text-xs rounded-lg bg-gray-100 hover:bg-gray-200" data-id="${it._rowId}" data-action="del">✕</button>
+            </div>
+          </div>`); }); }
+
+      const total = CART.reduce((a,x)=>a+x.precio*x.qty,0);
+      const costo = CART.reduce((a,x)=>a+(Number(x.costo)||0)*x.qty,0);
+      $('#totalBruto').text($fmt(total)); $('#totalCosto').text($fmt(costo)); $('#totalGanancia').text($fmt(total-costo));
+      const pago = Number($('#pago').val()||m.pago||0); const vuelto = Math.max(0, pago-total); $('#vuelto').text($fmt(vuelto));
     }
 
-    function renderCharts(){
-      const alcance = $('#alcanceSel').val();
-      const diaDia = $('#chkDiaDia').is(':checked');
+    async function saveOrder(){
+      const m=mesaActual(); if(!m) return;
+      if(!ORDERS_WEBAPP_URL || ORDERS_WEBAPP_URL.startsWith('PASTE_')){ alert('Configura ORDERS_WEBAPP_URL'); return; }
+      if(m.items.length===0){ alert('El carrito está vacío.'); return; }
+      const total = m.items.reduce((a,x)=>a+x.precio*x.qty,0);
+      const totalCosto = m.items.reduce((a,x)=>a+(Number(x.costo)||0)*x.qty,0);
+      const payload = { timestamp:new Date().toISOString(), cliente:m.cliente||'', mesa:m.nombre, color:m.color, total, totalCosto, ganancia: total-totalCosto, pago: Number(m.pago||0), items: m.items.map(x=>({nombre:x.nombre,precio:x.precio,costo:x.costo,qty:x.qty})) };
 
-      const ventasBase = getVentasAlcance();
-      const dataAgg = aggregateByCategory(ventasBase);
-      const labels = CAT_LABELS;
-      const qtyArr = labels.map(l=> dataAgg[l].unidades);
-      const profitArr = labels.map(l=> dataAgg[l].ganancia);
-
-      // Tabla resumen
-      const tb = document.getElementById('tbodyResumenCat');
-      tb.innerHTML = '';
-      labels.forEach(l=>{
-        const r = dataAgg[l];
-        tb.innerHTML += `<tr>
-          <td class="p-2">${l}</td>
-          <td class="p-2 text-right">${r.unidades}</td>
-          <td class="p-2 text-right">${r.veces}</td>
-          <td class="p-2 text-right">${$fmt(r.ganancia)}</td>
-        </tr>`;
-      });
-
-      // Mostrar/ocultar contenedores
-      document.getElementById('aggWrap').classList.toggle('hidden', diaDia);
-      document.getElementById('dailyWrap').classList.toggle('hidden', !diaDia);
-
-      destroyCharts();
-
-      if(diaDia){
-        // Serie día a día (apilada por categoría, unidades)
-        const byDay = aggregateByDayAndCategory(ventasBase);
-        const days = Object.keys(byDay).sort(); // ejes X
-        const datasets = CAT_LABELS.map((cat, idx)=>({
-          label: cat,
-          data: days.map(d => byDay[d][cat]?.unidades || 0),
-          stack: 'stack1'
-        }));
-        const ctx = document.getElementById('chartDailyQty').getContext('2d');
-        DAILY_QTY = new Chart(ctx, {
-          type: 'bar',
-          data: { labels: days, datasets },
-          options: {
-            responsive: true,
-            scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true, ticks: { precision:0 } } },
-            plugins: { legend: { position: 'bottom' } }
-          }
-        });
-        return;
-      }
-
-      // Gráficos agregados (alcance elegido)
-      const ctxPie = document.getElementById('chartPie').getContext('2d');
-      PIE = new Chart(ctxPie, {
-        type: 'pie',
-        data: { labels, datasets: [{ data: qtyArr }]},
-        options: {
-          plugins: {
-            legend: { position: 'bottom' },
-            tooltip: { callbacks: { label: (ctx)=>{
-              const total = qtyArr.reduce((a,b)=>a+b,0)||1;
-              const v = ctx.parsed;
-              const p = (v*100/total).toFixed(1);
-              return `${ctx.label}: ${v} (${p}%)`;
-            }}}
-          }
-        }
-      });
-
-      const ctxBarQty = document.getElementById('chartBarQty').getContext('2d');
-      BAR_QTY = new Chart(ctxBarQty, {
-        type: 'bar',
-        data: { labels, datasets: [{ label: 'Unidades', data: qtyArr }]},
-        options: {
-          scales: { y: { beginAtZero: true, ticks: { precision:0 } } },
-          plugins: { legend: { display:false } }
-        }
-      });
-
-      const ctxBarProf = document.getElementById('chartBarProfit').getContext('2d');
-      BAR_PROF = new Chart(ctxBarProf, {
-        type: 'bar',
-        data: { labels, datasets: [{ label: 'Ganancia (ARS)', data: profitArr }]},
-        options: {
-          scales: { y: { beginAtZero: true } },
-          plugins: {
-            legend: { display:false },
-            tooltip: { callbacks: { label: (ctx)=> `${$fmt(ctx.parsed.y)}` } }
-          }
-        }
-      });
-    }
-
-    // ======= Carga CSV =======
-    async function fetchCsvText(url){
+      $('#btnGuardar').prop('disabled',true).text('Guardando…');
       try{
-        const res=await fetch(url);
-        if(!res.ok) throw new Error(`HTTP ${res.status}`);
-        return await res.text();
-      }catch(err1){
-        const proxied = 'https://r.jina.ai/http://' + url.replace(/^https?:\/\//,'');
-        const res2 = await fetch(proxied);
-        if(!res2.ok) throw new Error(`HTTP ${res2.status} (proxy). Error previo: ${err1?.message||err1}`);
-        return await res2.text();
-      }
+        const res = await fetch(ORDERS_WEBAPP_URL, { method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'}, body:'payload='+encodeURIComponent(JSON.stringify(payload)) });
+        const txt = await res.text(); let data; try{ data=JSON.parse(txt) }catch{ data={ok:true} }
+        if(!res.ok || data.ok===false) throw new Error((data && data.error) || 'Error al guardar');
+        alert('Pedido guardado ✅');
+        // limpiar mesa actual
+        m.items=[]; renderCart(); saveState();
+      }catch(err){ console.error(err); alert('No se pudo guardar el pedido: '+err.message); }
+      finally{ $('#btnGuardar').prop('disabled',false).text('Guardar Pedido'); }
     }
-    function parseCsv(text){
-      return new Promise((resolve,reject)=>{
-        Papa.parse(text,{header:true,skipEmptyLines:true,complete:r=>resolve(r.data||[]),error:reject});
+
+    function printTicket(){
+      const m=mesaActual(); if(!m) return;
+      const meta = `${new Date().toLocaleString('es-AR')} · ${m.nombre} · Cliente: ${m.cliente||'-'}`;
+      $('#ticketMeta').text(meta); $('#ticket').html($('#ticket').html().replace('{{STORE}}', STORE_NAME));
+      const itemsHtml = m.items.map(x=>`<div class="flex justify-between"><span>${x.qty}× ${x.nombre}</span><span>${$fmt(x.qty*x.precio)}</span></div>`).join('');
+      $('#ticketItems').html(itemsHtml);
+      const total = m.items.reduce((a,x)=>a+x.precio*x.qty,0); const pago = Number(m.pago||0); const vuelto = Math.max(0, pago-total);
+      $('#ticketTotal').text($fmt(total)); $('#ticketPago').text($fmt(pago)); $('#ticketVuelto').text($fmt(vuelto));
+      window.print();
+    }
+
+    // ===== Eventos UI =====
+    function bindEvents(){
+      // Sidebar
+      $('#btnNuevaMesa').on('click', ()=> nuevaMesa());
+      $('#listaMesas').on('click','[data-action="switch"]', function(){ MESA_ACTUAL=$(this).data('id'); renderMesas(); });
+      $('#listaMesas').on('click','[data-action="rename"]', function(){ const id=$(this).data('id'); const m=MESAS.find(x=>x.id===id); if(!m) return; const nv = prompt('Nuevo nombre', m.nombre); if(nv){ m.nombre=nv; if(MESA_ACTUAL===id) $('#mesaTitulo').text(nv); renderMesas(); } });
+      $('#listaMesas').on('click','[data-action="dup"]', function(){ duplicarMesa($(this).data('id')); });
+      $('#listaMesas').on('click','[data-action="del"]', function(){ eliminarMesa($(this).data('id')); });
+      $('#colorMesa').on('input', function(){ cambiarColorActual($(this).val()); });
+
+      // Filtros
+      $('#categoria').on('change', function(){ renderSubcats(); renderProducts(); });
+      $('#subcategoria, #buscar').on('input change', renderProducts);
+
+      // Productos
+      $('#listaProductos').on('click','button[data-action="add"]', function(){ addToCart($(this).data('id')); });
+
+      // Carrito
+      $('#cartTable').on('click','button[data-action="del"]', function(){ removeFromCart($(this).data('id')); });
+      $('#cartTable').on('input','input[data-action="qty"]', function(){ setQty($(this).data('id'), $(this).val()); });
+
+      // Cliente / Pago por mesa
+      $('#cliente').on('input', function(){ const m=mesaActual(); if(!m) return; m.cliente=$(this).val(); saveState(); });
+      $('#pago').on('input', function(){ const m=mesaActual(); if(!m) return; m.pago=Number($(this).val()||0); renderCart(); saveState(); });
+
+      // Acciones
+      $('#btnVaciar').on('click', function(){ const m=mesaActual(); if(!m) return; m.items=[]; renderCart(); saveState(); });
+      $('#btnDuplicarMesa').on('click', function(){ duplicarMesa(MESA_ACTUAL); });
+      $('#btnGuardar').on('click', saveOrder);
+      $('#btnComanda').on('click', printTicket);
+    }
+
+    // ===== Carga de menú =====
+    function normalizeRow(row, idx){
+      return { _rowId:`r${idx}`, categoria:(row.categoria||row.Categoria||row.categoría||row.Categoría||'').toString().trim(), subcategoria:(row.subcategoria||row.Subcategoria||row.Subcategoría||row['Sub-categoria']||'').toString().trim(), nombre:(row.nombre||row.producto||row.Producto||row.Nombre||'').toString().trim(), precio:Number(row.precio||row.Precio||row.price||0), costo:Number(row.costo||row.Costo||row.cost||0), stock:(row.stock||row.Stock||'') };
+    }
+
+    async function loadMenu(){
+      if(!MENU_CSV_URL || MENU_CSV_URL.startsWith('PASTE_')){ $('#statusBadge').attr('class','inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700').text('Configura MENU_CSV_URL'); return; }
+      $('#statusBadge').attr('class','inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700').text('Cargando menú…');
+      return new Promise((resolve)=>{
+        Papa.parse(MENU_CSV_URL,{ download:true, header:true, complete:(results)=>{ MENU = results.data.filter(r=>r && Object.keys(r).length).map(normalizeRow).filter(x=>x.nombre && !isNaN(x.precio)); renderFilters(); renderProducts(); renderCart(); $('#statusBadge').attr('class','inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700').text('Menú sincronizado'); resolve(); }, error:()=>{ $('#statusBadge').attr('class','inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700').text('Error al cargar menú'); resolve(); } });
       });
     }
-    async function cargarVentas(){
-      try{
-        $('#statusBadge').attr('class','text-xs px-3 py-1 rounded-full bg-blue-100 text-blue-700').text('Cargando…');
-        document.getElementById('diag').innerHTML='';
-        const url=document.getElementById('csvUrl').value.trim();
-        const text=await fetchCsvText(url);
-        const rows=await parseCsv(text);
-        diag(`Filas: ${rows.length}`);
-        diag('Encabezados: '+Object.keys(rows[0]||{}).join(', '));
-        VENTAS=rows.map(normalizeRow);
-        cargarMeses();
-        setDia(new Date());
-        aplicarFiltros();
-        $('#statusBadge').attr('class','text-xs px-3 py-1 rounded-full bg-emerald-100 text-emerald-700').text('Listo');
-      }catch(err){
-        $('#statusBadge').attr('class','text-xs px-3 py-1 rounded-full bg-red-100 text-red-700').text('Error');
-        diag('Error: '+(err.message||err));
-      }
-    }
 
-    // ===== Helpers de export =====
-    function buildItemsText(items, expandirFlag){
-      if(!items || !items.length) return '-';
-      return items
-        .map(i => expandirFlag
-          ? `${toNumber(i.qty)}× ${i.nombre} ($${toNumber(i.precio)})`
-          : `${toNumber(i.qty)}× ${i.nombre}`
-        )
-        .join(expandirFlag ? '\n' : ', ');
-    }
-
-    function exportarExcel(){
-      if(!VENTAS_FILTRADAS.length){ alert('No hay datos para exportar.'); return; }
-      const data = VENTAS_FILTRADAS.map(v => ({
-        'Fecha': v.date.toLocaleString('es-AR'),
-        'Cliente': v.cliente || '-',
-        'Mesa': v.mesa || '-',
-        'Método': v.metodo || '-',
-        'Items': buildItemsText(v.items, expandir),
-        'Total (ARS)': Number(toNumber(v.total).toFixed(2)),
-        'Ganancia (ARS)': Number(toNumber(v.ganancia).toFixed(2)),
-      }));
-      const ws = XLSX.utils.json_to_sheet(data);
-      ws['!cols'] = [{wch:20},{wch:20},{wch:12},{wch:16},{wch:50},{wch:14},{wch:14}];
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, 'Ventas');
-      const mesSel = ($('#mesFiltro').val() || 'mes').replace(/[^0-9\-]/g,'');
-      const t=new Date(), fname=`Ventas_OnceyDoce_${mesSel}_${t.getFullYear()}${String(t.getMonth()+1).padStart(2,'0')}${String(t.getDate()).padStart(2,'0')}_${String(t.getHours()).padStart(2,'0')}${String(t.getMinutes()).padStart(2,'0')}.xlsx`;
-      XLSX.writeFile(wb, fname);
-    }
-
-    function mapCondicionVenta(metodo){
-      const m = (metodo||'').toString().toLowerCase();
-      if(/efec/.test(m)) return 'EFECTIVO';
-      if(/mercado|mp/.test(m)) return 'MERCADO PAGO';
-      if(/debito|débito/.test(m)) return 'TARJETA DE DÉBITO';
-      if(/credito|crédito/.test(m)) return 'TARJETA DE CRÉDITO';
-      if(/transfer/.test(m)) return 'TRANSFERENCIA BANCARIA';
-      return 'OTROS MEDIOS DE PAGO ELECTRÓNICO';
-    }
-
-    function exportarExcelFact(){
-      if(!VENTAS_FILTRADAS.length){ alert('No hay datos para exportar.'); return; }
-      const rows = VENTAS_FILTRADAS.map(v => {
-        const fechaObj = v.date;
-        const totalNum = Number(toNumber(v.total).toFixed(2));
-        return {
-          'Fecha Comprobante': fechaObj,
-          'Producto / Servicio': (v.items && v.items.length) ? buildItemsText(v.items, false) : '-',
-          'Precio Unitario': totalNum,
-          'Cantidad': 1,
-          'Total': totalNum,
-          'Tipo': 'PRODUCTO',
-          'Facturado Desde': fechaObj,
-          'Facturado Hasta': fechaObj,
-          'Condicion de Venta': mapCondicionVenta(v.metodo),
-          'Condicion de IVA': 'CONSUMIDOR FINAL',
-          'CUIT o DNI (Opcional)': '',
-          'Email (Opcional)': ''
-        };
-      });
-      const ws = XLSX.utils.json_to_sheet(rows);
-      ws['!cols'] = [
-        {wch:20},{wch:60},{wch:16},{wch:10},{wch:14},{wch:12},
-        {wch:20},{wch:20},{wch:34},{wch:20},{wch:22},{wch:24}
-      ];
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
-      const mesSel = ($('#mesFiltro').val() || 'mes').replace(/[^0-9\-]/g,'');
-      const t=new Date(), fname=`Facturacion_OnceyDoce_${mesSel}_${t.getFullYear()}${String(t.getMonth()+1).padStart(2,'0')}${String(t.getDate()).padStart(2,'0')}.xlsx`;
-      XLSX.writeFile(wb, fname);
-    }
-
-    // ==== Eventos / Init ====
-    $(document).on('input change','#mesFiltro,#buscar,#catFiltro',aplicarFiltros);
-
-    // Controles alcance
-    $('#alcanceSel').on('change', ()=>{
-      const v = $('#alcanceSel').val();
-      document.getElementById('rangoWrap').classList.toggle('hidden', v!=='rango');
-      renderCharts();
-    });
-    $('#btnAplicarRango').on('click', ()=> renderCharts());
-    $('#desdeFecha,#hastaFecha,#chkDiaDia').on('change', ()=> renderCharts());
-
-    $('#btnExpandir').on('click',function(){
-      expandir=!expandir;
-      $(this).text(expandir?'Contraer items':'Expandir items');
-      renderTabla();
-    });
-    $('#btnReload').on('click',cargarVentas);
-
-    $('#btnExcel').on('click', exportarExcel);
-    $('#btnExcelFact').on('click', exportarExcelFact);
-
-    $('#diaFiltro').on('change', ()=>{ renderKPIs(); renderCharts(); });
-    $('#btnHoy').on('click', ()=> setDia(new Date()));
-    $('#btnAyer').on('click', ()=> { const d=new Date(); d.setDate(d.getDate()-1); setDia(d); });
-    $('#btnMenos2').on('click', ()=> { const d=new Date(); d.setDate(d.getDate()-2); setDia(d); });
-
-    $(function(){ cargarVentas(); });
-
-    // Redibujo si cambia tamaño
-    window.addEventListener('resize', ()=>{ if(VENTAS_FILTRADAS.length){ renderCharts(); }});
+    // ===== Init =====
+    $(async function(){ loadState(); bindEvents(); renderMesas(); await loadMenu(); });
   </script>
 </body>
 </html>
