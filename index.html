@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>POS OnceyDoce — Multi‑Carritos + Google Sheets</title>
+  <title>POS OnceyDoce — Multi-Carritos + Google Sheets</title>
   <!-- TailwindCSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- jQuery -->
@@ -12,6 +12,9 @@
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
   <style>
     @media print { .no-print { display:none!important } .print\:block{display:block!important} }
+    .low-stock { background:#fef2f2 }           /* rojo muy suave */
+    .low-stock .title { color:#b91c1c }         /* rojo fuerte en título */
+    .no-stock  { opacity:0.55 }                 /* deshabilitado */
   </style>
 </head>
 <body class="bg-gray-100 text-gray-900">
@@ -30,6 +33,14 @@
         <input id="colorMesa" type="color" class="w-full h-10 rounded cursor-pointer" />
       </div>
 
+      <div class="mt-4 p-3 rounded-xl bg-gray-50">
+        <label class="block text-xs text-gray-500 mb-1">Alerta stock (mínimo global)</label>
+        <div class="flex items-center gap-2">
+          <input id="stockMinGlobal" type="number" min="0" value="3" class="w-24 rounded-xl border-gray-300" />
+          <span class="text-xs text-gray-500">*Si un producto no trae su propio mínimo</span>
+        </div>
+      </div>
+
       <p class="text-xs text-gray-500 mt-4">Consejo: duplicá una mesa para armar pedidos similares y acelerar la carga.</p>
     </aside>
 
@@ -39,27 +50,26 @@
         <div class="rounded-2xl bg-white shadow p-6 flex items-center justify-between">
           <div>
             <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight">POS OnceyDoce</h1>
-            <p class="text-sm text-gray-500">Multi‑carritos · Google Sheets</p>
+            <p class="text-sm text-gray-500">Multi-carritos · Google Sheets</p>
           </div>
           <div class="text-right">
             <div id="statusBadge" class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600">Sincronizando…</div>
           </div>
         </div>
       </header>
-      <!-- CONFIG PLACEHOLDERS -->
-    <script>
-      // === CONFIGURACIÓN ===
-      // 1) Publica tu hoja de MENÚ como CSV (Archivo → Compartir → Publicar en la web → seleccionar la hoja del menú) y pega la URL aquí.
-      //    También funciona con la URL de gviz CSV: https://docs.google.com/spreadsheets/d/ID/gviz/tq?tqx=out:csv&sheet=NombreHoja
-      const MENU_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTOCWWvu8KMMGhuRlTtbvCMEaJIWb9l3DYMi7281gfgncS5tGeO81BRpcCMk-SJIWtNyvWckt2bV4U-/pub?output=csv";
 
-      // 2) Implementa el WebApp de Apps Script (ver instrucciones) que recibe los pedidos con método POST y pega la URL aquí.
-      const ORDERS_WEBAPP_URL = "https://script.google.com/macros/s/AKfycbzDOjveLDLPJI344Z9nm4DGfjytidwisPt3hU01lFzDK6siuI9GhFzhPxrdw-t2JD8u/exec";
+      <!-- CONFIG -->
+      <script>
+        // 1) Publica tu hoja de MENÚ como CSV y pega la URL aquí.
+        //    Soporta columnas: categoria, subcategoria, nombre, precio, costo, stock, min (o minimo / alerta)
+        const MENU_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTOCWWvu8KMMGhuRlTtbvCMEaJIWb9l3DYMi7281gfgncS5tGeO81BRpcCMk-SJIWtNyvWckt2bV4U-/pub?output=csv";
 
-      // 3) Opcional: nombre del local para imprimir comanda
-      const STORE_NAME = "OnceyDoce";
-    </script>
+        // 2) Apps Script WebApp para guardar pedidos:
+        const ORDERS_WEBAPP_URL = "https://script.google.com/macros/s/AKfycbzDOjveLDLPJI344Z9nm4DGfjytidwisPt3hU01lFzDK6siuI9GhFzhPxrdw-t2JD8u/exec";
 
+        // 3) Opcional: nombre del local para imprimir comanda
+        const STORE_NAME = "OnceyDoce";
+      </script>
 
       <!-- Filters & Customer -->
       <section class="mb-6 grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -145,8 +155,10 @@
   <script>
     // ===== Menú / productos =====
     let MENU = [];
+    // Para evitar alertas repetidas en la misma sesión
+    const ALERTED = new Set();
 
-    // ===== Multi‑Carritos =====
+    // ===== Multi-Carritos =====
     // Estructura de mesa: { id, nombre, color, items:[], cliente:'', pago:0 }
     let MESAS = [];
     let MESA_ACTUAL = null; // id
@@ -157,12 +169,49 @@
 
     // --- Storage ---
     function loadState(){
-      try{ const raw = localStorage.getItem('pos-1112-mesas'); if(raw){ const data = JSON.parse(raw); MESAS = data.mesas||[]; MESA_ACTUAL = data.actual||null; } }catch{ }
-      if(MESAS.length===0){ const id = uid(); MESAS=[{id, nombre:'Mesa 1', color:'#22c55e', items:[], cliente:'', pago:0}]; MESA_ACTUAL=id; }
+      try{
+        const raw = localStorage.getItem('pos-1112-mesas');
+        if(raw){ const data = JSON.parse(raw); MESAS = data.mesas||[]; MESA_ACTUAL = data.actual||null; }
+      }catch{}
+      if(MESAS.length===0){
+        const id = uid();
+        MESAS=[{id, nombre:'Mesa 1', color:'#22c55e', items:[], cliente:'', pago:0}];
+        MESA_ACTUAL=id;
+      }
     }
     function saveState(){ localStorage.setItem('pos-1112-mesas', JSON.stringify({mesas:MESAS, actual:MESA_ACTUAL})); }
-
     function mesaActual(){ return MESAS.find(m=>m.id===MESA_ACTUAL); }
+
+    // ====== STOCK ======
+    function reservedQtyAllMesas(rowId){
+      // suma de cantidades reservadas del producto en todas las mesas
+      return MESAS.reduce((acc,m)=> acc + (m.items||[]).filter(x=>x._rowId===rowId).reduce((a,i)=>a+i.qty,0), 0);
+    }
+    function productThreshold(p){
+      const glob = Number($('#stockMinGlobal').val()||0);
+      const own = Number(p.min||p.minimo||p.alerta||0);
+      return Number.isFinite(own) && own>0 ? own : glob;
+    }
+    function availableStock(p){
+      const stock = Number(p.stock||0);
+      if(!Number.isFinite(stock)) return 0;
+      const reserved = reservedQtyAllMesas(p._rowId);
+      return Math.max(0, stock - reserved);
+    }
+    function shouldLowStock(p){
+      const min = productThreshold(p);
+      return availableStock(p) <= min && (Number(p.stock||0) > 0);
+    }
+    function shouldNoStock(p){
+      return availableStock(p) <= 0 && (Number(p.stock||0) > 0);
+    }
+    function maybeAlertLow(p){
+      if(!shouldLowStock(p)) return;
+      const key = p._rowId;
+      if(ALERTED.has(key)) return; // ya alertado
+      ALERTED.add(key);
+      alert(`⚠️ Stock bajo de "${p.nombre}". Quedan ${availableStock(p)} (umbral ${productThreshold(p)}).`);
+    }
 
     // --- Sidebar render ---
     function renderMesas(){
@@ -198,25 +247,21 @@
       const m = { id:uid(), nombre, color, items:[], cliente:'', pago:0 };
       MESAS.push(m); MESA_ACTUAL=m.id; renderMesas();
     }
-
     function duplicarMesa(id){
       const src = MESAS.find(m=>m.id===id); if(!src) return;
       const copy = { ...src, id:uid(), nombre: src.nombre+" (copia)", items: JSON.parse(JSON.stringify(src.items)) };
       MESAS.push(copy); MESA_ACTUAL=copy.id; renderMesas();
     }
-
     function eliminarMesa(id){
       if(MESAS.length===1){ alert('Debe quedar al menos una mesa.'); return; }
       MESAS = MESAS.filter(m=>m.id!==id);
       if(MESA_ACTUAL===id){ MESA_ACTUAL = MESAS[0].id; }
       renderMesas();
     }
-
     function cambiarColorActual(color){ const m=mesaActual(); if(!m) return; m.color=color; $('#cartWrapper').css('border-color', color); saveState(); renderMesas(); }
 
     // ===== Productos y filtros =====
     function groupUnique(arr, key){ return [...new Set(arr.map(x => (x[key]||"").trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b)); }
-
     function renderFilters(){
       const cats = groupUnique(MENU, 'categoria');
       const catSel = $('#categoria');
@@ -232,7 +277,6 @@
       subSel.find('option:not(:first)').remove();
       subs.forEach(s => subSel.append(`<option value="${s}">${s}</option>`));
     }
-
     function productMatches(p){
       const q=$('#buscar').val().trim().toLowerCase(); const cat=$('#categoria').val(); const sub=$('#subcategoria').val();
       if(cat && p.categoria!==cat) return false; if(sub && p.subcategoria!==sub) return false; if(!q) return true;
@@ -240,37 +284,97 @@
     }
 
     function renderProducts(){
-      const cont=$('#listaProductos'); cont.empty(); const list=MENU.filter(productMatches); $('#countProductos').text(list.length);
+      const cont=$('#listaProductos'); cont.empty();
+      const list=MENU.filter(productMatches);
+      $('#countProductos').text(list.length);
+
       list.forEach(p=>{
-        const disp=(p.stock!==undefined && p.stock!==""?`<span class='text-xs text-gray-500'>Stock: ${p.stock}</span>`:"");
+        const dispStock = Number.isFinite(Number(p.stock)) ? availableStock(p) : null;
+        const isLow  = dispStock!==null && shouldLowStock(p);
+        const isZero = dispStock!==null && shouldNoStock(p);
+
+        const rowClasses = `${isLow?'low-stock':''} ${isZero?'no-stock':''}`;
+        const stockHtml = (dispStock!==null)
+          ? `<span class='text-xs ${isLow?'text-red-700':'text-gray-500'}'>Stock disp.: ${dispStock}${isLow?` · min ${productThreshold(p)}`:''}</span>`
+          : `<span class='text-xs text-gray-400'>Sin stock informado</span>`;
+
         cont.append(`
-          <div class="p-3 flex items-center gap-3 hover:bg-gray-50">
+          <div class="p-3 flex items-center gap-3 hover:bg-gray-50 ${rowClasses}">
             <div class="flex-1">
-              <div class="font-medium">${p.nombre}</div>
+              <div class="font-medium title">${p.nombre}</div>
               <div class="text-xs text-gray-500">${p.categoria}${p.subcategoria?" · "+p.subcategoria:""}</div>
-              ${disp}
+              ${stockHtml}
             </div>
             <div class="text-right">
               <div class="text-base font-semibold">${$fmt(p.precio)}</div>
               ${p.costo?`<div class="text-[11px] text-gray-500">Costo ${$fmt(p.costo)}</div>`:""}
             </div>
             <div>
-              <button class="px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm" data-id="${p._rowId}" data-action="add">Agregar</button>
+              <button ${isZero?'disabled':''} class="px-3 py-2 rounded-xl ${isZero?'bg-gray-200 cursor-not-allowed text-gray-500':'bg-emerald-600 hover:bg-emerald-700 text-white'} text-sm" data-id="${p._rowId}" data-action="add">Agregar</button>
             </div>
           </div>`);
       });
     }
 
     // ===== Carrito (por mesa) =====
-    function addToCart(rowId){ const m=mesaActual(); const p=MENU.find(x=>x._rowId===rowId); if(!m||!p) return; const ex=m.items.find(x=>x._rowId===rowId); if(ex){ex.qty+=1}else{m.items.push({_rowId:rowId,nombre:p.nombre,precio:Number(p.precio)||0,costo:Number(p.costo)||0,qty:1})} renderCart(); saveState(); }
-    function removeFromCart(rowId){ const m=mesaActual(); if(!m) return; m.items = m.items.filter(x=>x._rowId!==rowId); renderCart(); saveState(); }
-    function setQty(rowId,qty){ const m=mesaActual(); if(!m) return; const it=m.items.find(x=>x._rowId===rowId); if(it){ it.qty=Math.max(1,Number(qty)||1); renderCart(); saveState(); } }
+    function addToCart(rowId){
+      const m=mesaActual(); const p=MENU.find(x=>x._rowId===rowId); if(!m||!p) return;
+
+      // Chequeo de stock disponible
+      if(Number.isFinite(Number(p.stock))){
+        const disp = availableStock(p);
+        if(disp<=0){ alert(`Sin stock de "${p.nombre}"`); renderProducts(); return; }
+      }
+
+      const ex=m.items.find(x=>x._rowId===rowId);
+      if(ex){
+        // si tiene stock, no permitir pasar el disponible
+        if(Number.isFinite(Number(p.stock))){
+          const disp = availableStock(p);
+          if(disp<=0){ alert(`Sin stock de "${p.nombre}"`); renderProducts(); return; }
+        }
+        ex.qty+=1;
+      }else{
+        m.items.push({_rowId:rowId,nombre:p.nombre,precio:Number(p.precio)||0,costo:Number(p.costo)||0,qty:1});
+      }
+      maybeAlertLow(p);  // alerta si llegó al mínimo
+      renderCart(); saveState(); renderProducts(); // refresco para pintar rojo / botón disabled
+    }
+
+    function removeFromCart(rowId){
+      const m=mesaActual(); if(!m) return;
+      m.items = m.items.filter(x=>x._rowId!==rowId);
+      renderCart(); saveState(); renderProducts();
+    }
+
+    function setQty(rowId,qty){
+      const m=mesaActual(); if(!m) return;
+      const it=m.items.find(x=>x._rowId===rowId); if(!it) return;
+      qty = Math.max(1,Number(qty)||1);
+
+      const p=MENU.find(x=>x._rowId===rowId);
+      if(Number.isFinite(Number(p?.stock))){
+        // disponible si consideramos todas las mesas pero restamos lo que ya tenía este item
+        const reservedOtros = reservedQtyAllMesas(rowId) - it.qty;
+        const disp = Math.max(0, Number(p.stock||0) - reservedOtros);
+        if(qty > disp){
+          alert(`Solo hay ${disp} disponibles de "${p.nombre}".`);
+          qty = disp>0 ? disp : 1;
+        }
+      }
+      it.qty = qty;
+      maybeAlertLow(p);
+      renderCart(); saveState(); renderProducts();
+    }
 
     function renderCart(){
       const m=mesaActual(); const cont=$('#cartTable'); cont.empty(); if(!m){return}
       const CART=m.items;
       if(CART.length===0){ cont.html('<p class="text-sm text-gray-500">No hay ítems en el carrito.</p>'); }
-      else{ CART.forEach(it=>{ const linea=it.precio*it.qty; cont.append(`
+      else{
+        CART.forEach(it=>{
+          const linea=it.precio*it.qty;
+          cont.append(`
           <div class="grid grid-cols-12 gap-2 items-center py-2">
             <div class="col-span-5">
               <div class="font-medium">${it.nombre}</div>
@@ -283,7 +387,9 @@
             <div class="col-span-1 text-right">
               <button class="px-2 py-1 text-xs rounded-lg bg-gray-100 hover:bg-gray-200" data-id="${it._rowId}" data-action="del">✕</button>
             </div>
-          </div>`); }); }
+          </div>`);
+        });
+      }
 
       const total = CART.reduce((a,x)=>a+x.precio*x.qty,0);
       const costo = CART.reduce((a,x)=>a+(Number(x.costo)||0)*x.qty,0);
@@ -295,20 +401,59 @@
       const m=mesaActual(); if(!m) return;
       if(!ORDERS_WEBAPP_URL || ORDERS_WEBAPP_URL.startsWith('PASTE_')){ alert('Configura ORDERS_WEBAPP_URL'); return; }
       if(m.items.length===0){ alert('El carrito está vacío.'); return; }
+
+      // Chequeo final de stock: que nada haya quedado en negativo
+      for(const it of m.items){
+        const p = MENU.find(x=>x._rowId===it._rowId);
+        if(Number.isFinite(Number(p?.stock))){
+          const disp = availableStock(p);
+          if(it.qty > disp){
+            alert(`No hay stock suficiente de "${p.nombre}". Disponible: ${disp}.`);
+            return;
+          }
+        }
+      }
+
       const total = m.items.reduce((a,x)=>a+x.precio*x.qty,0);
       const totalCosto = m.items.reduce((a,x)=>a+(Number(x.costo)||0)*x.qty,0);
-      const payload = { timestamp:new Date().toISOString(), cliente:m.cliente||'', mesa:m.nombre, color:m.color, total, totalCosto, ganancia: total-totalCosto, pago: Number(m.pago||0), items: m.items.map(x=>({nombre:x.nombre,precio:x.precio,costo:x.costo,qty:x.qty})) };
+      const payload = {
+        timestamp:new Date().toISOString(),
+        cliente:m.cliente||'',
+        mesa:m.nombre,
+        color:m.color,
+        total, totalCosto,
+        ganancia: total-totalCosto,
+        pago: Number(m.pago||0),
+        items: m.items.map(x=>({nombre:x.nombre,precio:x.precio,costo:x.costo,qty:x.qty}))
+      };
 
       $('#btnGuardar').prop('disabled',true).text('Guardando…');
       try{
-        const res = await fetch(ORDERS_WEBAPP_URL, { method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'}, body:'payload='+encodeURIComponent(JSON.stringify(payload)) });
+        const res = await fetch(ORDERS_WEBAPP_URL, {
+          method:'POST',
+          headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},
+          body:'payload='+encodeURIComponent(JSON.stringify(payload))
+        });
         const txt = await res.text(); let data; try{ data=JSON.parse(txt) }catch{ data={ok:true} }
         if(!res.ok || data.ok===false) throw new Error((data && data.error) || 'Error al guardar');
+
+        // ✅ Descontamos del stock base (persistido en memoria; si querés, podés escribirlo a Sheets en otro endpoint)
+        for(const it of m.items){
+          const p = MENU.find(x=>x._rowId===it._rowId);
+          if(p && Number.isFinite(Number(p.stock))){
+            p.stock = Math.max(0, Number(p.stock) - it.qty);
+          }
+        }
+
         alert('Pedido guardado ✅');
         // limpiar mesa actual
-        m.items=[]; renderCart(); saveState();
-      }catch(err){ console.error(err); alert('No se pudo guardar el pedido: '+err.message); }
-      finally{ $('#btnGuardar').prop('disabled',false).text('Guardar Pedido'); }
+        m.items=[]; renderCart(); saveState(); renderProducts(); // refresco para aplicar nuevos disponibles/alertas
+      }catch(err){
+        console.error(err);
+        alert('No se pudo guardar el pedido: '+err.message);
+      }finally{
+        $('#btnGuardar').prop('disabled',false).text('Guardar Pedido');
+      }
     }
 
     function printTicket(){
@@ -332,6 +477,9 @@
       $('#listaMesas').on('click','[data-action="del"]', function(){ eliminarMesa($(this).data('id')); });
       $('#colorMesa').on('input', function(){ cambiarColorActual($(this).val()); });
 
+      // Global stock min
+      $('#stockMinGlobal').on('input', ()=> renderProducts());
+
       // Filtros
       $('#categoria').on('change', function(){ renderSubcats(); renderProducts(); });
       $('#subcategoria, #buscar').on('input change', renderProducts);
@@ -348,7 +496,7 @@
       $('#pago').on('input', function(){ const m=mesaActual(); if(!m) return; m.pago=Number($(this).val()||0); renderCart(); saveState(); });
 
       // Acciones
-      $('#btnVaciar').on('click', function(){ const m=mesaActual(); if(!m) return; m.items=[]; renderCart(); saveState(); });
+      $('#btnVaciar').on('click', function(){ const m=mesaActual(); if(!m) return; m.items=[]; renderCart(); saveState(); renderProducts(); });
       $('#btnDuplicarMesa').on('click', function(){ duplicarMesa(MESA_ACTUAL); });
       $('#btnGuardar').on('click', saveOrder);
       $('#btnComanda').on('click', printTicket);
@@ -356,14 +504,45 @@
 
     // ===== Carga de menú =====
     function normalizeRow(row, idx){
-      return { _rowId:`r${idx}`, categoria:(row.categoria||row.Categoria||row.categoría||row.Categoría||'').toString().trim(), subcategoria:(row.subcategoria||row.Subcategoria||row.Subcategoría||row['Sub-categoria']||'').toString().trim(), nombre:(row.nombre||row.producto||row.Producto||row.Nombre||'').toString().trim(), precio:Number(row.precio||row.Precio||row.price||0), costo:Number(row.costo||row.Costo||row.cost||0), stock:(row.stock||row.Stock||'') };
+      // mapeo flexible de columnas
+      const min = row.min ?? row.minimo ?? row.alerta ?? row.Min ?? row.Mínimo ?? row.Alerta;
+      const stock = row.stock ?? row.Stock ?? row.inventario ?? row.existencias;
+      return {
+        _rowId:`r${idx}`,
+        categoria:(row.categoria||row.Categoria||row.categoría||row.Categoría||'').toString().trim(),
+        subcategoria:(row.subcategoria||row.Subcategoria||row.Subcategoría||row['Sub-categoria']||'').toString().trim(),
+        nombre:(row.nombre||row.producto||row.Producto||row.Nombre||'').toString().trim(),
+        precio:Number(row.precio||row.Precio||row.price||0),
+        costo:Number(row.costo||row.Costo||row.cost||0),
+        stock: stock===''||stock==null ? '' : Number(stock),
+        min:   min===''||min==null   ? '' : Number(min)
+      };
     }
 
     async function loadMenu(){
-      if(!MENU_CSV_URL || MENU_CSV_URL.startsWith('PASTE_')){ $('#statusBadge').attr('class','inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700').text('Configura MENU_CSV_URL'); return; }
+      if(!MENU_CSV_URL || MENU_CSV_URL.startsWith('PASTE_')){
+        $('#statusBadge').attr('class','inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700').text('Configura MENU_CSV_URL'); return;
+      }
       $('#statusBadge').attr('class','inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700').text('Cargando menú…');
       return new Promise((resolve)=>{
-        Papa.parse(MENU_CSV_URL,{ download:true, header:true, complete:(results)=>{ MENU = results.data.filter(r=>r && Object.keys(r).length).map(normalizeRow).filter(x=>x.nombre && !isNaN(x.precio)); renderFilters(); renderProducts(); renderCart(); $('#statusBadge').attr('class','inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700').text('Menú sincronizado'); resolve(); }, error:()=>{ $('#statusBadge').attr('class','inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700').text('Error al cargar menú'); resolve(); } });
+        Papa.parse(MENU_CSV_URL,{
+          download:true, header:true,
+          complete:(results)=>{
+            MENU = results.data
+              .filter(r=>r && Object.keys(r).length)
+              .map(normalizeRow)
+              .filter(x=>x.nombre && !isNaN(x.precio));
+            // Limpiar alertas previas (cambia menú)
+            ALERTED.clear();
+            renderFilters(); renderProducts(); renderCart();
+            $('#statusBadge').attr('class','inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700').text('Menú sincronizado');
+            resolve();
+          },
+          error:()=>{
+            $('#statusBadge').attr('class','inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700').text('Error al cargar menú');
+            resolve();
+          }
+        });
       });
     }
 
