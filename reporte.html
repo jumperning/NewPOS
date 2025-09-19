@@ -13,6 +13,11 @@
     .chip{display:inline-flex;align-items:center;padding:.125rem .5rem;border-radius:9999px;font-size:.75rem;line-height:1rem;background:#f3f4f6;color:#374151}
     .btn{padding:.375rem .75rem;border-radius:.75rem;background:#f3f4f6}
     .btn:hover{background:#e5e7eb}
+    /* 👁️ estilos para ocultar montos */
+.hide-money .money {
+  color: transparent !important;
+  text-shadow: 0 0 8px #999;
+}
   </style>
 </head>
 <body class="bg-gray-100 text-gray-900">
@@ -107,18 +112,18 @@
       <main class="lg:col-span-9 space-y-4">
         <!-- KPIs Mensuales -->
         <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
-          <div class="bg-white rounded-2xl shadow p-4"><div class="text-xs text-gray-500">Ventas (mes)</div><div id="kpiVentas" class="text-2xl font-bold">0</div></div>
-          <div class="bg-white rounded-2xl shadow p-4"><div class="text-xs text-gray-500">Unidades (mes)</div><div id="kpiUnidades" class="text-2xl font-bold">0</div></div>
-          <div class="bg-white rounded-2xl shadow p-4"><div class="text-xs text-gray-500">Ingresos (mes)</div><div id="kpiIngresos" class="text-2xl font-bold">$0</div></div>
+          <div class="bg-white rounded-2xl shadow p-4"><div class="text-xs text-gray-500">Ventas (mes)</div><div id="kpiVentas" class="text-2xl font-bold money">0</div></div>
+          <div class="bg-white rounded-2xl shadow p-4"><div class="text-xs text-gray-500">Unidades (mes)</div><div id="kpiUnidades" class="text-2xl font-bold money">0</div></div>
+          <div class="bg-white rounded-2xl shadow p-4"><div class="text-xs text-gray-500">Ingresos (mes)</div><div id="kpiIngresos" class="text-2xl font-bold money">$0</div></div>
         </div>
 
         <!-- KPIs del Día -->
         <div class="grid grid-cols-2 sm:grid-cols-5 gap-4">
-          <div class="bg-white rounded-2xl shadow p-4"><div class="text-xs text-gray-500">Ganancia (día)</div><div id="kpiGanDia" class="text-2xl font-bold">$0</div><div id="kpiGanDiaLbl" class="text-xs text-gray-500 mt-1"></div></div>
-          <div class="bg-white rounded-2xl shadow p-4"><div class="text-xs text-gray-500">Ingresos (día)</div><div id="kpiIngDia" class="text-2xl font-bold">$0</div></div>
-          <div class="bg-white rounded-2xl shadow p-4"><div class="text-xs text-gray-500">Unidades (día)</div><div id="kpiUniDia" class="text-2xl font-bold">0</div></div>
-          <div class="bg-white rounded-2xl shadow p-4"><div class="text-xs text-gray-500">Ventas (día)</div><div id="kpiVentasDia" class="text-2xl font-bold">0</div></div>
-          <div class="bg-white rounded-2xl shadow p-4"><div class="text-xs text-gray-500">Costo (día)</div><div id="kpiCostoDia" class="text-2xl font-bold">$0</div></div>
+          <div class="bg-white rounded-2xl shadow p-4"><div class="text-xs text-gray-500">Ganancia (día)</div><div id="kpiGanDia" class="text-2xl font-bold money">$0</div><div id="kpiGanDiaLbl" class="text-xs text-gray-500 mt-1"></div></div>
+          <div class="bg-white rounded-2xl shadow p-4"><div class="text-xs text-gray-500">Ingresos (día)</div><div id="kpiIngDia" class="text-2xl font-bold money">$0</div></div>
+          <div class="bg-white rounded-2xl shadow p-4"><div class="text-xs text-gray-500">Unidades (día)</div><div id="kpiUniDia" class="text-2xl font-bold money">0</div></div>
+          <div class="bg-white rounded-2xl shadow p-4"><div class="text-xs text-gray-500">Ventas (día)</div><div id="kpiVentasDia" class="text-2xl font-bold money">0</div></div>
+          <div class="bg-white rounded-2xl shadow p-4"><div class="text-xs text-gray-500">Costo (día)</div><div id="kpiCostoDia" class="text-2xl font-bold money">$0</div></div>
         </div>
 
         <!-- Análisis por Categoría -->
@@ -268,12 +273,12 @@
           </div>
 
           <div class="grid grid-cols-2 sm:grid-cols-6 gap-4">
-            <div class="rounded-xl border p-3"><div class="text-xs text-gray-500">Ingresos (día)</div><div id="cierreIng" class="text-xl font-bold">$0</div></div>
-            <div class="rounded-xl border p-3"><div class="text-xs text-gray-500">Costo (día)</div><div id="cierreCosto" class="text-xl font-bold">$0</div></div>
-            <div class="rounded-xl border p-3"><div class="text-xs text-gray-500">Ganancia bruta</div><div id="cierreBruta" class="text-xl font-bold">$0</div></div>
-            <div class="rounded-xl border p-3"><div class="text-xs text-gray-500">Gastos del local</div><div id="cierreGastosLbl" class="text-xl font-bold">$0</div></div>
-            <div class="rounded-xl border p-3"><div class="text-xs text-gray-500">Ganancia neta</div><div id="cierreNeta" class="text-xl font-bold">$0</div></div>
-            <div class="rounded-xl border p-3"><div class="text-xs text-gray-500">Por persona</div><div id="cierrePorPersona" class="text-xl font-bold">$0</div></div>
+            <div class="rounded-xl border p-3"><div class="text-xs text-gray-500">Ingresos (día)</div><div id="cierreIng" class="text-xl font-bold money">$0</div></div>
+            <div class="rounded-xl border p-3"><div class="text-xs text-gray-500">Costo (día)</div><div id="cierreCosto" class="text-xl font-bold money">$0</div></div>
+            <div class="rounded-xl border p-3"><div class="text-xs text-gray-500">Ganancia bruta</div><div id="cierreBruta" class="text-xl font-bold money">$0</div></div>
+            <div class="rounded-xl border p-3"><div class="text-xs text-gray-500">Gastos del local</div><div id="cierreGastosLbl" class="text-xl font-bold money">$0</div></div>
+            <div class="rounded-xl border p-3"><div class="text-xs text-gray-500">Ganancia neta</div><div id="cierreNeta" class="text-xl font-bold money">$0</div></div>
+            <div class="rounded-xl border p-3"><div class="text-xs text-gray-500">Por persona</div><div id="cierrePorPersona" class="text-xl font-bold money">$0</div></div>
           </div>
         </div>
 
