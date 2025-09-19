@@ -1,3 +1,13 @@
+// ================== Mostrar/Ocultar montos ==================
+let mostrarMoneda = true;
+
+function toggleMoneda(){
+  mostrarMoneda = !mostrarMoneda;
+  document.body.classList.toggle('hide-money', !mostrarMoneda);
+}
+
+$('#btnToggleMoneda').on('click', toggleMoneda);
+
 // ================== Utils ==================
 const $fmt = n => new Intl.NumberFormat('es-AR',{style:'currency',currency:'ARS',maximumFractionDigits:0}).format(Number(n||0));
 const monthKey = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
