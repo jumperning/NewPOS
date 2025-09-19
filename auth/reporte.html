@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang='es'>
+<head>
+
+  <meta charset=\"utf-8\" />
+  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\" />
+  <title>OnceyDoce</title>
+  <script src=\"https://cdn.tailwindcss.com\"></script>
+  <style>
+    :root{ --bg:#f7fafc; --panel:#ffffff; --accent:#10b981; --text:#0f172a; }
+    body{ background:var(--bg); color:var(--text); }
+    .panel{ background:var(--panel); }
+    .btn-accent{ background:var(--accent); color:#fff; }
+    .navlink.active{ background: rgba(16,185,129,.12); }
+  </style>
+  <script defer src=\"./assets/app.js\"></script>
+
+</head>
+<body>
+  <aside class='hidden md:flex md:flex-col fixed inset-y-0 left-0 w-64 panel backdrop-blur border-r border-slate-200/60'>
+    <div class='px-5 pt-6 pb-4 flex items-center gap-3'>
+      <div class='h-10 w-10 grid place-items-center rounded-2xl text-white font-black' style='background:var(--accent)'>OD</div>
+      <div><div class='text-lg font-extrabold'>OnceyDoce</div><div class='text-xs text-slate-500'>POS & Reportes</div></div>
+    </div>
+    <nav class='mt-2 px-2 space-y-1' id='appNav'>
+      <a href='./index.html' data-route='index' class='navlink flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-slate-50'><span>POS</span></a>
+      <a href='./reporte.html' data-route='reporte' class='navlink flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-slate-50'><span>Reporte</span></a>
+      <a href='./login.html' class='mt-4 block px-3 py-2 rounded-xl hover:bg-slate-50'>Cambiar de usuario</a>
+    </nav>
+    <div class='mt-auto p-3'><button id='btnLogout' class='w-full px-3 py-2 text-sm rounded-xl border hover:bg-slate-50'>Salir</button><div class='text-[10px] text-slate-400 mt-2 text-center'>© 2025 OnceyDoce</div></div>
+  </aside>
+  <header class='md:ml-64 sticky top-0 z-40 panel border-b border-slate-200/60'>
+    <div class='px-4 py-3 flex items-center justify-between md:justify-end'><div class='md:hidden flex items-center gap-3'><div class='h-9 w-9 grid place-items-center rounded-xl text-white font-black' style='background:var(--accent)'>OD</div><span class='font-bold'>OnceyDoce</span></div><div class='text-sm text-slate-500'>Reporte</div></div>
+  </header>
+  <main class='md:ml-64 p-4 sm:p-6 space-y-6'>
+    
+<div class='max-w-6xl mx-auto space-y-4'>
+  <div class='panel rounded-2xl shadow p-6 flex items-center justify-between'>
+    <div><h1 class='text-2xl sm:text-3xl font-extrabold tracking-tight'>Reporte</h1><p class='text-sm text-slate-500'>Charts + tablas</p></div>
+    <div class='text-right'><div id='statusBadge' class='inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-600'>Listo</div></div>
+  </div>
+  <div class='panel rounded-2xl shadow p-4'><div class='text-slate-500'>[Acá tu reporte]</div><div class='h-56 grid place-items-center text-slate-400'>Placeholder</div></div>
+</div>
+
+  </main>
+</body>
+</html>

@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang='es'>
+<head>
+
+  <meta charset=\"utf-8\" />
+  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\" />
+  <title>OnceyDoce</title>
+  <script src=\"https://cdn.tailwindcss.com\"></script>
+  <style>
+    :root{ --bg:#f7fafc; --panel:#ffffff; --accent:#10b981; --text:#0f172a; }
+    body{ background:var(--bg); color:var(--text); }
+    .panel{ background:var(--panel); }
+    .btn-accent{ background:var(--accent); color:#fff; }
+    .navlink.active{ background: rgba(16,185,129,.12); }
+  </style>
+  <script defer src=\"./assets/app.js\"></script>
+
+</head>
+<body>
+  <div class='min-h-screen grid place-items-center px-4'>
+    <div class='panel max-w-sm w-full rounded-2xl shadow p-6'>
+      <div class='flex items-center gap-3 mb-5'>
+        <div class='h-10 w-10 grid place-items-center rounded-2xl text-white font-black' style='background:var(--accent)'>OD</div>
+        <div>
+          <div class='text-lg font-extrabold'>OnceyDoce</div>
+          <div class='text-xs text-slate-500'>Acceso</div>
+        </div>
+      </div>
+      <label class='block text-sm mb-1'>Email</label>
+      <input id='loginEmail' type='email' class='w-full rounded-xl border p-2' placeholder='admin@onceydoce.com'/>
+      <label class='block text-sm mt-3 mb-1'>Clave</label>
+      <input id='loginPass' type='password' class='w-full rounded-xl border p-2' placeholder='••••••'/>
+      <button id='btnLogin' class='mt-4 w-full py-2 rounded-xl btn-accent'>Entrar</button>
+      <div id='loginMsg' class='text-xs text-red-500 mt-2'></div>
+
+      <div class='mt-6'>
+        <h3 class='font-semibold mb-2'>Personalizar Tema</h3>
+        <div class='grid grid-cols-3 gap-2'>
+          <div><label class='block text-xs text-slate-500 mb-1'>Fondo</label><input type='color' id='themeBg' class='w-full h-10 rounded' value='#f7fafc'></div>
+          <div><label class='block text-xs text-slate-500 mb-1'>Panel</label><input type='color' id='themePanelColor' class='w-full h-10 rounded' value='#ffffff'></div>
+          <div><label class='block text-xs text-slate-500 mb-1'>Acento</label><input type='color' id='themeAccent' class='w-full h-10 rounded' value='#10b981'></div>
+        </div>
+        <div class='mt-3 flex gap-2'>
+          <button id='btnApplyTheme' class='px-3 py-2 rounded-xl btn-accent'>Aplicar</button>
+          <button id='btnSaveTheme' class='px-3 py-2 rounded-xl border'>Guardar</button>
+        </div>
+        <div id='themeMsg' class='text-xs text-slate-500 mt-1'></div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
