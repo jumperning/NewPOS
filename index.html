@@ -1,65 +1,89 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>POS OnceyDoce — Multi-Carritos + Google Sheets</title>
-  <!-- TailwindCSS CDN -->
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>POS — OnceyDoce</title>
+
+  <!-- Tailwind (dark mode por clase) -->
+  <script> window.tailwind = { config: { darkMode: 'class' } } </script>
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- jQuery -->
-  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-  <!-- PapaParse for CSV parsing (from Google Sheets published CSV) -->
-  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+
+  <!-- Tokens + utilidades minimal -->
   <style>
-    @media print { .no-print { display:none!important } .print\:block{display:block!important} }
-    .low-stock { background:#fef2f2 }           /* rojo muy suave */
-    .low-stock .title { color:#b91c1c }         /* rojo fuerte en título */
-    .no-stock  { opacity:0.55 }                 /* deshabilitado */
+    :root{
+      --surface:#ffffff; --surface-weak:#f6f7f9;
+      --accent-50:#fff1f2; --accent-100:#ffe4e6;
+      --accent-500:#f43f5e; --accent-600:#e11d48;
+    }
+    html,body{height:100%}
+    .container-grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:1rem}
+    @media (min-width:1024px){ .container-grid{gap:1rem} }
+
+    .card{ background:var(--surface); border-radius:1rem; border:1px solid rgba(15,23,42,.08); }
+    .btn{ padding:.5rem .875rem; border-radius:.75rem; border:1px solid rgba(15,23,42,.10); background:#fff; }
+    .btn:hover{ background:#f9fafb }
+    .btn-primary{ border:none; background:var(--accent-600); color:#fff }
+    .btn-primary:hover{ background:var(--accent-500) }
+    .btn-ghost{ border-color:rgba(15,23,42,.10); background:#fff }
+    .btn-ghost:hover{ background:#f9fafb }
+    .inp{ border-radius:.75rem; border:1px solid #e5e7eb; padding:.5rem .75rem }
+    .inp:focus{ outline:none; box-shadow:0 0 0 3px rgba(244,63,94,.15),0 0 0 1px var(--accent-500); border-color:var(--accent-500) }
+    .navlink{ display:flex; gap:.625rem; align-items:center; padding:.5rem .75rem; border-radius:.75rem; color:#334155 }
+    .navlink:hover{ background:#f3f4f6 }
+    .navlink.active{ background:var(--accent-50); color:var(--accent-600) }
+    .badge{ display:inline-flex; align-items:center; gap:.375rem; padding:.25rem .5rem; border-radius:999px; font-size:.75rem; color:#475569; background:#f3f4f6; }
   </style>
+  <style>
+  /* Tipografías en negro en todo el sitio */
+  body { color:#000; }
+  .text-slate-800,.text-slate-700,.text-slate-600,.text-slate-500,.text-slate-400,
+  .text-gray-800,.text-gray-700,.text-gray-600,.text-gray-500,.text-gray-400 {
+    color:#000 !important;
+  }
+  /* Badges y textos “muted” también en negro */
+  .badge { color:#000; }
+</style>
 </head>
-<body class="bg-gray-100 text-gray-900">
-  <div class="max-w-7xl mx-auto p-4 sm:p-6 grid grid-cols-1 lg:grid-cols-12 gap-4">
-    <!-- SIDEBAR: Carritos/Mesas -->
-    <aside class="lg:col-span-3 bg-white rounded-2xl shadow p-4 h-fit sticky top-4">
-      <div class="flex items-center justify-between mb-3">
-        <h2 class="text-lg font-semibold">Mesas / Carritos</h2>
-        <button id="btnNuevaMesa" class="px-3 py-1.5 rounded-xl text-sm bg-emerald-600 text-white hover:bg-emerald-700">+ Nueva</button>
+<body class="bg-slate-50  text-black dark:text-black">
+
+
+  <!-- Sidebar -->
+  <aside class="hidden md:flex md:flex-col fixed inset-y-0 left-0 w-64 bg-white border-r border-slate-200">
+    <div class="px-5 pt-6 pb-4 flex items-center gap-3">
+      <div class="h-9 w-9 grid place-items-center rounded-xl bg-[var(--accent-600)] text-white font-black">OD</div>
+      <div>
+        <div class="text-lg font-extrabold">OnceyDoce</div>
+        <div class="text-xs text-slate-500">POS & Reportes</div>
       </div>
+    </div>
+    <nav class="mt-2 px-2 space-y-1">
+      <a href="./index.html" class="navlink active">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12l2-2 7-7 7 7-2 2v8a1 1 0 0 1-1 1h-3m-6 0h6"/></svg>
+        <span>POS</span>
+      </a>
+      <a href="./reporte.html" class="navlink">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h6a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"/><path d="M11 11h4a2 2 0 0 1 2 2v6"/></svg>
+        <span>Reporte</span>
+      </a>
+    </nav>
+    <div class="mt-auto p-3">
+      <button id="btnLogout" class="btn w-full">Salir</button>
+      <div class="text-[10px] text-slate-400 mt-2 text-center">© 2025 OnceyDoce</div>
+    </div>
+  </aside>
 
-      <div id="listaMesas" class="space-y-2"></div>
-
-      <div class="mt-4 p-3 rounded-xl bg-gray-50">
-        <label class="block text-xs text-gray-500 mb-1">Color de la mesa seleccionada</label>
-        <input id="colorMesa" type="color" class="w-full h-10 rounded cursor-pointer" />
+  <!-- Topbar (mobile) -->
+  <header class="md:ml-64 sticky top-0 z-40 bg-white border-b border-slate-200">
+    <div class="px-4 py-3 flex items-center justify-between md:justify-end">
+      <div class="md:hidden flex items-center gap-3">
+        <div class="h-8 w-8 grid place-items-center rounded-lg bg-[var(--accent-600)] text-white font-black">OD</div>
+        <span class="font-bold">OnceyDoce</span>
       </div>
-
-      <div class="mt-4 p-3 rounded-xl bg-gray-50">
-        <label class="block text-xs text-gray-500 mb-1">Alerta stock (mínimo global)</label>
-        <div class="flex items-center gap-2">
-          <input id="stockMinGlobal" type="number" min="0" value="3" class="w-24 rounded-xl border-gray-300" />
-          <span class="text-xs text-gray-500">*Si un producto no trae su propio mínimo</span>
-        </div>
-      </div>
-
-      <p class="text-xs text-gray-500 mt-4">Consejo: duplicá una mesa para armar pedidos similares y acelerar la carga.</p>
-    </aside>
-
-    <!-- MAIN -->
-    <main class="lg:col-span-9">
-      <header class="mb-4">
-        <div class="rounded-2xl bg-white shadow p-6 flex items-center justify-between">
-          <div>
-            <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight">POS OnceyDoce</h1>
-            <p class="text-sm text-gray-500">Multi-carritos · Google Sheets</p>
-          </div>
-          <div class="text-right">
-            <div id="statusBadge" class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600">Sincronizando…</div>
-          </div>
-        </div>
-      </header>
-
-      <!-- CONFIG -->
-      <script>
+      <div class="text-sm text-slate-500">POS</div>
+    </div>
+  </header>
+   <script>
         // 1) Publica tu hoja de MENÚ como CSV y pega la URL aquí.
         //    Soporta columnas: categoria, subcategoria, nombre, precio, costo, stock, min (o minimo / alerta)
         const MENU_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTOCWWvu8KMMGhuRlTtbvCMEaJIWb9l3DYMi7281gfgncS5tGeO81BRpcCMk-SJIWtNyvWckt2bV4U-/pub?output=csv";
@@ -71,97 +95,153 @@
         const STORE_NAME = "OnceyDoce";
       </script>
 
-      <!-- Filters & Customer -->
-      <section class="mb-6 grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div class="rounded-2xl bg-white shadow p-4">
-          <label class="block text-sm font-medium mb-1" for="categoria">Categoría</label>
-          <select id="categoria" class="w-full rounded-xl border-gray-300 focus:ring-2 focus:ring-emerald-500">
-            <option value="">Todas</option>
-          </select>
-        </div>
-        <div class="rounded-2xl bg-white shadow p-4">
-          <label class="block text-sm font-medium mb-1" for="subcategoria">Subcategoría</label>
-          <select id="subcategoria" class="w-full rounded-xl border-gray-300 focus:ring-2 focus:ring-emerald-500">
-            <option value="">Todas</option>
-          </select>
-        </div>
-        <div class="rounded-2xl bg-white shadow p-4">
-          <label class="block text-sm font-medium mb-1" for="cliente">Nombre del cliente</label>
-          <input id="cliente" type="text" placeholder="Ej: Juan Pérez" class="w-full rounded-xl border-gray-300 focus:ring-2 focus:ring-emerald-500" />
-        </div>
-      </section>
+  <!-- Contenido principal -->
+  <main class="md:ml-64 p-4 sm:p-6">
+    <div class="max-w-7xl mx-auto space-y-6">
 
-      <!-- Products & Cart -->
-      <section class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <!-- Products -->
-        <div class="rounded-2xl bg-white shadow overflow-hidden">
-          <div class="p-4 border-b flex items-center gap-3">
-            <input id="buscar" type="text" placeholder="Buscar producto…" class="flex-1 rounded-xl border-gray-300 focus:ring-2 focus:ring-emerald-500" />
-            <span class="text-sm text-gray-500">Productos: <b id="countProductos">0</b></span>
+      <!-- Header POS -->
+      <div class="card p-6 flex items-center justify-between">
+        <div>
+          <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight">POS OnceyDoce</h1>
+          <p class="text-sm text-gray-500">Multi-carritos · Google Sheets</p>
+        </div>
+        <div class="text-right">
+          <div id="statusBadge" class="badge">Sincronizando…</div>
+        </div>
+      </div>
+
+      <!-- GRID POS -->
+      <div class="container-grid">
+        <!-- SIDEBAR Mesas -->
+        <aside class="lg:col-span-3 col-span-12 card p-4 h-fit lg:sticky lg:top-6">
+          <div class="flex items-center justify-between mb-3">
+            <h2 class="text-lg font-semibold">Mesas / Carritos</h2>
+            <button id="btnNuevaMesa" class="btn-primary text-sm rounded-xl p-2">+ Nueva</button>
           </div>
-          <div class="divide-y max-h-[520px] overflow-auto" id="listaProductos"></div>
-        </div>
 
-        <!-- Cart -->
-        <div id="cartWrapper" class="rounded-2xl bg-white shadow overflow-hidden border-2" style="border-color:#e5e7eb">
-          <div class="p-4 border-b flex items-center justify-between">
-            <h2 class="text-xl font-semibold"><span id="mesaTitulo">Mesa 1</span></h2>
-            <div class="flex gap-2 items-center">
-              <button id="btnDuplicarMesa" class="no-print px-3 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-sm">Duplicar</button>
-              <button id="btnVaciar" class="no-print px-3 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-sm">Vaciar</button>
+          <div id="listaMesas" class="space-y-2"></div>
+
+          <div class="mt-4 p-3 rounded-xl bg-slate-50">
+            <label class="block text-xs text-gray-500 mb-1">Color de la mesa seleccionada</label>
+            <input id="colorMesa" type="color" class="w-full h-10 rounded cursor-pointer" />
+          </div>
+
+          <div class="mt-4 p-3 rounded-xl bg-slate-50">
+            <label class="block text-xs text-gray-500 mb-1">Alerta stock (mínimo global)</label>
+            <div class="flex items-center gap-2">
+              <input id="stockMinGlobal" type="number" min="0" value="3" class="inp w-24" />
+              <span class="text-xs text-gray-500">*Si un producto no trae su propio mínimo</span>
             </div>
           </div>
-          <div class="p-4">
-            <div id="cartTable" class="w-full text-sm"></div>
-            <hr class="my-4" />
-            <div class="grid grid-cols-2 gap-4 text-sm">
-              <div class="space-y-2">
-                <div class="flex items-center justify-between"><span>Total bruto</span><span id="totalBruto" class="font-semibold">$0</span></div>
-                <div class="flex items-center justify-between"><span>Costo</span><span id="totalCosto" class="font-semibold">$0</span></div>
-                <div class="flex items-center justify-between"><span>Ganancia</span><span id="totalGanancia" class="font-semibold">$0</span></div>
+
+          <p class="text-xs text-gray-500 mt-4">Consejo: duplicá una mesa para armar pedidos similares y acelerar la carga.</p>
+        </aside>
+
+        <!-- MAIN POS -->
+        <section class="lg:col-span-9 col-span-12 space-y-6">
+          <!-- CONFIG -->
+          <script>
+            const MENU_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTOCWWvu8KMMGhuRlTtbvCMEaJIWb9l3DYMi7281gfgncS5tGeO81BRpcCMk-SJIWtNyvWckt2bV4U-/pub?output=csv";
+            const ORDERS_WEBAPP_URL = "https://script.google.com/macros/s/AKfycbzDOjveLDLPJI344Z9nm4DGfjytidwisPt3hU01lFzDK6siuI9GhFzhPxrdw-t2JD8u/exec";
+            const STORE_NAME = "OnceyDoce";
+          </script>
+
+          <!-- Filtros -->
+          <section class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <div class="card p-4">
+              <label class="block text-sm font-medium mb-1" for="categoria">Categoría</label>
+              <select id="categoria" class="inp w-full">
+                <option value="">Todas</option>
+              </select>
+            </div>
+            <div class="card p-4">
+              <label class="block text-sm font-medium mb-1" for="subcategoria">Subcategoría</label>
+              <select id="subcategoria" class="inp w-full">
+                <option value="">Todas</option>
+              </select>
+            </div>
+            <div class="card p-4">
+              <label class="block text-sm font-medium mb-1" for="cliente">Nombre del cliente</label>
+              <input id="cliente" type="text" placeholder="Ej: Juan Pérez" class="inp w-full" />
+            </div>
+          </section>
+
+          <!-- Productos & Carrito -->
+          <section class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Productos -->
+            <div class="card overflow-hidden">
+              <div class="p-4 border-b flex items-center gap-3">
+                <input id="buscar" type="text" placeholder="Buscar producto…" class="inp flex-1" />
+                <span class="text-sm text-gray-500">Productos: <b id="countProductos">0</b></span>
               </div>
-              <div class="space-y-2">
-                <label class="block text-sm" for="pago">Pago ($)</label>
-                <input id="pago" type="number" min="0" class="w-full rounded-xl border-gray-300 focus:ring-2 focus:ring-emerald-500"/>
-                <div class="flex items-center justify-between"><span>Vuelto</span><span id="vuelto" class="font-semibold">$0</span></div>
+              <div class="divide-y max-h-[520px] overflow-auto" id="listaProductos"></div>
+            </div>
+
+            <!-- Carrito -->
+            <div id="cartWrapper" class="card overflow-hidden border-2" style="border-color:#e5e7eb">
+              <div class="p-4 border-b flex items-center justify-between">
+                <h2 class="text-xl font-semibold"><span id="mesaTitulo">Mesa 1</span></h2>
+                <div class="flex gap-2 items-center">
+                  <button id="btnDuplicarMesa" class="btn btn-ghost text-sm rounded-xl">Duplicar</button>
+                  <button id="btnVaciar" class="btn btn-ghost text-sm rounded-xl">Vaciar</button>
+                </div>
+              </div>
+              <div class="p-4">
+                <div id="cartTable" class="w-full text-sm"></div>
+                <hr class="my-4" />
+                <div class="grid grid-cols-2 gap-4 text-sm">
+                  <div class="space-y-2">
+                    <div class="flex items-center justify-between"><span>Total bruto</span><span id="totalBruto" class="font-semibold">$0</span></div>
+                    <div class="flex items-center justify-between"><span>Costo</span><span id="totalCosto" class="font-semibold">$0</span></div>
+                    <div class="flex items-center justify-between"><span>Ganancia</span><span id="totalGanancia" class="font-semibold">$0</span></div>
+                  </div>
+                  <div class="space-y-2">
+                    <label class="block text-sm" for="pago">Pago ($)</label>
+                    <input id="pago" type="number" min="0" class="inp w-full"/>
+                    <div class="flex items-center justify-between"><span>Vuelto</span><span id="vuelto" class="font-semibold">$0</span></div>
+                  </div>
+                </div>
+              </div>
+              <div class="p-4 border-t flex flex-col sm:flex-row gap-3 sm:gap-4">
+                <button id="btnGuardar" class="no-print flex-1 btn-primary rounded-2xl py-3 font-semibold">Guardar Pedido</button>
+                <button id="btnComanda" class="no-print flex-1 btn-primary rounded-2xl py-3 font-semibold">Imprimir Comanda</button>
               </div>
             </div>
-          </div>
-          <div class="p-4 border-t flex flex-col sm:flex-row gap-3 sm:gap-4">
-            <button id="btnGuardar" class="no-print flex-1 px-4 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold">Guardar Pedido</button>
-            <button id="btnComanda" class="no-print flex-1 px-4 py-3 rounded-2xl bg-amber-500 hover:bg-amber-600 text-white font-semibold">Imprimir Comanda</button>
-          </div>
-        </div>
-      </section>
+          </section>
 
-      <!-- Printable ticket (hidden) -->
-      <section id="ticket" class="hidden print:block p-6">
-        <div class="max-w-sm mx-auto">
-          <h2 class="text-center text-xl font-bold mb-2">{{STORE}}</h2>
-          <div class="text-xs text-center mb-4" id="ticketMeta"></div>
-          <div id="ticketItems" class="text-sm"></div>
-          <hr class="my-2"/>
-          <div class="text-sm">
-            <div class="flex justify-between"><span>Total</span><span id="ticketTotal"></span></div>
-            <div class="flex justify-between"><span>Pago</span><span id="ticketPago"></span></div>
-            <div class="flex justify-between"><span>Vuelto</span><span id="ticketVuelto"></span></div>
-          </div>
-          <p class="text-center text-xs mt-4">¡Gracias por su compra!</p>
-        </div>
-      </section>
-    </main>
-  </div>
+          <!-- Ticket (impresión) -->
+          <section id="ticket" class="hidden print:block p-6">
+            <div class="max-w-sm mx-auto">
+              <h2 class="text-center text-xl font-bold mb-2">{{STORE}}</h2>
+              <div class="text-xs text-center mb-4" id="ticketMeta"></div>
+              <div id="ticketItems" class="text-sm"></div>
+              <hr class="my-2"/>
+              <div class="text-sm">
+                <div class="flex justify-between"><span>Total</span><span id="ticketTotal"></span></div>
+                <div class="flex justify-between"><span>Pago</span><span id="ticketPago"></span></div>
+                <div class="flex justify-between"><span>Vuelto</span><span id="ticketVuelto"></span></div>
+              </div>
+              <p class="text-center text-xs mt-4">¡Gracias por su compra!</p>
+            </div>
+          </section>
+        </section>
+      </div>
+    </div>
+  </main>
 
+  <!-- Librerías -->
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+
+  <!-- App POS -->
   <script>
     // ===== Menú / productos =====
     let MENU = [];
-    // Para evitar alertas repetidas en la misma sesión
     const ALERTED = new Set();
 
     // ===== Multi-Carritos =====
-    // Estructura de mesa: { id, nombre, color, items:[], cliente:'', pago:0 }
     let MESAS = [];
-    let MESA_ACTUAL = null; // id
+    let MESA_ACTUAL = null;
 
     // ===== Utils =====
     const $fmt = (n) => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(Number(n||0));
@@ -175,7 +255,7 @@
       }catch{}
       if(MESAS.length===0){
         const id = uid();
-        MESAS=[{id, nombre:'Mesa 1', color:'#22c55e', items:[], cliente:'', pago:0}];
+        MESAS=[{id, nombre:'Mesa 1', color:'#e11d48', items:[], cliente:'', pago:0}];
         MESA_ACTUAL=id;
       }
     }
@@ -184,7 +264,6 @@
 
     // ====== STOCK ======
     function reservedQtyAllMesas(rowId){
-      // suma de cantidades reservadas del producto en todas las mesas
       return MESAS.reduce((acc,m)=> acc + (m.items||[]).filter(x=>x._rowId===rowId).reduce((a,i)=>a+i.qty,0), 0);
     }
     function productThreshold(p){
@@ -208,7 +287,7 @@
     function maybeAlertLow(p){
       if(!shouldLowStock(p)) return;
       const key = p._rowId;
-      if(ALERTED.has(key)) return; // ya alertado
+      if(ALERTED.has(key)) return;
       ALERTED.add(key);
       alert(`⚠️ Stock bajo de "${p.nombre}". Quedan ${availableStock(p)} (umbral ${productThreshold(p)}).`);
     }
@@ -220,16 +299,16 @@
       MESAS.forEach(m=>{
         const active = m.id===MESA_ACTUAL;
         cont.append(`
-          <div class="group flex items-center justify-between gap-2 p-2 rounded-xl border ${active?'border-emerald-500 bg-emerald-50':'border-gray-200 hover:bg-gray-50'}">
+          <div class="group flex items-center justify-between gap-2 p-2 rounded-xl border ${active?'border-[var(--accent-600)] bg-[var(--accent-50)]':'border-gray-200 hover:bg-gray-50'}">
             <button class="flex items-center gap-2 flex-1 text-left" data-action="switch" data-id="${m.id}">
               <span class="inline-block w-3 h-3 rounded-full" style="background:${m.color}"></span>
               <span class="font-medium truncate">${m.nombre}</span>
               <span class="text-xs text-gray-500 ml-auto">${m.items.reduce((a,x)=>a+x.qty,0)} ítems</span>
             </button>
             <div class="opacity-0 group-hover:opacity-100 transition flex gap-1">
-              <button class="px-2 py-1 text-xs rounded-lg bg-gray-100" title="Renombrar" data-action="rename" data-id="${m.id}">✎</button>
-              <button class="px-2 py-1 text-xs rounded-lg bg-gray-100" title="Duplicar" data-action="dup" data-id="${m.id}">⧉</button>
-              <button class="px-2 py-1 text-xs rounded-lg bg-gray-100" title="Eliminar" data-action="del" data-id="${m.id}">✕</button>
+              <button class="btn btn-ghost text-xs px-2 py-1" title="Renombrar" data-action="rename" data-id="${m.id}">✎</button>
+              <button class="btn btn-ghost text-xs px-2 py-1" title="Duplicar" data-action="dup" data-id="${m.id}">⧉</button>
+              <button class="btn btn-ghost text-xs px-2 py-1" title="Eliminar" data-action="del" data-id="${m.id}">✕</button>
             </div>
           </div>`);
       });
@@ -243,8 +322,8 @@
       saveState();
     }
 
-    function nuevaMesa(nombre='Mesa '+(MESAS.length+1), color='#22c55e'){
-      const m = { id:uid(), nombre, color, items:[], cliente:'', pago:0 };
+    function nuevaMesa(nombre='Mesa '+(MESAS.length+1), color='var(--accent-600)'){
+      const m = { id:uid(), nombre, color:'#e11d48', items:[], cliente:'', pago:0 };
       MESAS.push(m); MESA_ACTUAL=m.id; renderMesas();
     }
     function duplicarMesa(id){
@@ -310,7 +389,7 @@
               ${p.costo?`<div class="text-[11px] text-gray-500">Costo ${$fmt(p.costo)}</div>`:""}
             </div>
             <div>
-              <button ${isZero?'disabled':''} class="px-3 py-2 rounded-xl ${isZero?'bg-gray-200 cursor-not-allowed text-gray-500':'bg-emerald-600 hover:bg-emerald-700 text-white'} text-sm" data-id="${p._rowId}" data-action="add">Agregar</button>
+              <button ${isZero?'disabled':''} class="text-sm rounded-xl ${isZero?'btn cursor-not-allowed opacity-60':'btn-primary'}" data-id="${p._rowId}" data-action="add">Agregar</button>
             </div>
           </div>`);
       });
@@ -320,7 +399,6 @@
     function addToCart(rowId){
       const m=mesaActual(); const p=MENU.find(x=>x._rowId===rowId); if(!m||!p) return;
 
-      // Chequeo de stock disponible
       if(Number.isFinite(Number(p.stock))){
         const disp = availableStock(p);
         if(disp<=0){ alert(`Sin stock de "${p.nombre}"`); renderProducts(); return; }
@@ -328,7 +406,6 @@
 
       const ex=m.items.find(x=>x._rowId===rowId);
       if(ex){
-        // si tiene stock, no permitir pasar el disponible
         if(Number.isFinite(Number(p.stock))){
           const disp = availableStock(p);
           if(disp<=0){ alert(`Sin stock de "${p.nombre}"`); renderProducts(); return; }
@@ -337,8 +414,8 @@
       }else{
         m.items.push({_rowId:rowId,nombre:p.nombre,precio:Number(p.precio)||0,costo:Number(p.costo)||0,qty:1});
       }
-      maybeAlertLow(p);  // alerta si llegó al mínimo
-      renderCart(); saveState(); renderProducts(); // refresco para pintar rojo / botón disabled
+      maybeAlertLow(p);
+      renderCart(); saveState(); renderProducts();
     }
 
     function removeFromCart(rowId){
@@ -354,7 +431,6 @@
 
       const p=MENU.find(x=>x._rowId===rowId);
       if(Number.isFinite(Number(p?.stock))){
-        // disponible si consideramos todas las mesas pero restamos lo que ya tenía este item
         const reservedOtros = reservedQtyAllMesas(rowId) - it.qty;
         const disp = Math.max(0, Number(p.stock||0) - reservedOtros);
         if(qty > disp){
@@ -381,11 +457,11 @@
               <div class="text-xs text-gray-500">${$fmt(it.precio)} c/u</div>
             </div>
             <div class="col-span-3">
-              <input type="number" min="1" value="${it.qty}" data-id="${it._rowId}" data-action="qty" class="w-24 rounded-xl border-gray-300"/>
+              <input type="number" min="1" value="${it.qty}" data-id="${it._rowId}" data-action="qty" class="inp w-24"/>
             </div>
             <div class="col-span-3 text-right font-semibold">${$fmt(linea)}</div>
             <div class="col-span-1 text-right">
-              <button class="px-2 py-1 text-xs rounded-lg bg-gray-100 hover:bg-gray-200" data-id="${it._rowId}" data-action="del">✕</button>
+              <button class="btn btn-ghost text-xs px-2 py-1" data-id="${it._rowId}" data-action="del">✕</button>
             </div>
           </div>`);
         });
@@ -402,7 +478,6 @@
       if(!ORDERS_WEBAPP_URL || ORDERS_WEBAPP_URL.startsWith('PASTE_')){ alert('Configura ORDERS_WEBAPP_URL'); return; }
       if(m.items.length===0){ alert('El carrito está vacío.'); return; }
 
-      // Chequeo final de stock: que nada haya quedado en negativo
       for(const it of m.items){
         const p = MENU.find(x=>x._rowId===it._rowId);
         if(Number.isFinite(Number(p?.stock))){
@@ -437,7 +512,6 @@
         const txt = await res.text(); let data; try{ data=JSON.parse(txt) }catch{ data={ok:true} }
         if(!res.ok || data.ok===false) throw new Error((data && data.error) || 'Error al guardar');
 
-        // ✅ Descontamos del stock base (persistido en memoria; si querés, podés escribirlo a Sheets en otro endpoint)
         for(const it of m.items){
           const p = MENU.find(x=>x._rowId===it._rowId);
           if(p && Number.isFinite(Number(p.stock))){
@@ -446,8 +520,7 @@
         }
 
         alert('Pedido guardado ✅');
-        // limpiar mesa actual
-        m.items=[]; renderCart(); saveState(); renderProducts(); // refresco para aplicar nuevos disponibles/alertas
+        m.items=[]; renderCart(); saveState(); renderProducts();
       }catch(err){
         console.error(err);
         alert('No se pudo guardar el pedido: '+err.message);
@@ -469,7 +542,6 @@
 
     // ===== Eventos UI =====
     function bindEvents(){
-      // Sidebar
       $('#btnNuevaMesa').on('click', ()=> nuevaMesa());
       $('#listaMesas').on('click','[data-action="switch"]', function(){ MESA_ACTUAL=$(this).data('id'); renderMesas(); });
       $('#listaMesas').on('click','[data-action="rename"]', function(){ const id=$(this).data('id'); const m=MESAS.find(x=>x.id===id); if(!m) return; const nv = prompt('Nuevo nombre', m.nombre); if(nv){ m.nombre=nv; if(MESA_ACTUAL===id) $('#mesaTitulo').text(nv); renderMesas(); } });
@@ -477,25 +549,19 @@
       $('#listaMesas').on('click','[data-action="del"]', function(){ eliminarMesa($(this).data('id')); });
       $('#colorMesa').on('input', function(){ cambiarColorActual($(this).val()); });
 
-      // Global stock min
       $('#stockMinGlobal').on('input', ()=> renderProducts());
 
-      // Filtros
       $('#categoria').on('change', function(){ renderSubcats(); renderProducts(); });
       $('#subcategoria, #buscar').on('input change', renderProducts);
 
-      // Productos
       $('#listaProductos').on('click','button[data-action="add"]', function(){ addToCart($(this).data('id')); });
 
-      // Carrito
       $('#cartTable').on('click','button[data-action="del"]', function(){ removeFromCart($(this).data('id')); });
       $('#cartTable').on('input','input[data-action="qty"]', function(){ setQty($(this).data('id'), $(this).val()); });
 
-      // Cliente / Pago por mesa
       $('#cliente').on('input', function(){ const m=mesaActual(); if(!m) return; m.cliente=$(this).val(); saveState(); });
       $('#pago').on('input', function(){ const m=mesaActual(); if(!m) return; m.pago=Number($(this).val()||0); renderCart(); saveState(); });
 
-      // Acciones
       $('#btnVaciar').on('click', function(){ const m=mesaActual(); if(!m) return; m.items=[]; renderCart(); saveState(); renderProducts(); });
       $('#btnDuplicarMesa').on('click', function(){ duplicarMesa(MESA_ACTUAL); });
       $('#btnGuardar').on('click', saveOrder);
@@ -504,7 +570,6 @@
 
     // ===== Carga de menú =====
     function normalizeRow(row, idx){
-      // mapeo flexible de columnas
       const min = row.min ?? row.minimo ?? row.alerta ?? row.Min ?? row.Mínimo ?? row.Alerta;
       const stock = row.stock ?? row.Stock ?? row.inventario ?? row.existencias;
       return {
@@ -521,9 +586,9 @@
 
     async function loadMenu(){
       if(!MENU_CSV_URL || MENU_CSV_URL.startsWith('PASTE_')){
-        $('#statusBadge').attr('class','inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700').text('Configura MENU_CSV_URL'); return;
+        $('#statusBadge').attr('class','badge').text('Configura MENU_CSV_URL'); return;
       }
-      $('#statusBadge').attr('class','inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700').text('Cargando menú…');
+      $('#statusBadge').attr('class','badge').text('Cargando menú…');
       return new Promise((resolve)=>{
         Papa.parse(MENU_CSV_URL,{
           download:true, header:true,
@@ -532,14 +597,13 @@
               .filter(r=>r && Object.keys(r).length)
               .map(normalizeRow)
               .filter(x=>x.nombre && !isNaN(x.precio));
-            // Limpiar alertas previas (cambia menú)
             ALERTED.clear();
             renderFilters(); renderProducts(); renderCart();
-            $('#statusBadge').attr('class','inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700').text('Menú sincronizado');
+            $('#statusBadge').attr('class','badge').text('Menú sincronizado');
             resolve();
           },
           error:()=>{
-            $('#statusBadge').attr('class','inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700').text('Error al cargar menú');
+            $('#statusBadge').attr('class','badge').text('Error al cargar menú');
             resolve();
           }
         });
