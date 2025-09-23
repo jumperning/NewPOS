@@ -47,7 +47,28 @@
 </head>
 <body class="bg-slate-50  text-black dark:text-black">
 
+  <header>
+    <div>
+      <strong>OnceyDoce POS</strong>
+      <span id="user-badge" class="chip" style="display:none;"></span>
+    </div>
+    <div>
+      <button id="login-btn" class="btn">Iniciar sesión</button>
+      <button id="logout-btn" class="btn" style="display:none;">Salir</button>
+    </div>
+  </header>
 
+  <!-- Pantalla bloqueada (no logueado) -->
+  <section id="screen-locked">
+    <div style="text-align:center;">
+      <h1>Acceso restringido</h1>
+      <p>Iniciá sesión para usar el POS.</p>
+      <button id="unlock-btn" class="btn">Iniciar sesión</button>
+    </div>
+  </section>
+
+
+  
   <!-- Sidebar -->
   <aside class="hidden md:flex md:flex-col fixed inset-y-0 left-0 w-64 bg-white border-r border-slate-200">
     <div class="px-5 pt-6 pb-4 flex items-center gap-3">
