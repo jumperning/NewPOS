@@ -44,44 +44,10 @@
   /* Badges y textos “muted” también en negro */
   .badge { color:#000; }
 </style>
-  <style>
-    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; margin:0; }
-    header { display:flex; align-items:center; justify-content:space-between; padding:12px 16px; border-bottom:1px solid #eee; }
-    .btn { cursor:pointer; padding:8px 12px; border-radius:10px; border:1px solid #ddd; background:#fff; }
-    .btn:disabled { opacity:.6; cursor:not-allowed; }
-    #screen-locked { display:grid; place-items:center; min-height:75vh; }
-    #app { display:none; } /* se muestra tras login */
-    .chip { padding:4px 8px; border-radius:999px; border:1px solid #ddd; font-size:12px; }
-  </style>
-  <!-- SDK Auth0 por CDN -->
-  <script src="https://cdn.auth0.com/js/auth0-spa-js/2.1/auth0-spa-js.production.js" defer></script>
-  <!-- Tu lógica de auth -->
-  <script defer src="./auth.js"></script>
 </head>
 <body class="bg-slate-50  text-black dark:text-black">
 
-  <header>
-    <div>
-      <strong>OnceyDoce POS</strong>
-      <span id="user-badge" class="chip" style="display:none;"></span>
-    </div>
-    <div>
-      <button id="login-btn" class="btn">Iniciar sesión</button>
-      <button id="logout-btn" class="btn" style="display:none;">Salir</button>
-    </div>
-  </header>
 
-  <!-- Pantalla bloqueada (no logueado) -->
-  <section id="screen-locked">
-    <div style="text-align:center;">
-      <h1>Acceso restringido</h1>
-      <p>Iniciá sesión para usar el POS.</p>
-      <button id="unlock-btn" class="btn">Iniciar sesión</button>
-    </div>
-  </section>
-
-
-  
   <!-- Sidebar -->
   <aside class="hidden md:flex md:flex-col fixed inset-y-0 left-0 w-64 bg-white border-r border-slate-200">
     <div class="px-5 pt-6 pb-4 flex items-center gap-3">
@@ -92,31 +58,14 @@
       </div>
     </div>
     <nav class="mt-2 px-2 space-y-1">
-      <a href="./index.html" class="navlink ${location.pathname.endsWith('index.html') ? 'active' : ''}" title="POS">
-    <!-- Cash/Ticket -->
-    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-      <!-- base -->
-      <path d="M4 10h16a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-6a2 2 0 0 1 2-2Z"/>
-      <!-- gaveta -->
-      <path d="M7 16h10"/>
-      <path d="M9.5 13h5"/>
-      <!-- ticketcito arriba -->
-      <path d="M9 4h6v4l-1-.6-1 .6-1-.6-1 .6-1-.6-1 .6V4Z"/>
-    </svg>
-    <span>POS</span>
-  </a>
-
-  <!-- Reporte -->
-  <a href="./reporte.html" class="navlink ${location.pathname.endsWith('reporte.html') ? 'active' : ''}" title="Reporte">
-    <!-- Chart bars -->
-    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-      <path d="M3 20h18"/>
-      <rect x="5" y="11" width="3" height="6" rx="1"/>
-      <rect x="10.5" y="8" width="3" height="9" rx="1"/>
-      <rect x="16" y="5" width="3" height="12" rx="1"/>
-    </svg>
-    <span>Reporte</span>
-  </a>
+      <a href="./index.html" class="navlink active">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12l2-2 7-7 7 7-2 2v8a1 1 0 0 1-1 1h-3m-6 0h6"/></svg>
+        <span>POS</span>
+      </a>
+      <a href="./reporte.html" class="navlink">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h6a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"/><path d="M11 11h4a2 2 0 0 1 2 2v6"/></svg>
+        <span>Reporte</span>
+      </a>
     </nav>
     <div class="mt-auto p-3">
       <button id="btnLogout" class="btn w-full">Salir</button>
