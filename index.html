@@ -43,6 +43,34 @@
   }
   /* Badges y textos “muted” también en negro */
   .badge { color:#000; }
+    <style>
+  /* Solo impresión */
+  @media print {
+    /* Ancho exacto del rollo */
+    html, body { margin:0; padding:0; width:58mm; }
+    /* “Alto automático”: el contenido define la altura de la página */
+    @page { size: 58mm auto; margin: 0; }
+
+    /* Contenedor del ticket/comanda */
+    .print-sheet {
+      width:58mm;
+      padding: 0 2mm;          /* un pelín de sangría lateral */
+      box-sizing: border-box;
+    }
+
+    /* Quita todo lo que no sea ticket/comanda */
+    .no-print, header, aside, nav, .container-grid > :not(#ticket, #comanda) { display:none !important; }
+    #ticket, #comanda { display:block !important; }
+
+    /* Tipografía compacta para ahorrar largo */
+    #ticket, #comanda { font-size:12px; line-height:1.25; }
+    #ticket hr, #comanda hr { border:0; border-top:1px dashed #000; margin:.35rem 0; }
+
+    /* Evita saltos raros */
+    .avoid-break { break-inside: avoid; page-break-inside: avoid; }
+  }
+</style>
+
   </style>
 
   <!-- CSS de impresión térmica (58mm) -->
