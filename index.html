@@ -8,6 +8,28 @@
   <!-- Tailwind (dark mode por clase) -->
   <script> window.tailwind = { config: { darkMode: 'class' } } </script>
   <script src="https://cdn.tailwindcss.com"></script>
+<style>
+  /* Área física del ticket: 58 mm de ancho */
+  .print-sheet { width: 58mm; margin: 0 auto; }
+
+  @media print {
+    @page { size: 58mm 200mm; margin: 0 } /* Chrome ignora height auto; 200mm es “techo” */
+    html, body { width: 58mm; margin:0; padding:0; background:#fff !important; }
+    /* ocultar todo menos la sección a imprimir */
+    .no-print, header, aside, nav, .container-grid, main > * { display:none !important; }
+    #ticketCliente, #comandaCocina { display:block !important; }
+  }
+
+  /* Tipografías compactas para el ticket */
+  #ticketCliente, #comandaCocina {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+    font-size: 11px; line-height: 1.25;
+  }
+  #ticketCliente .row, #comandaCocina .row {
+    display:flex; justify-content:space-between; gap:8px; border-bottom:1px dashed #999; padding:2px 0;
+  }
+  #ticketCliente .row:last-child, #comandaCocina .row:last-child { border-bottom:0; }
+</style>
 
   <!-- Tokens + utilidades minimal -->
   <style>
@@ -261,6 +283,7 @@
 
           <!-- Hojas de impresión -->
           <!-- Ticket Cliente -->
+          
           <section id="ticketCliente" class="print-sheet">
             <div class="title" id="tck-store">OnceyDoce</div>
             <div class="muted" id="tck-meta">--</div>
