@@ -43,7 +43,28 @@
   }
   /* Badges y textos “muted” también en negro */
   .badge { color:#000; }
-</style>
+  </style>
+
+  <!-- CSS de impresión térmica (58mm) -->
+  <style>
+    @page { size: 58mm auto; margin: 0; }
+    .print-sheet{
+      display:none;
+      width:58mm;
+      padding:8px 6px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      color:#000;
+    }
+    .print-sheet hr{ border:0; border-top:1px dashed #000; margin:6px 0; }
+    .print-sheet .row{ display:flex; justify-content:space-between; gap:8px; }
+    .print-sheet .title{ text-align:center; font-weight:700; font-size:14px; }
+    .print-sheet .muted{ font-size:10px; text-align:center; }
+    @media print {
+      body * { visibility: hidden !important; }
+      .print-sheet, .print-sheet * { visibility: visible !important; }
+      .print-sheet { display:block !important; position:absolute; left:0; top:0; }
+    }
+  </style>
 </head>
 <body class="bg-slate-50  text-black dark:text-black">
 
@@ -204,26 +225,36 @@
               </div>
               <div class="p-4 border-t flex flex-col sm:flex-row gap-3 sm:gap-4">
                 <button id="btnGuardar" class="no-print flex-1 btn-primary rounded-2xl py-3 font-semibold">Guardar Pedido</button>
+                <button id="btnTicket"  class="no-print flex-1 btn-primary rounded-2xl py-3 font-semibold">Imprimir Ticket</button>
                 <button id="btnComanda" class="no-print flex-1 btn-primary rounded-2xl py-3 font-semibold">Imprimir Comanda</button>
               </div>
             </div>
           </section>
 
-          <!-- Ticket (impresión) -->
-          <section id="ticket" class="hidden print:block p-6">
-            <div class="max-w-sm mx-auto">
-              <h2 class="text-center text-xl font-bold mb-2">{{STORE}}</h2>
-              <div class="text-xs text-center mb-4" id="ticketMeta"></div>
-              <div id="ticketItems" class="text-sm"></div>
-              <hr class="my-2"/>
-              <div class="text-sm">
-                <div class="flex justify-between"><span>Total</span><span id="ticketTotal"></span></div>
-                <div class="flex justify-between"><span>Pago</span><span id="ticketPago"></span></div>
-                <div class="flex justify-between"><span>Vuelto</span><span id="ticketVuelto"></span></div>
-              </div>
-              <p class="text-center text-xs mt-4">¡Gracias por su compra!</p>
-            </div>
+          <!-- Hojas de impresión -->
+          <!-- Ticket Cliente -->
+          <section id="ticketCliente" class="print-sheet">
+            <div class="title" id="tck-store">OnceyDoce</div>
+            <div class="muted" id="tck-meta">--</div>
+            <hr>
+            <div id="tck-items"></div>
+            <hr>
+            <div class="row"><span>Total</span><span id="tck-total">$0</span></div>
+            <div class="row"><span>Pago</span><span id="tck-pago">$0</span></div>
+            <div class="row"><span>Vuelto</span><span id="tck-vuelto">$0</span></div>
+            <div class="muted" style="margin-top:6px">¡Gracias por su compra!</div>
           </section>
+
+          <!-- Comanda Cocina -->
+          <section id="comandaCocina" class="print-sheet">
+            <div class="title" id="cmd-store">ONCEYDOCE — COMANDA</div>
+            <div class="muted" id="cmd-meta">--</div>
+            <hr>
+            <div id="cmd-items"></div>
+            <hr>
+            <div class="muted">Preparar y despachar</div>
+          </section>
+
         </section>
       </div>
     </div>
@@ -529,15 +560,57 @@
       }
     }
 
-    function printTicket(){
-      const m=mesaActual(); if(!m) return;
+    // ==== Construcción de hojas y disparo de impresión ====
+    function buildTicketCliente(m){
       const meta = `${new Date().toLocaleString('es-AR')} · ${m.nombre} · Cliente: ${m.cliente||'-'}`;
-      $('#ticketMeta').text(meta); $('#ticket').html($('#ticket').html().replace('{{STORE}}', STORE_NAME));
-      const itemsHtml = m.items.map(x=>`<div class="flex justify-between"><span>${x.qty}× ${x.nombre}</span><span>${$fmt(x.qty*x.precio)}</span></div>`).join('');
-      $('#ticketItems').html(itemsHtml);
-      const total = m.items.reduce((a,x)=>a+x.precio*x.qty,0); const pago = Number(m.pago||0); const vuelto = Math.max(0, pago-total);
-      $('#ticketTotal').text($fmt(total)); $('#ticketPago').text($fmt(pago)); $('#ticketVuelto').text($fmt(vuelto));
+      document.getElementById('tck-store').textContent = STORE_NAME || 'OnceyDoce';
+      document.getElementById('tck-meta').textContent  = meta;
+      const cont = document.getElementById('tck-items');
+      cont.innerHTML='';
+      m.items.forEach(x=>{
+        const row=document.createElement('div'); row.className='row';
+        row.innerHTML=`<span>${x.qty}× ${x.nombre}</span><span>${$fmt(x.qty*x.precio)}</span>`;
+        cont.appendChild(row);
+      });
+      const total = m.items.reduce((a,x)=>a + x.precio*x.qty, 0);
+      const pago  = Number(m.pago||0);
+      const vuelto= Math.max(0, pago-total);
+      document.getElementById('tck-total').textContent  = $fmt(total);
+      document.getElementById('tck-pago').textContent   = $fmt(pago);
+      document.getElementById('tck-vuelto').textContent = $fmt(vuelto);
+    }
+
+    function buildComandaCocina(m){
+      const meta = `${new Date().toLocaleString('es-AR')} · ${m.nombre} · Cliente: ${m.cliente||'-'}`;
+      document.getElementById('cmd-store').textContent = (STORE_NAME||'OnceyDoce') + ' — COMANDA';
+      document.getElementById('cmd-meta').textContent  = meta;
+      const cont = document.getElementById('cmd-items');
+      cont.innerHTML='';
+      m.items.forEach(x=>{
+        const row=document.createElement('div');
+        row.style.display='flex'; row.style.justifyContent='space-between'; row.style.gap='8px';
+        row.innerHTML = `<span>${x.qty}× ${x.nombre}</span><span>${x.notas ? x.notas : ''}</span>`;
+        cont.appendChild(row);
+      });
+    }
+
+    function printSection(sectionId){
+      document.getElementById('ticketCliente').style.display = 'none';
+      document.getElementById('comandaCocina').style.display = 'none';
+      document.getElementById(sectionId).style.display = 'block';
       window.print();
+      setTimeout(()=>{ document.getElementById(sectionId).style.display='none'; }, 250);
+    }
+
+    function printTicketCliente(){
+      const m=mesaActual(); if(!m || (m.items||[]).length===0){ alert('No hay items.'); return; }
+      buildTicketCliente(m);
+      printSection('ticketCliente');
+    }
+    function printComandaCocina(){
+      const m=mesaActual(); if(!m || (m.items||[]).length===0){ alert('No hay items.'); return; }
+      buildComandaCocina(m);
+      printSection('comandaCocina');
     }
 
     // ===== Eventos UI =====
@@ -565,7 +638,10 @@
       $('#btnVaciar').on('click', function(){ const m=mesaActual(); if(!m) return; m.items=[]; renderCart(); saveState(); renderProducts(); });
       $('#btnDuplicarMesa').on('click', function(){ duplicarMesa(MESA_ACTUAL); });
       $('#btnGuardar').on('click', saveOrder);
-      $('#btnComanda').on('click', printTicket);
+
+      // NUEVO: botones de impresión
+      $('#btnTicket').on('click', printTicketCliente);
+      $('#btnComanda').on('click', printComandaCocina);
     }
 
     // ===== Carga de menú =====
