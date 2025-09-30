@@ -293,326 +293,340 @@
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 
   <!-- App POS -->
-  <script>
-    // ===== Menú / productos =====
-    let MENU = [];
-    const ALERTED = new Set();
+<script>
+  // ===== Menú / productos =====
+  let MENU = [];
+  const ALERTED = new Set();
 
-    // ===== Multi-Carritos =====
-    let MESAS = [];
-    let MESA_ACTUAL = null;
+  // ===== Multi-Carritos =====
+  let MESAS = [];
+  let MESA_ACTUAL = null;
 
-    // ===== Utils =====
-    const $fmt = (n) => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(Number(n||0));
-    const uid = () => 'm' + Math.random().toString(36).slice(2,9);
+  // ===== Utils =====
+  const $fmt = (n) => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(Number(n||0));
+  const uid = () => 'm' + Math.random().toString(36).slice(2,9);
 
-    // --- Storage ---
-    function loadState(){
-      try{
-        const raw = localStorage.getItem('pos-1112-mesas');
-        if(raw){ const data = JSON.parse(raw); MESAS = data.mesas||[]; MESA_ACTUAL = data.actual||null; }
-      }catch{}
-      if(MESAS.length===0){
-        const id = uid();
-        MESAS=[{id, nombre:'Mesa 1', color:'#e11d48', items:[], cliente:'', pago:0}];
-        MESA_ACTUAL=id;
-      }
+  // --- Storage ---
+  function loadState(){
+    try{
+      const raw = localStorage.getItem('pos-1112-mesas');
+      if(raw){ const data = JSON.parse(raw); MESAS = data.mesas||[]; MESA_ACTUAL = data.actual||null; }
+    }catch{}
+    if(MESAS.length===0){
+      const id = uid();
+      MESAS=[{id, nombre:'Mesa 1', color:'#e11d48', items:[], cliente:'', pago:0}];
+      MESA_ACTUAL=id;
     }
-    function saveState(){ localStorage.setItem('pos-1112-mesas', JSON.stringify({mesas:MESAS, actual:MESA_ACTUAL})); }
-    function mesaActual(){ return MESAS.find(m=>m.id===MESA_ACTUAL); }
+  }
+  function saveState(){ localStorage.setItem('pos-1112-mesas', JSON.stringify({mesas:MESAS, actual:MESA_ACTUAL})); }
+  function mesaActual(){ return MESAS.find(m=>m.id===MESA_ACTUAL); }
 
-    // ====== STOCK ======
-    function reservedQtyAllMesas(rowId){
-      return MESAS.reduce((acc,m)=> acc + (m.items||[]).filter(x=>x._rowId===rowId).reduce((a,i)=>a+i.qty,0), 0);
-    }
-    function productThreshold(p){
-      const glob = Number($('#stockMinGlobal').val()||0);
-      const own = Number(p.min||p.minimo||p.alerta||0);
-      return Number.isFinite(own) && own>0 ? own : glob;
-    }
-    function availableStock(p){
-      const stock = Number(p.stock||0);
-      if(!Number.isFinite(stock)) return 0;
-      const reserved = reservedQtyAllMesas(p._rowId);
-      return Math.max(0, stock - reserved);
-    }
-    function shouldLowStock(p){
-      const min = productThreshold(p);
-      return availableStock(p) <= min && (Number(p.stock||0) > 0);
-    }
-    function shouldNoStock(p){
-      return availableStock(p) <= 0 && (Number(p.stock||0) > 0);
-    }
-    function maybeAlertLow(p){
-      if(!shouldLowStock(p)) return;
-      const key = p._rowId;
-      if(ALERTED.has(key)) return;
-      ALERTED.add(key);
-      alert(`⚠️ Stock bajo de "${p.nombre}". Quedan ${availableStock(p)} (umbral ${productThreshold(p)}).`);
+  // ====== STOCK ======
+  function reservedQtyAllMesas(rowId){
+    return MESAS.reduce((acc,m)=> acc + (m.items||[]).filter(x=>x._rowId===rowId).reduce((a,i)=>a+i.qty,0), 0);
+  }
+  function productThreshold(p){
+    const glob = Number($('#stockMinGlobal').val()||0);
+    const own = Number(p.min||p.minimo||p.alerta||0);
+    return Number.isFinite(own) && own>0 ? own : glob;
+  }
+  function availableStock(p){
+    const stock = Number(p.stock||0);
+    if(!Number.isFinite(stock)) return 0;
+    const reserved = reservedQtyAllMesas(p._rowId);
+    return Math.max(0, stock - reserved);
+  }
+  function shouldLowStock(p){
+    const min = productThreshold(p);
+    return availableStock(p) <= min && (Number(p.stock||0) > 0);
+  }
+  function shouldNoStock(p){
+    return availableStock(p) <= 0 && (Number(p.stock||0) > 0);
+  }
+  function maybeAlertLow(p){
+    if(!shouldLowStock(p)) return;
+    const key = p._rowId;
+    if(ALERTED.has(key)) return;
+    ALERTED.add(key);
+    alert(`⚠️ Stock bajo de "${p.nombre}". Quedan ${availableStock(p)} (umbral ${productThreshold(p)}).`);
+  }
+
+  // --- Sidebar render ---
+  function renderMesas(){
+    const cont = $('#listaMesas');
+    cont.empty();
+    MESAS.forEach(m=>{
+      const active = m.id===MESA_ACTUAL;
+      cont.append(`
+        <div class="group flex items-center justify-between gap-2 p-2 rounded-xl border ${active?'border-[var(--accent-600)] bg-[var(--accent-50)]':'border-gray-200 hover:bg-gray-50'}">
+          <button class="flex items-center gap-2 flex-1 text-left" data-action="switch" data-id="${m.id}">
+            <span class="inline-block w-3 h-3 rounded-full" style="background:${m.color}"></span>
+            <span class="font-medium truncate">${m.nombre}</span>
+            <span class="text-xs text-gray-500 ml-auto">${m.items.reduce((a,x)=>a+x.qty,0)} ítems</span>
+          </button>
+          <div class="opacity-0 group-hover:opacity-100 transition flex gap-1">
+            <button class="btn btn-ghost text-xs px-2 py-1" title="Renombrar" data-action="rename" data-id="${m.id}">✎</button>
+            <button class="btn btn-ghost text-xs px-2 py-1" title="Duplicar" data-action="dup" data-id="${m.id}">⧉</button>
+            <button class="btn btn-ghost text-xs px-2 py-1" title="Eliminar" data-action="del" data-id="${m.id}">✕</button>
+          </div>
+        </div>`);
+    });
+    const m = mesaActual();
+    $('#mesaTitulo').text(m.nombre);
+    $('#cliente').val(m.cliente);
+    $('#pago').val(m.pago);
+    $('#colorMesa').val(m.color);
+    $('#cartWrapper').css('border-color', m.color);
+    renderCart();
+    saveState();
+  }
+
+  function nuevaMesa(nombre='Mesa '+(MESAS.length+1), color='var(--accent-600)'){
+    const m = { id:uid(), nombre, color:'#e11d48', items:[], cliente:'', pago:0 };
+    MESAS.push(m); MESA_ACTUAL=m.id; renderMesas();
+  }
+  function duplicarMesa(id){
+    const src = MESAS.find(m=>m.id===id); if(!src) return;
+    const copy = { ...src, id:uid(), nombre: src.nombre+" (copia)", items: JSON.parse(JSON.stringify(src.items)) };
+    MESAS.push(copy); MESA_ACTUAL=copy.id; renderMesas();
+  }
+  function eliminarMesa(id){
+    if(MESAS.length===1){ alert('Debe quedar al menos una mesa.'); return; }
+    MESAS = MESAS.filter(m=>m.id!==id);
+    if(MESA_ACTUAL===id){ MESA_ACTUAL = MESAS[0].id; }
+    renderMesas();
+  }
+  function cambiarColorActual(color){ const m=mesaActual(); if(!m) return; m.color=color; $('#cartWrapper').css('border-color', color); saveState(); renderMesas(); }
+
+  // ===== Productos y filtros =====
+  function groupUnique(arr, key){ return [...new Set(arr.map(x => (x[key]||"").trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b)); }
+  function renderFilters(){
+    const cats = groupUnique(MENU, 'categoria');
+    const catSel = $('#categoria');
+    catSel.find('option:not(:first)').remove();
+    cats.forEach(c => catSel.append(`<option value="${c}">${c}</option>`));
+    renderSubcats();
+  }
+  function renderSubcats(){
+    const cat = $('#categoria').val();
+    let list = MENU; if(cat) list = MENU.filter(x => x.categoria === cat);
+    const subs = groupUnique(list, 'subcategoria');
+    const subSel = $('#subcategoria');
+    subSel.find('option:not(:first)').remove();
+    subs.forEach(s => subSel.append(`<option value="${s}">${s}</option>`));
+  }
+  function productMatches(p){
+    const q=$('#buscar').val().trim().toLowerCase(); const cat=$('#categoria').val(); const sub=$('#subcategoria').val();
+    if(cat && p.categoria!==cat) return false; if(sub && p.subcategoria!==sub) return false; if(!q) return true;
+    return [p.nombre,p.categoria,p.subcategoria].join(' ').toLowerCase().includes(q);
+  }
+
+  function renderProducts(){
+    const cont=$('#listaProductos'); cont.empty();
+    const list=MENU.filter(productMatches);
+    $('#countProductos').text(list.length);
+
+    list.forEach(p=>{
+      const dispStock = Number.isFinite(Number(p.stock)) ? availableStock(p) : null;
+      const isLow  = dispStock!==null && shouldLowStock(p);
+      const isZero = dispStock!==null && shouldNoStock(p);
+
+      const rowClasses = `${isLow?'low-stock':''} ${isZero?'no-stock':''}`;
+      const stockHtml = (dispStock!==null)
+        ? `<span class='text-xs ${isLow?'text-red-700':'text-gray-500'}'>Stock disp.: ${dispStock}${isLow?` · min ${productThreshold(p)}`:''}</span>`
+        : `<span class='text-xs text-gray-400'>Sin stock informado</span>`;
+
+      cont.append(`
+        <div class="p-3 flex items-center gap-3 hover:bg-gray-50 ${rowClasses}">
+          <div class="flex-1">
+            <div class="font-medium title">${p.nombre}</div>
+            <div class="text-xs text-gray-500">${p.categoria}${p.subcategoria?" · "+p.subcategoria:""}</div>
+            ${stockHtml}
+          </div>
+          <div class="text-right">
+            <div class="text-base font-semibold">${$fmt(p.precio)}</div>
+            ${p.costo?`<div class="text-[11px] text-gray-500">Costo ${$fmt(p.costo)}</div>`:""}
+          </div>
+          <div>
+            <button ${isZero?'disabled':''} class="p-2 text-sm rounded-xl ${isZero?'btn cursor-not-allowed opacity-60':'btn-primary'}" data-id="${p._rowId}" data-action="add">Agregar</button>
+          </div>
+        </div>`);
+    });
+  }
+
+  // ===== Carrito (por mesa) =====
+  function addToCart(rowId){
+    const m=mesaActual(); const p=MENU.find(x=>x._rowId===rowId); if(!m||!p) return;
+
+    if(Number.isFinite(Number(p.stock))){
+      const disp = availableStock(p);
+      if(disp<=0){ alert(`Sin stock de "${p.nombre}"`); renderProducts(); return; }
     }
 
-    // --- Sidebar render ---
-    function renderMesas(){
-      const cont = $('#listaMesas');
-      cont.empty();
-      MESAS.forEach(m=>{
-        const active = m.id===MESA_ACTUAL;
-        cont.append(`
-          <div class="group flex items-center justify-between gap-2 p-2 rounded-xl border ${active?'border-[var(--accent-600)] bg-[var(--accent-50)]':'border-gray-200 hover:bg-gray-50'}">
-            <button class="flex items-center gap-2 flex-1 text-left" data-action="switch" data-id="${m.id}">
-              <span class="inline-block w-3 h-3 rounded-full" style="background:${m.color}"></span>
-              <span class="font-medium truncate">${m.nombre}</span>
-              <span class="text-xs text-gray-500 ml-auto">${m.items.reduce((a,x)=>a+x.qty,0)} ítems</span>
-            </button>
-            <div class="opacity-0 group-hover:opacity-100 transition flex gap-1">
-              <button class="btn btn-ghost text-xs px-2 py-1" title="Renombrar" data-action="rename" data-id="${m.id}">✎</button>
-              <button class="btn btn-ghost text-xs px-2 py-1" title="Duplicar" data-action="dup" data-id="${m.id}">⧉</button>
-              <button class="btn btn-ghost text-xs px-2 py-1" title="Eliminar" data-action="del" data-id="${m.id}">✕</button>
-            </div>
-          </div>`);
-      });
-      const m = mesaActual();
-      $('#mesaTitulo').text(m.nombre);
-      $('#cliente').val(m.cliente);
-      $('#pago').val(m.pago);
-      $('#colorMesa').val(m.color);
-      $('#cartWrapper').css('border-color', m.color);
-      renderCart();
-      saveState();
-    }
-
-    function nuevaMesa(nombre='Mesa '+(MESAS.length+1), color='var(--accent-600)'){
-      const m = { id:uid(), nombre, color:'#e11d48', items:[], cliente:'', pago:0 };
-      MESAS.push(m); MESA_ACTUAL=m.id; renderMesas();
-    }
-    function duplicarMesa(id){
-      const src = MESAS.find(m=>m.id===id); if(!src) return;
-      const copy = { ...src, id:uid(), nombre: src.nombre+" (copia)", items: JSON.parse(JSON.stringify(src.items)) };
-      MESAS.push(copy); MESA_ACTUAL=copy.id; renderMesas();
-    }
-    function eliminarMesa(id){
-      if(MESAS.length===1){ alert('Debe quedar al menos una mesa.'); return; }
-      MESAS = MESAS.filter(m=>m.id!==id);
-      if(MESA_ACTUAL===id){ MESA_ACTUAL = MESAS[0].id; }
-      renderMesas();
-    }
-    function cambiarColorActual(color){ const m=mesaActual(); if(!m) return; m.color=color; $('#cartWrapper').css('border-color', color); saveState(); renderMesas(); }
-
-    // ===== Productos y filtros =====
-    function groupUnique(arr, key){ return [...new Set(arr.map(x => (x[key]||"").trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b)); }
-    function renderFilters(){
-      const cats = groupUnique(MENU, 'categoria');
-      const catSel = $('#categoria');
-      catSel.find('option:not(:first)').remove();
-      cats.forEach(c => catSel.append(`<option value="${c}">${c}</option>`));
-      renderSubcats();
-    }
-    function renderSubcats(){
-      const cat = $('#categoria').val();
-      let list = MENU; if(cat) list = MENU.filter(x => x.categoria === cat);
-      const subs = groupUnique(list, 'subcategoria');
-      const subSel = $('#subcategoria');
-      subSel.find('option:not(:first)').remove();
-      subs.forEach(s => subSel.append(`<option value="${s}">${s}</option>`));
-    }
-    function productMatches(p){
-      const q=$('#buscar').val().trim().toLowerCase(); const cat=$('#categoria').val(); const sub=$('#subcategoria').val();
-      if(cat && p.categoria!==cat) return false; if(sub && p.subcategoria!==sub) return false; if(!q) return true;
-      return [p.nombre,p.categoria,p.subcategoria].join(' ').toLowerCase().includes(q);
-    }
-
-    function renderProducts(){
-      const cont=$('#listaProductos'); cont.empty();
-      const list=MENU.filter(productMatches);
-      $('#countProductos').text(list.length);
-
-      list.forEach(p=>{
-        const dispStock = Number.isFinite(Number(p.stock)) ? availableStock(p) : null;
-        const isLow  = dispStock!==null && shouldLowStock(p);
-        const isZero = dispStock!==null && shouldNoStock(p);
-
-        const rowClasses = `${isLow?'low-stock':''} ${isZero?'no-stock':''}`;
-        const stockHtml = (dispStock!==null)
-          ? `<span class='text-xs ${isLow?'text-red-700':'text-gray-500'}'>Stock disp.: ${dispStock}${isLow?` · min ${productThreshold(p)}`:''}</span>`
-          : `<span class='text-xs text-gray-400'>Sin stock informado</span>`;
-
-        cont.append(`
-          <div class="p-3 flex items-center gap-3 hover:bg-gray-50 ${rowClasses}">
-            <div class="flex-1">
-              <div class="font-medium title">${p.nombre}</div>
-              <div class="text-xs text-gray-500">${p.categoria}${p.subcategoria?" · "+p.subcategoria:""}</div>
-              ${stockHtml}
-            </div>
-            <div class="text-right">
-              <div class="text-base font-semibold">${$fmt(p.precio)}</div>
-              ${p.costo?`<div class="text-[11px] text-gray-500">Costo ${$fmt(p.costo)}</div>`:""}
-            </div>
-            <div>
-              <button ${isZero?'disabled':''} class="p-2 text-sm rounded-xl ${isZero?'btn cursor-not-allowed opacity-60':'btn-primary'}" data-id="${p._rowId}" data-action="add">Agregar</button>
-            </div>
-          </div>`);
-      });
-    }
-
-    // ===== Carrito (por mesa) =====
-    function addToCart(rowId){
-      const m=mesaActual(); const p=MENU.find(x=>x._rowId===rowId); if(!m||!p) return;
-
+    const ex=m.items.find(x=>x._rowId===rowId);
+    if(ex){
       if(Number.isFinite(Number(p.stock))){
         const disp = availableStock(p);
         if(disp<=0){ alert(`Sin stock de "${p.nombre}"`); renderProducts(); return; }
       }
+      ex.qty+=1;
+    }else{
+      m.items.push({_rowId:rowId,nombre:p.nombre,precio:Number(p.precio)||0,costo:Number(p.costo)||0,qty:1});
+    }
+    maybeAlertLow(p);
+    renderCart(); saveState(); renderProducts();
+  }
 
-      const ex=m.items.find(x=>x._rowId===rowId);
-      if(ex){
-        if(Number.isFinite(Number(p.stock))){
-          const disp = availableStock(p);
-          if(disp<=0){ alert(`Sin stock de "${p.nombre}"`); renderProducts(); return; }
-        }
-        ex.qty+=1;
-      }else{
-        m.items.push({_rowId:rowId,nombre:p.nombre,precio:Number(p.precio)||0,costo:Number(p.costo)||0,qty:1});
+  function removeFromCart(rowId){
+    const m=mesaActual(); if(!m) return;
+    m.items = m.items.filter(x=>x._rowId!==rowId);
+    renderCart(); saveState(); renderProducts();
+  }
+
+  function setQty(rowId,qty){
+    const m=mesaActual(); if(!m) return;
+    const it=m.items.find(x=>x._rowId===rowId); if(!it) return;
+    qty = Math.max(1,Number(qty)||1);
+
+    const p=MENU.find(x=>x._rowId===rowId);
+    if(Number.isFinite(Number(p?.stock))){
+      const reservedOtros = reservedQtyAllMesas(rowId) - it.qty;
+      const disp = Math.max(0, Number(p.stock||0) - reservedOtros);
+      if(qty > disp){
+        alert(`Solo hay ${disp} disponibles de "${p.nombre}".`);
+        qty = disp>0 ? disp : 1;
       }
-      maybeAlertLow(p);
-      renderCart(); saveState(); renderProducts();
+    }
+    it.qty = qty;
+    maybeAlertLow(p);
+    renderCart(); saveState(); renderProducts();
+  }
+
+  function renderCart(){
+    const m=mesaActual(); const cont=$('#cartTable'); cont.empty(); if(!m){return}
+    const CART=m.items;
+    if(CART.length===0){ cont.html('<p class="text-sm text-gray-500">No hay ítems en el carrito.</p>'); }
+    else{
+      CART.forEach(it=>{
+        const linea=it.precio*it.qty;
+        cont.append(`
+        <div class="grid grid-cols-12 gap-2 items-center py-2">
+          <div class="col-span-5">
+            <div class="font-medium">${it.nombre}</div>
+            <div class="text-xs text-gray-500">${$fmt(it.precio)} c/u</div>
+          </div>
+          <div class="col-span-3">
+            <input type="number" min="1" value="${it.qty}" data-id="${it._rowId}" data-action="qty" class="inp w-24"/>
+          </div>
+          <div class="col-span-3 text-right font-semibold">${$fmt(linea)}</div>
+          <div class="col-span-1 text-right">
+            <button class="btn btn-ghost text-xs px-2 py-1" data-id="${it._rowId}" data-action="del">✕</button>
+          </div>
+        </div>`);
+      });
     }
 
-    function removeFromCart(rowId){
-      const m=mesaActual(); if(!m) return;
-      m.items = m.items.filter(x=>x._rowId!==rowId);
-      renderCart(); saveState(); renderProducts();
-    }
+    const total = CART.reduce((a,x)=>a+x.precio*x.qty,0);
+    const costo = CART.reduce((a,x)=>a+(Number(x.costo)||0)*x.qty,0);
+    $('#totalBruto').text($fmt(total)); $('#totalCosto').text($fmt(costo)); $('#totalGanancia').text($fmt(total-costo));
+    const pago = Number($('#pago').val()||m.pago||0); const vuelto = Math.max(0, pago-total); $('#vuelto').text($fmt(vuelto));
+  }
 
-    function setQty(rowId,qty){
-      const m=mesaActual(); if(!m) return;
-      const it=m.items.find(x=>x._rowId===rowId); if(!it) return;
-      qty = Math.max(1,Number(qty)||1);
+  async function saveOrder(){
+    const m=mesaActual(); if(!m) return;
+    if(!ORDERS_WEBAPP_URL || ORDERS_WEBAPP_URL.startsWith('PASTE_')){ alert('Configura ORDERS_WEBAPP_URL'); return; }
+    if(m.items.length===0){ alert('El carrito está vacío.'); return; }
 
-      const p=MENU.find(x=>x._rowId===rowId);
+    for(const it of m.items){
+      const p = MENU.find(x=>x._rowId===it._rowId);
       if(Number.isFinite(Number(p?.stock))){
-        const reservedOtros = reservedQtyAllMesas(rowId) - it.qty;
-        const disp = Math.max(0, Number(p.stock||0) - reservedOtros);
-        if(qty > disp){
-          alert(`Solo hay ${disp} disponibles de "${p.nombre}".`);
-          qty = disp>0 ? disp : 1;
+        const disp = availableStock(p);
+        if(it.qty > disp){
+          alert(`No hay stock suficiente de "${p.nombre}". Disponible: ${disp}.`);
+          return;
         }
       }
-      it.qty = qty;
-      maybeAlertLow(p);
-      renderCart(); saveState(); renderProducts();
     }
 
-    function renderCart(){
-      const m=mesaActual(); const cont=$('#cartTable'); cont.empty(); if(!m){return}
-      const CART=m.items;
-      if(CART.length===0){ cont.html('<p class="text-sm text-gray-500">No hay ítems en el carrito.</p>'); }
-      else{
-        CART.forEach(it=>{
-          const linea=it.precio*it.qty;
-          cont.append(`
-          <div class="grid grid-cols-12 gap-2 items-center py-2">
-            <div class="col-span-5">
-              <div class="font-medium">${it.nombre}</div>
-              <div class="text-xs text-gray-500">${$fmt(it.precio)} c/u</div>
-            </div>
-            <div class="col-span-3">
-              <input type="number" min="1" value="${it.qty}" data-id="${it._rowId}" data-action="qty" class="inp w-24"/>
-            </div>
-            <div class="col-span-3 text-right font-semibold">${$fmt(linea)}</div>
-            <div class="col-span-1 text-right">
-              <button class="btn btn-ghost text-xs px-2 py-1" data-id="${it._rowId}" data-action="del">✕</button>
-            </div>
-          </div>`);
-        });
-      }
+    const total = m.items.reduce((a,x)=>a+x.precio*x.qty,0);
+    const totalCosto = m.items.reduce((a,x)=>a+(Number(x.costo)||0)*x.qty,0);
+    const payload = {
+      timestamp:new Date().toISOString(),
+      cliente:m.cliente||'',
+      mesa:m.nombre,
+      color:m.color,
+      total, totalCosto,
+      ganancia: total-totalCosto,
+      pago: Number(m.pago||0),
+      items: m.items.map(x=>({nombre:x.nombre,precio:x.precio,costo:x.costo,qty:x.qty}))
+    };
 
-      const total = CART.reduce((a,x)=>a+x.precio*x.qty,0);
-      const costo = CART.reduce((a,x)=>a+(Number(x.costo)||0)*x.qty,0);
-      $('#totalBruto').text($fmt(total)); $('#totalCosto').text($fmt(costo)); $('#totalGanancia').text($fmt(total-costo));
-      const pago = Number($('#pago').val()||m.pago||0); const vuelto = Math.max(0, pago-total); $('#vuelto').text($fmt(vuelto));
-    }
-
-    async function saveOrder(){
-      const m=mesaActual(); if(!m) return;
-      if(!ORDERS_WEBAPP_URL || ORDERS_WEBAPP_URL.startsWith('PASTE_')){ alert('Configura ORDERS_WEBAPP_URL'); return; }
-      if(m.items.length===0){ alert('El carrito está vacío.'); return; }
+    $('#btnGuardar').prop('disabled',true).text('Guardando…');
+    try{
+      const res = await fetch(ORDERS_WEBAPP_URL, {
+        method:'POST',
+        headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},
+        body:'payload='+encodeURIComponent(JSON.stringify(payload))
+      });
+      const txt = await res.text(); let data; try{ data=JSON.parse(txt) }catch{ data={ok:true} }
+      if(!res.ok || data.ok===false) throw new Error((data && data.error) || 'Error al guardar');
 
       for(const it of m.items){
         const p = MENU.find(x=>x._rowId===it._rowId);
-        if(Number.isFinite(Number(p?.stock))){
-          const disp = availableStock(p);
-          if(it.qty > disp){
-            alert(`No hay stock suficiente de "${p.nombre}". Disponible: ${disp}.`);
-            return;
-          }
+        if(p && Number.isFinite(Number(p.stock))){
+          p.stock = Math.max(0, Number(p.stock) - it.qty);
         }
       }
 
-      const total = m.items.reduce((a,x)=>a+x.precio*x.qty,0);
-      const totalCosto = m.items.reduce((a,x)=>a+(Number(x.costo)||0)*x.qty,0);
-      const payload = {
-        timestamp:new Date().toISOString(),
-        cliente:m.cliente||'',
-        mesa:m.nombre,
-        color:m.color,
-        total, totalCosto,
-        ganancia: total-totalCosto,
-        pago: Number(m.pago||0),
-        items: m.items.map(x=>({nombre:x.nombre,precio:x.precio,costo:x.costo,qty:x.qty}))
-      };
-
-      $('#btnGuardar').prop('disabled',true).text('Guardando…');
-      try{
-        const res = await fetch(ORDERS_WEBAPP_URL, {
-          method:'POST',
-          headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},
-          body:'payload='+encodeURIComponent(JSON.stringify(payload))
-        });
-        const txt = await res.text(); let data; try{ data=JSON.parse(txt) }catch{ data={ok:true} }
-        if(!res.ok || data.ok===false) throw new Error((data && data.error) || 'Error al guardar');
-
-        for(const it of m.items){
-          const p = MENU.find(x=>x._rowId===it._rowId);
-          if(p && Number.isFinite(Number(p.stock))){
-            p.stock = Math.max(0, Number(p.stock) - it.qty);
-          }
-        }
-
-        alert('Pedido guardado ✅');
-        m.items=[]; renderCart(); saveState(); renderProducts();
-      }catch(err){
-        console.error(err);
-        alert('No se pudo guardar el pedido: '+err.message);
-      }finally{
-        $('#btnGuardar').prop('disabled',false).text('Guardar Pedido');
-      }
+      alert('Pedido guardado ✅');
+      m.items=[]; renderCart(); saveState(); renderProducts();
+    }catch(err){
+      console.error(err);
+      alert('No se pudo guardar el pedido: '+err.message);
+    }finally{
+      $('#btnGuardar').prop('disabled',false).text('Guardar Pedido');
     }
+  }
 
-    // ==== Construcción de hojas y disparo de impresión ====
-    function buildTicketCliente(m){
-      const meta = `${new Date().toLocaleString('es-AR')} · ${m.nombre} · Cliente: ${m.cliente||'-'}`;
-      document.getElementById('tck-store').textContent = STORE_NAME || 'OnceyDoce';
-      document.getElementById('tck-meta').textContent  = meta;
-      const cont = document.getElementById('tck-items');
+  // ==== Construcción de hojas y disparo de impresión ====
+  function buildTicketCliente(m){
+    const meta = `${new Date().toLocaleString('es-AR')} · ${m.nombre} · Cliente: ${m.cliente||'-'}`;
+    const store = (typeof STORE_NAME!=='undefined' && STORE_NAME) ? STORE_NAME : 'OnceyDoce';
+    const elStore = document.getElementById('tck-store');
+    const elMeta  = document.getElementById('tck-meta');
+    const cont    = document.getElementById('tck-items');
+    const elTot   = document.getElementById('tck-total');
+    const elPago  = document.getElementById('tck-pago');
+    const elVuel  = document.getElementById('tck-vuelto');
+
+    if(elStore) elStore.textContent = store;
+    if(elMeta)  elMeta.textContent  = meta;
+    if(cont){
       cont.innerHTML='';
       m.items.forEach(x=>{
         const row=document.createElement('div'); row.className='row';
         row.innerHTML=`<span>${x.qty}× ${x.nombre}</span><span>${$fmt(x.qty*x.precio)}</span>`;
         cont.appendChild(row);
       });
-      const total = m.items.reduce((a,x)=>a + x.precio*x.qty, 0);
-      const pago  = Number(m.pago||0);
-      const vuelto= Math.max(0, pago-total);
-      document.getElementById('tck-total').textContent  = $fmt(total);
-      document.getElementById('tck-pago').textContent   = $fmt(pago);
-      document.getElementById('tck-vuelto').textContent = $fmt(vuelto);
     }
+    const total = m.items.reduce((a,x)=>a + x.precio*x.qty, 0);
+    const pago  = Number(m.pago||0);
+    const vuelto= Math.max(0, pago-total);
+    if(elTot)  elTot.textContent  = $fmt(total);
+    if(elPago) elPago.textContent  = $fmt(pago);
+    if(elVuel) elVuel.textContent  = $fmt(vuelto);
+  }
 
-    function buildComandaCocina(m){
-      const meta = `${new Date().toLocaleString('es-AR')} · ${m.nombre} · Cliente: ${m.cliente||'-'}`;
-      document.getElementById('cmd-store').textContent = (STORE_NAME||'OnceyDoce') + ' — COMANDA';
-      document.getElementById('cmd-meta').textContent  = meta;
-      const cont = document.getElementById('cmd-items');
+  function buildComandaCocina(m){
+    const meta = `${new Date().toLocaleString('es-AR')} · ${m.nombre} · Cliente: ${m.cliente||'-'}`;
+    const store = (typeof STORE_NAME!=='undefined' && STORE_NAME) ? STORE_NAME : 'OnceyDoce';
+    const elStore = document.getElementById('cmd-store');
+    const elMeta  = document.getElementById('cmd-meta');
+    const cont    = document.getElementById('cmd-items');
+
+    if(elStore) elStore.textContent = store + ' — COMANDA';
+    if(elMeta)  elMeta.textContent  = meta;
+    if(cont){
       cont.innerHTML='';
       m.items.forEach(x=>{
         const row=document.createElement('div');
@@ -621,101 +635,109 @@
         cont.appendChild(row);
       });
     }
+  }
 
-    function printSection(sectionId){
-      document.getElementById('ticketCliente').style.display = 'none';
-      document.getElementById('comandaCocina').style.display = 'none';
-      document.getElementById(sectionId).style.display = 'block';
-      window.print();
-      setTimeout(()=>{ document.getElementById(sectionId).style.display='none'; }, 250);
+  function printSection(sectionId){
+    const a = document.getElementById('ticketCliente');
+    const b = document.getElementById('comandaCocina');
+    if(a) a.style.display='none';
+    if(b) b.style.display='none';
+
+    const target = document.getElementById(sectionId);
+    if(target) target.style.display = 'block';
+
+    window.print();
+
+    setTimeout(()=>{ if(target) target.style.display='none'; }, 250);
+  }
+
+  function printTicketCliente(){
+    const m=mesaActual(); if(!m || (m.items||[]).length===0){ alert('No hay items.'); return; }
+    buildTicketCliente(m);
+    printSection('ticketCliente');
+  }
+  function printComandaCocina(){
+    const m=mesaActual(); if(!m || (m.items||[]).length===0){ alert('No hay items.'); return; }
+    buildComandaCocina(m);
+    printSection('comandaCocina');
+  }
+
+  // ===== Eventos UI =====
+  function bindEvents(){
+    $('#btnNuevaMesa').on('click', ()=> nuevaMesa());
+    $('#listaMesas').on('click','[data-action="switch"]', function(){ MESA_ACTUAL=$(this).data('id'); renderMesas(); });
+    $('#listaMesas').on('click','[data-action="rename"]', function(){ const id=$(this).data('id'); const m=MESAS.find(x=>x.id===id); if(!m) return; const nv = prompt('Nuevo nombre', m.nombre); if(nv){ m.nombre=nv; if(MESA_ACTUAL===id) $('#mesaTitulo').text(nv); renderMesas(); } });
+    $('#listaMesas').on('click','[data-action="dup"]', function(){ duplicarMesa($(this).data('id')); });
+    $('#listaMesas').on('click','[data-action="del"]', function(){ eliminarMesa($(this).data('id')); });
+    $('#colorMesa').on('input', function(){ cambiarColorActual($(this).val()); });
+
+    $('#stockMinGlobal').on('input', ()=> renderProducts());
+
+    $('#categoria').on('change', function(){ renderSubcats(); renderProducts(); });
+    $('#subcategoria, #buscar').on('input change', renderProducts);
+
+    $('#listaProductos').on('click','button[data-action="add"]', function(){ addToCart($(this).data('id')); });
+
+    $('#cartTable').on('click','button[data-action="del"]', function(){ removeFromCart($(this).data('id')); });
+    $('#cartTable').on('input','input[data-action="qty"]', function(){ setQty($(this).data('id'), $(this).val()); });
+
+    $('#cliente').on('input', function(){ const m=mesaActual(); if(!m) return; m.cliente=$(this).val(); saveState(); });
+    $('#pago').on('input', function(){ const m=mesaActual(); if(!m) return; m.pago=Number($(this).val()||0); renderCart(); saveState(); });
+
+    $('#btnVaciar').on('click', function(){ const m=mesaActual(); if(!m) return; m.items=[]; renderCart(); saveState(); renderProducts(); });
+    $('#btnDuplicarMesa').on('click', function(){ duplicarMesa(MESA_ACTUAL); });
+    $('#btnGuardar').on('click', saveOrder);
+
+    // NUEVO: botones de impresión
+    $('#btnTicket').on('click', printTicketCliente);
+    $('#btnComanda').on('click', printComandaCocina);
+  }
+
+  // ===== Carga de menú =====
+  function normalizeRow(row, idx){
+    const min = row.min ?? row.minimo ?? row.alerta ?? row.Min ?? row.Mínimo ?? row.Alerta;
+    const stock = row.stock ?? row.Stock ?? row.inventario ?? row.existencias;
+    return {
+      _rowId:`r${idx}`,
+      categoria:(row.categoria||row.Categoria||row.categoría||row.Categoría||'').toString().trim(),
+      subcategoria:(row.subcategoria||row.Subcategoria||row.Subcategoría||row['Sub-categoria']||'').toString().trim(),
+      nombre:(row.nombre||row.producto||row.Producto||row.Nombre||'').toString().trim(),
+      precio:Number(row.precio||row.Precio||row.price||0),
+      costo:Number(row.costo||row.Costo||row.cost||0),
+      stock: stock===''||stock==null ? '' : Number(stock),
+      min:   min===''||min==null   ? '' : Number(min)
+    };
+  }
+
+  async function loadMenu(){
+    if(!MENU_CSV_URL || MENU_CSV_URL.startsWith('PASTE_')){
+      $('#statusBadge').attr('class','badge').text('Configura MENU_CSV_URL'); return;
     }
-
-    function printTicketCliente(){
-      const m=mesaActual(); if(!m || (m.items||[]).length===0){ alert('No hay items.'); return; }
-      buildTicketCliente(m);
-      printSection('ticketCliente');
-    }
-    function printComandaCocina(){
-      const m=mesaActual(); if(!m || (m.items||[]).length===0){ alert('No hay items.'); return; }
-      buildComandaCocina(m);
-      printSection('comandaCocina');
-    }
-
-    // ===== Eventos UI =====
-    function bindEvents(){
-      $('#btnNuevaMesa').on('click', ()=> nuevaMesa());
-      $('#listaMesas').on('click','[data-action="switch"]', function(){ MESA_ACTUAL=$(this).data('id'); renderMesas(); });
-      $('#listaMesas').on('click','[data-action="rename"]', function(){ const id=$(this).data('id'); const m=MESAS.find(x=>x.id===id); if(!m) return; const nv = prompt('Nuevo nombre', m.nombre); if(nv){ m.nombre=nv; if(MESA_ACTUAL===id) $('#mesaTitulo').text(nv); renderMesas(); } });
-      $('#listaMesas').on('click','[data-action="dup"]', function(){ duplicarMesa($(this).data('id')); });
-      $('#listaMesas').on('click','[data-action="del"]', function(){ eliminarMesa($(this).data('id')); });
-      $('#colorMesa').on('input', function(){ cambiarColorActual($(this).val()); });
-
-      $('#stockMinGlobal').on('input', ()=> renderProducts());
-
-      $('#categoria').on('change', function(){ renderSubcats(); renderProducts(); });
-      $('#subcategoria, #buscar').on('input change', renderProducts);
-
-      $('#listaProductos').on('click','button[data-action="add"]', function(){ addToCart($(this).data('id')); });
-
-      $('#cartTable').on('click','button[data-action="del"]', function(){ removeFromCart($(this).data('id')); });
-      $('#cartTable').on('input','input[data-action="qty"]', function(){ setQty($(this).data('id'), $(this).val()); });
-
-      $('#cliente').on('input', function(){ const m=mesaActual(); if(!m) return; m.cliente=$(this).val(); saveState(); });
-      $('#pago').on('input', function(){ const m=mesaActual(); if(!m) return; m.pago=Number($(this).val()||0); renderCart(); saveState(); });
-
-      $('#btnVaciar').on('click', function(){ const m=mesaActual(); if(!m) return; m.items=[]; renderCart(); saveState(); renderProducts(); });
-      $('#btnDuplicarMesa').on('click', function(){ duplicarMesa(MESA_ACTUAL); });
-      $('#btnGuardar').on('click', saveOrder);
-
-      // NUEVO: botones de impresión
-      $('#btnTicket').on('click', printTicketCliente);
-      $('#btnComanda').on('click', printComandaCocina);
-    }
-
-    // ===== Carga de menú =====
-    function normalizeRow(row, idx){
-      const min = row.min ?? row.minimo ?? row.alerta ?? row.Min ?? row.Mínimo ?? row.Alerta;
-      const stock = row.stock ?? row.Stock ?? row.inventario ?? row.existencias;
-      return {
-        _rowId:`r${idx}`,
-        categoria:(row.categoria||row.Categoria||row.categoría||row.Categoría||'').toString().trim(),
-        subcategoria:(row.subcategoria||row.Subcategoria||row.Subcategoría||row['Sub-categoria']||'').toString().trim(),
-        nombre:(row.nombre||row.producto||row.Producto||row.Nombre||'').toString().trim(),
-        precio:Number(row.precio||row.Precio||row.price||0),
-        costo:Number(row.costo||row.Costo||row.cost||0),
-        stock: stock===''||stock==null ? '' : Number(stock),
-        min:   min===''||min==null   ? '' : Number(min)
-      };
-    }
-
-    async function loadMenu(){
-      if(!MENU_CSV_URL || MENU_CSV_URL.startsWith('PASTE_')){
-        $('#statusBadge').attr('class','badge').text('Configura MENU_CSV_URL'); return;
-      }
-      $('#statusBadge').attr('class','badge').text('Cargando menú…');
-      return new Promise((resolve)=>{
-        Papa.parse(MENU_CSV_URL,{
-          download:true, header:true,
-          complete:(results)=>{
-            MENU = results.data
-              .filter(r=>r && Object.keys(r).length)
-              .map(normalizeRow)
-              .filter(x=>x.nombre && !isNaN(x.precio));
-            ALERTED.clear();
-            renderFilters(); renderProducts(); renderCart();
-            $('#statusBadge').attr('class','badge').text('Menú sincronizado');
-            resolve();
-          },
-          error:()=>{
-            $('#statusBadge').attr('class','badge').text('Error al cargar menú');
-            resolve();
-          }
-        });
+    $('#statusBadge').attr('class','badge').text('Cargando menú…');
+    return new Promise((resolve)=>{
+      Papa.parse(MENU_CSV_URL,{
+        download:true, header:true,
+        complete:(results)=>{
+          MENU = results.data
+            .filter(r=>r && Object.keys(r).length)
+            .map(normalizeRow)
+            .filter(x=>x.nombre && !isNaN(x.precio));
+          ALERTED.clear();
+          renderFilters(); renderProducts(); renderCart();
+          $('#statusBadge').attr('class','badge').text('Menú sincronizado');
+          resolve();
+        },
+        error:()=>{
+          $('#statusBadge').attr('class','badge').text('Error al cargar menú');
+          resolve();
+        }
       });
-    }
+    });
+  }
 
-    // ===== Init =====
-    $(async function(){ loadState(); bindEvents(); renderMesas(); await loadMenu(); });
-  </script>
+  // ===== Init =====
+  $(async function(){ loadState(); bindEvents(); renderMesas(); await loadMenu(); });
+</script>
+
 </body>
 </html>
