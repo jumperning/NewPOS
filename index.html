@@ -33,49 +33,17 @@
     .navlink:hover{ background:#f3f4f6 }
     .navlink.active{ background:var(--accent-50); color:var(--accent-600) }
     .badge{ display:inline-flex; align-items:center; gap:.375rem; padding:.25rem .5rem; border-radius:999px; font-size:.75rem; color:#475569; background:#f3f4f6; }
-  </style>
-  <style>
-  /* Tipografías en negro en todo el sitio */
-  body { color:#000; }
-  .text-slate-800,.text-slate-700,.text-slate-600,.text-slate-500,.text-slate-400,
-  .text-gray-800,.text-gray-700,.text-gray-600,.text-gray-500,.text-gray-400 {
-    color:#000 !important;
-  }
-  /* Badges y textos “muted” también en negro */
-  .badge { color:#000; }
-    <style>
-  /* Solo impresión */
-  @media print {
-    /* Ancho exacto del rollo */
-    html, body { margin:0; padding:0; width:58mm; }
-    /* “Alto automático”: el contenido define la altura de la página */
-    @page { size: 58mm auto; margin: 0; }
 
-    /* Contenedor del ticket/comanda */
-    .print-sheet {
-      width:58mm;
-      padding: 0 2mm;          /* un pelín de sangría lateral */
-      box-sizing: border-box;
-    }
-
-    /* Quita todo lo que no sea ticket/comanda */
-    .no-print, header, aside, nav, .container-grid > :not(#ticket, #comanda) { display:none !important; }
-    #ticket, #comanda { display:block !important; }
-
-    /* Tipografía compacta para ahorrar largo */
-    #ticket, #comanda { font-size:12px; line-height:1.25; }
-    #ticket hr, #comanda hr { border:0; border-top:1px dashed #000; margin:.35rem 0; }
-
-    /* Evita saltos raros */
-    .avoid-break { break-inside: avoid; page-break-inside: avoid; }
-  }
-</style>
-
+    /* Tipografías en negro en todo el sitio */
+    body { color:#000; }
+    .text-slate-800,.text-slate-700,.text-slate-600,.text-slate-500,.text-slate-400,
+    .text-gray-800,.text-gray-700,.text-gray-600,.text-gray-500,.text-gray-400 { color:#000 !important; }
+    .badge { color:#000; }
   </style>
 
-  <!-- CSS de impresión térmica (58mm) -->
+  <!-- CSS de impresión térmica (58mm) — LIMPIO y acotado -->
   <style>
-    @page { size: 58mm auto; margin: 0; }
+    /* Base del “papel” del ticket/comanda (modo pantalla) */
     .print-sheet{
       display:none;
       width:58mm;
@@ -87,15 +55,37 @@
     .print-sheet .row{ display:flex; justify-content:space-between; gap:8px; }
     .print-sheet .title{ text-align:center; font-weight:700; font-size:14px; }
     .print-sheet .muted{ font-size:10px; text-align:center; }
+
+    /* SOLO impresión */
     @media print {
+      @page { size: 58mm auto; margin: 0; }
+      html, body { margin:0; padding:0; width:58mm; }
+
+      /* Esconde TODO por defecto */
       body * { visibility: hidden !important; }
-      .print-sheet, .print-sheet * { visibility: visible !important; }
-      .print-sheet { display:block !important; position:absolute; left:0; top:0; }
+
+      /* Solo el target activo se ve e imprime */
+      .print-active, .print-active * { visibility: visible !important; }
+      .print-active{
+        display:block !important;
+        position:absolute; left:0; top:0;
+        width:58mm; box-sizing: border-box;
+        font-size:12px; line-height:1.25;
+      }
     }
   </style>
+
+  <!-- Config global (UNA sola vez) -->
+  <script>
+    // 1) Publica tu hoja de MENÚ como CSV y pegá la URL aquí.
+    const MENU_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTOCWWvu8KMMGhuRlTtbvCMEaJIWb9l3DYMi7281gfgncS5tGeO81BRpcCMk-SJIWtNyvWckt2bV4U-/pub?output=csv";
+    // 2) Apps Script WebApp para guardar pedidos:
+    const ORDERS_WEBAPP_URL = "https://script.google.com/macros/s/AKfycbzDOjveLDLPJI344Z9nm4DGfjytidwisPt3hU01lFzDK6siuI9GhFzhPxrdw-t2JD8u/exec";
+    // 3) Opcional: nombre del local para imprimir
+    const STORE_NAME = "OnceyDoce";
+  </script>
 </head>
 <body class="bg-slate-50  text-black dark:text-black">
-
 
   <!-- Sidebar -->
   <aside class="hidden md:flex md:flex-col fixed inset-y-0 left-0 w-64 bg-white border-r border-slate-200">
@@ -132,17 +122,6 @@
       <div class="text-sm text-slate-500">POS</div>
     </div>
   </header>
-   <script>
-        // 1) Publica tu hoja de MENÚ como CSV y pega la URL aquí.
-        //    Soporta columnas: categoria, subcategoria, nombre, precio, costo, stock, min (o minimo / alerta)
-        const MENU_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTOCWWvu8KMMGhuRlTtbvCMEaJIWb9l3DYMi7281gfgncS5tGeO81BRpcCMk-SJIWtNyvWckt2bV4U-/pub?output=csv";
-
-        // 2) Apps Script WebApp para guardar pedidos:
-        const ORDERS_WEBAPP_URL = "https://script.google.com/macros/s/AKfycbzDOjveLDLPJI344Z9nm4DGfjytidwisPt3hU01lFzDK6siuI9GhFzhPxrdw-t2JD8u/exec";
-
-        // 3) Opcional: nombre del local para imprimir comanda
-        const STORE_NAME = "OnceyDoce";
-      </script>
 
   <!-- Contenido principal -->
   <main class="md:ml-64 p-4 sm:p-6">
@@ -188,13 +167,6 @@
 
         <!-- MAIN POS -->
         <section class="lg:col-span-9 col-span-12 space-y-6">
-          <!-- CONFIG -->
-          <script>
-            const MENU_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTOCWWvu8KMMGhuRlTtbvCMEaJIWb9l3DYMi7281gfgncS5tGeO81BRpcCMk-SJIWtNyvWckt2bV4U-/pub?output=csv";
-            const ORDERS_WEBAPP_URL = "https://script.google.com/macros/s/AKfycbzDOjveLDLPJI344Z9nm4DGfjytidwisPt3hU01lFzDK6siuI9GhFzhPxrdw-t2JD8u/exec";
-            const STORE_NAME = "OnceyDoce";
-          </script>
-
           <!-- Filtros -->
           <section class="grid grid-cols-1 lg:grid-cols-3 gap-4">
             <div class="card p-4">
@@ -637,18 +609,20 @@
     }
   }
 
+  // NUEVO: solo imprime la sección marcada como activa
   function printSection(sectionId){
     const a = document.getElementById('ticketCliente');
     const b = document.getElementById('comandaCocina');
-    if(a) a.style.display='none';
-    if(b) b.style.display='none';
+    if(a) a.classList.remove('print-active');
+    if(b) b.classList.remove('print-active');
 
     const target = document.getElementById(sectionId);
-    if(target) target.style.display = 'block';
+    if(target) target.classList.add('print-active');
 
     window.print();
 
-    setTimeout(()=>{ if(target) target.style.display='none'; }, 250);
+    // Limpia marca de impresión
+    setTimeout(()=>{ if(target) target.classList.remove('print-active'); }, 250);
   }
 
   function printTicketCliente(){
@@ -688,7 +662,7 @@
     $('#btnDuplicarMesa').on('click', function(){ duplicarMesa(MESA_ACTUAL); });
     $('#btnGuardar').on('click', saveOrder);
 
-    // NUEVO: botones de impresión
+    // Botones de impresión
     $('#btnTicket').on('click', printTicketCliente);
     $('#btnComanda').on('click', printComandaCocina);
   }
