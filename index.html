@@ -43,36 +43,28 @@
 
   <!-- CSS de impresión térmica (58mm) — LIMPIO y acotado -->
   <style>
-    /* Base del “papel” del ticket/comanda (modo pantalla) */
-    .print-sheet{
-      display:none;
-      width:58mm;
-      padding:8px 6px;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
-      color:#000;
-    }
-    .print-sheet hr{ border:0; border-top:1px dashed #000; margin:6px 0; }
-    .print-sheet .row{ display:flex; justify-content:space-between; gap:8px; }
-    .print-sheet .title{ text-align:center; font-weight:700; font-size:14px; }
-    .print-sheet .muted{ font-size:10px; text-align:center; }
+ @media print {
+  body {
+    font-family: monospace;   /* fuente de recibo clásica */
+    font-size: 12px;          /* ajustá aquí el tamaño */
+    line-height: 1.4;
+  }
 
-    /* SOLO impresión */
-    @media print {
-      @page { size: 58mm auto; margin: 0; }
-      html, body { margin:0; padding:0; width:58mm; }
+  h2 {
+    font-size: 16px;          /* título local */
+    font-weight: bold;
+    text-align: center;
+  }
 
-      /* Esconde TODO por defecto */
-      body * { visibility: hidden !important; }
+  .row {
+    font-size: 12px;          /* filas de items */
+  }
 
-      /* Solo el target activo se ve e imprime */
-      .print-active, .print-active * { visibility: visible !important; }
-      .print-active{
-        display:block !important;
-        position:absolute; left:0; top:0;
-        width:58mm; box-sizing: border-box;
-        font-size:12px; line-height:1.25;
-      }
-    }
+  .total {
+    font-size: 14px;
+    font-weight: bold;
+  }
+}
   </style>
 
   <!-- Config global (UNA sola vez) -->
