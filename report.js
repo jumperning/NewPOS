@@ -1,4 +1,4 @@
-// ================== Mostrar/Ocultar montos ==================
+/* ================== Mostrar/Ocultar montos ================== */
 let mostrarMoneda = true;
 function toggleMoneda(){
   mostrarMoneda = !mostrarMoneda;
@@ -6,14 +6,14 @@ function toggleMoneda(){
 }
 $('#btnToggleMoneda').on('click', toggleMoneda);
 
-// ================== Utils ==================
+/* ================== Utils ================== */
 const $fmt = n => new Intl.NumberFormat('es-AR',{style:'currency',currency:'ARS',maximumFractionDigits:0}).format(Number(n||0));
 const monthKey = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
 const dayKey   = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 const toNumber = x => (typeof x==='number') ? x :
   Number(String(x??'').replace(/[^\d,.\-]/g,'').replace(/\.(?=.*\.)/g,'').replace(',', '.')) || 0;
 
-function diag(m){ const el=document.getElementById('diag'); el.innerHTML += `<div>• ${m}</div>`; }
+function diag(m){ const el=document.getElementById('diag'); if(el) el.innerHTML += `<div>• ${m}</div>`; }
 function parseJSONSafely(s){ try{ return JSON.parse(s); }catch{ return null; } }
 function parseDateSmart(s){
   if(!s) return null;
@@ -51,7 +51,7 @@ function ensureItemsArray(raw){
   return [];
 }
 
-// ====== Canonización ======
+/* ====== Canonización (si tenías mapas/reglas, podés pegarlos aquí) ====== */
 const stripAccents = s => s.normalize('NFD').replace(/[\u0300-\u036f]/g,'');
 const normKey = s => stripAccents(String(s||'').toLowerCase()).replace(/[^a-z0-9]+/g,' ').replace(/\s+/g,' ').trim();
 const CANON = {};
@@ -145,14 +145,15 @@ function normalizeRow(row){
   return { date, timestamp, cliente, mesa, metodo, total, totalCosto, ganancia, items };
 }
 
-// ================== Estado global ==================
+/* ================== Estado global ================== */
 let VENTAS=[], VENTAS_FILTRADAS=[], expandir=false;
+let GASTOS = []; // <<< NUEVO
 
-// Paginación
+/* Paginación */
 const PAGE_SIZE = 15;
 let currentPage = 1;
 
-// Filtros visibles (panel)
+/* Filtros visibles (panel) */
 const FILTER_KEYS = ['filtMes','filtDia','filtHorario','filtBuscar','filtCategoria'];
 const DEFAULT_VISIBLE = {filtMes:true, filtDia:true, filtHorario:false, filtBuscar:true, filtCategoria:false};
 
@@ -173,10 +174,10 @@ function openFiltrosPanel(){
   document.querySelectorAll('#panelFiltros .chkFilt').forEach(chk=>{
     chk.checked = !!vis[chk.value];
   });
-  document.getElementById('panelFiltros').classList.remove('hidden');
+  document.getElementById('panelFiltros')?.classList.remove('hidden');
 }
 function closeFiltrosPanel(){
-  document.getElementById('panelFiltros').classList.add('hidden');
+  document.getElementById('panelFiltros')?.classList.add('hidden');
 }
 function saveFiltrosFromPanel(){
   const vis = {};
@@ -188,7 +189,7 @@ function saveFiltrosFromPanel(){
   closeFiltrosPanel();
 }
 
-// ================== Día + horario ==================
+/* ================== Día + horario ================== */
 function setDia(dateObj){
   const yyyy = dateObj.getFullYear();
   const mm = String(dateObj.getMonth()+1).padStart(2,'0');
@@ -220,7 +221,7 @@ function cargarMeses(){
   if(keys.length) sel.val(keys[0]);
 }
 
-// ================== Categorización ==================
+/* ================== Categorización ================== */
 const CAT_LABELS = ['Café','Comida','Cerveza','Gaseosa','Agua','Vino','Whisky','Tragos'];
 function categorizar(nombre){
   const n=(nombre||'').toLowerCase();
@@ -235,7 +236,7 @@ function categorizar(nombre){
   return 'Comida';
 }
 
-// ================== Filtros base ==================
+/* ================== Filtros base ================== */
 function aplicarFiltros(){
   const mes=$('#mesFiltro').val();
   const q=($('#buscar').val()||'').toLowerCase();
@@ -250,7 +251,6 @@ function aplicarFiltros(){
   });
 
   currentPage = 1;
-
   renderKPIs();
   renderTabla();
   renderPaginador();
@@ -259,13 +259,13 @@ function aplicarFiltros(){
   renderHoras();
 }
 
-// ================== Alcance ==================
+/* ================== Alcance ================== */
 function getVentasAlcance(){
   const alcance = $('#alcanceSel').val();
   if(alcance==='dia'){
     const clave = getDiaKeySeleccionado();
     return VENTAS.filter(v => dayKey(v.date)===clave && withinHourRange(v.date));
-    }
+  }
   if(alcance==='rango'){
     const d1 = $('#desdeFecha').val();
     const d2 = $('#hastaFecha').val();
@@ -277,7 +277,7 @@ function getVentasAlcance(){
   return VENTAS.filter(v => monthKey(v.date)===mesSel);
 }
 
-// ================== Agregados categoría ==================
+/* ================== Agregados categoría ================== */
 function aggregateByCategory(ventas){
   const base = Object.fromEntries(CAT_LABELS.map(c=>[c, {unidades:0, veces:0, ganancia:0}]));
   ventas.forEach(v=>{
@@ -312,38 +312,14 @@ function aggregateByDayAndCategory(ventas){
   return byDay;
 }
 
-// ================== Medios de pago (helpers para KPIs del mes) ==================
-const isEfectivo = (m) => /efec/.test(String(m||'').toLowerCase());
-const isMP       = (m) => /(mercado\s*pago|\bmp\b)/.test(String(m||'').toLowerCase());
-
-// ================== KPIs / Tabla ==================
+/* ================== KPIs / Tabla (con paginación) ================== */
 function renderKPIs(){
-  // ——— KPIs de la tabla filtrada (como ya tenías) ———
   $('#kpiVentas').text(VENTAS_FILTRADAS.length);
-  const unidadesMesFiltrado=VENTAS_FILTRADAS.reduce((a,v)=>a+(v.items||[]).reduce((s,i)=>s+toNumber(i.qty),0),0);
-  $('#kpiUnidades').text(unidadesMesFiltrado);
-  const ingresosMesFiltrado=VENTAS_FILTRADAS.reduce((a,v)=>a+toNumber(v.total),0);
-  $('#kpiIngresos').text($fmt(ingresosMesFiltrado));
+  const unidadesMes=VENTAS_FILTRADAS.reduce((a,v)=>a+(v.items||[]).reduce((s,i)=>s+toNumber(i.qty),0),0);
+  $('#kpiUnidades').text(unidadesMes);
+  const ingresosMes=VENTAS_FILTRADAS.reduce((a,v)=>a+toNumber(v.total),0);
+  $('#kpiIngresos').text($fmt(ingresosMes));
 
-  // ——— NUEVO: KPIs “del mes” IGNORANDO texto/categoría ———
-  const mesSel = $('#mesFiltro').val();
-  const baseMes = VENTAS.filter(v => monthKey(v.date)===mesSel);
-
-  const ganMes = baseMes.reduce((a,v)=> a + toNumber(v.ganancia), 0);
-  const efectivoMes = baseMes.filter(v=>isEfectivo(v.metodo)).reduce((a,v)=> a + toNumber(v.total), 0);
-  const mpMes       = baseMes.filter(v=>isMP(v.metodo)).reduce((a,v)=> a + toNumber(v.total), 0);
-
-  // Pinta solo si existen los elementos en el HTML
-  const elGan = document.getElementById('kpiGanMes');
-  if(elGan) elGan.textContent = $fmt(ganMes);
-
-  const elEf = document.getElementById('kpiEfectivoMes');
-  if(elEf) elEf.textContent = $fmt(efectivoMes);
-
-  const elMP = document.getElementById('kpiMPMes');
-  if(elMP) elMP.textContent = $fmt(mpMes);
-
-  // ——— KPIs del día ———
   const claveDia = getDiaKeySeleccionado();
   const delDia = VENTAS.filter(v => dayKey(v.date) === claveDia && withinHourRange(v.date));
   const ganDia = delDia.reduce((a,v)=> a + toNumber(v.ganancia), 0);
@@ -425,12 +401,13 @@ function renderPaginador(){
   `;
 }
 
-// ================== Charts (categoría) ==================
+/* ================== Charts (categoría) ================== */
 let PIE, BAR_QTY, BAR_PROF, DAILY_QTY, TOP_ITEMS, HORAS;
 function destroyCharts(){
   [PIE,BAR_QTY,BAR_PROF,DAILY_QTY].forEach(c=>{ if(c) c.destroy(); });
   PIE=BAR_QTY=BAR_PROF=DAILY_QTY=null;
 }
+
 function renderCharts(){
   const diaDia = $('#chkDiaDia').is(':checked');
   const ventasBase = getVentasAlcance();
@@ -439,10 +416,10 @@ function renderCharts(){
   const qtyArr = labels.map(l=> dataAgg[l].unidades);
   const profitArr = labels.map(l=> dataAgg[l].ganancia);
 
-  const tb = document.getElementById('tbodyResumenCat'); tb.innerHTML = '';
+  const tb = document.getElementById('tbodyResumenCat'); if(tb) tb.innerHTML = '';
   labels.forEach(l=>{
     const r = dataAgg[l];
-    tb.innerHTML += `<tr>
+    if(tb) tb.innerHTML += `<tr>
       <td class="p-2">${l}</td>
       <td class="p-2 text-right">${r.unidades}</td>
       <td class="p-2 text-right">${r.veces}</td>
@@ -450,8 +427,8 @@ function renderCharts(){
     </tr>`;
   });
 
-  document.getElementById('aggWrap').classList.toggle('hidden', diaDia);
-  document.getElementById('dailyWrap').classList.toggle('hidden', !diaDia);
+  document.getElementById('aggWrap')?.classList.toggle('hidden', diaDia);
+  document.getElementById('dailyWrap')?.classList.toggle('hidden', !diaDia);
 
   destroyCharts();
 
@@ -515,7 +492,7 @@ function renderCharts(){
   });
 }
 
-// ================== Explorador de Ítems ==================
+/* ================== Explorador de Ítems ================== */
 function aggregateItems(ventas){
   const map = new Map();
   ventas.forEach(v=>{
@@ -546,9 +523,9 @@ function renderExplorer(){
 
   items.sort((a,b)=> (toNumber(b[sort]) - toNumber(a[sort])) || (b.qty - a.qty));
 
-  const tb = document.getElementById('tbodyItems'); tb.innerHTML='';
+  const tb = document.getElementById('tbodyItems'); if(tb) tb.innerHTML='';
   items.forEach(r=>{
-    tb.innerHTML += `<tr>
+    if(tb) tb.innerHTML += `<tr>
       <td class="p-2">${r.nombre}</td>
       <td class="p-2 text-right">${r.qty}</td>
       <td class="p-2 text-right">${r.veces}</td>
@@ -568,8 +545,7 @@ function renderExplorer(){
   });
 }
 
-// ================== Horarios ==================
-let HORAS;
+/* ================== Horarios ================== */
 function renderHoras(){
   const ventas = getVentasAlcance();
   const buckets = Array.from({length:24},()=>0);
@@ -577,7 +553,8 @@ function renderHoras(){
 
   const maxVal = Math.max(...buckets);
   const maxIdx = buckets.indexOf(maxVal);
-  document.getElementById('lblPeakHour').textContent = (maxVal>0) ? `Pico: ${String(maxIdx).padStart(2,'0')}:00 — ${$fmt(maxVal)}` : '';
+  const lbl = document.getElementById('lblPeakHour');
+  if(lbl) lbl.textContent = (maxVal>0) ? `Pico: ${String(maxIdx).padStart(2,'0')}:00 — ${$fmt(maxVal)}` : '';
 
   if(HORAS) HORAS.destroy();
   const ctxH = document.getElementById('chartHoras').getContext('2d');
@@ -588,7 +565,7 @@ function renderHoras(){
   });
 }
 
-// ================== Carga CSV ==================
+/* ================== Carga CSV ================== */
 async function fetchCsvText(url){
   try{ const res=await fetch(url); if(!res.ok) throw new Error(`HTTP ${res.status}`); return await res.text(); }
   catch(err1){
@@ -606,7 +583,7 @@ function parseCsv(text){
 async function cargarVentas(){
   try{
     $('#statusBadge').attr('class','text-xs px-3 py-1 rounded-full bg-blue-100 text-blue-700').text('Cargando…');
-    document.getElementById('diag').innerHTML='';
+    const diagEl=document.getElementById('diag'); if(diagEl) diagEl.innerHTML='';
     const url=document.getElementById('csvUrl').value.trim();
     const text=await fetchCsvText(url);
     const rows=await parseCsv(text);
@@ -626,7 +603,7 @@ async function cargarVentas(){
   }
 }
 
-// ================== Helpers export ==================
+/* ================== Helpers export ================== */
 function buildItemsText(items, expandirFlag){
   if(!items || !items.length) return '-';
   return items
@@ -695,13 +672,81 @@ function exportarExcelFact(){
   XLSX.writeFile(wb, fname);
 }
 
-// ================== Eventos / Init ==================
+/* ================== Gastos (sin backend, con localStorage) ================== */
+const GASTOS_LS_KEY = 'onceydoce-gastos';
+
+function toDayKeyFromYYYYMMDD(s){
+  if(!s) return null;
+  return s.slice(0,10);
+}
+function loadGastosFromStorage(){
+  try{ const raw = localStorage.getItem(GASTOS_LS_KEY); const arr = raw ? JSON.parse(raw) : []; GASTOS = Array.isArray(arr)?arr:[]; }
+  catch{ GASTOS = []; }
+}
+function saveGastosToStorage(){
+  try{ localStorage.setItem(GASTOS_LS_KEY, JSON.stringify(GASTOS)); }catch{}
+}
+
+function renderGastosLista(){
+  const tb = document.getElementById('tbodyGastos'); if(!tb) return;
+  tb.innerHTML = '';
+  GASTOS.slice(0,20).forEach(g=>{
+    tb.innerHTML += `
+      <tr class="border-b border-gray-100">
+        <td class="p-2">${g.fecha || '-'}</td>
+        <td class="p-2">${g.categoria || '-'}</td>
+        <td class="p-2">${g.concepto || '-'}</td>
+        <td class="p-2 text-right">${$fmt(toNumber(g.monto))}</td>
+      </tr>`;
+  });
+}
+
+function gastosDelDiaSeleccionado(){
+  const key = getDiaKeySeleccionado();
+  return GASTOS.filter(g => (g.fechaKey === key));
+}
+
+async function cargarGastosRecientes(){
+  // Acá simplemente usamos localStorage como “backend”
+  loadGastosFromStorage();
+  renderGastosLista();
+  renderCierre(); // refresca totales
+}
+
+function guardarGasto(){
+  const fecha = ($('#gastoFecha').val() || dayKey(new Date()));
+  const categoria = $('#gastoCategoria').val() || 'Otros';
+  const concepto  = $('#gastoConcepto').val()  || '';
+  const proveedor = $('#gastoProveedor').val() || '';
+  const monto     = toNumber($('#gastoMonto').val());
+  const nota      = $('#gastoNota').val() || '';
+
+  if(!monto || monto<=0){ alert('Ingresá un monto válido'); return; }
+  if(!concepto){ alert('Ingresá un concepto'); return; }
+
+  const nuevo = {
+    fecha, fechaKey: toDayKeyFromYYYYMMDD(fecha),
+    categoria, concepto, proveedor, monto, nota
+  };
+  GASTOS.unshift(nuevo);
+  saveGastosToStorage();
+  renderGastosLista();
+  renderCierre();
+
+  // limpiar campos mínimos
+  $('#gastoConcepto').val('');
+  $('#gastoMonto').val('');
+  $('#gastoNota').val('');
+  alert('Gasto guardado ✅');
+}
+
+/* ================== Eventos / Init ================== */
 $(document).on('input change','#mesFiltro,#buscar,#catFiltro',aplicarFiltros);
 
 // Alcance / rango
 $('#alcanceSel').on('change', ()=>{
   const v=$('#alcanceSel').val();
-  document.getElementById('rangoWrap').classList.toggle('hidden', v!=='rango');
+  document.getElementById('rangoWrap')?.classList.toggle('hidden', v!=='rango');
   renderCharts(); renderExplorer(); renderHoras();
 });
 $('#btnAplicarRango').on('click', ()=>{ renderCharts(); renderExplorer(); renderHoras(); });
@@ -725,7 +770,7 @@ $('#btnMenos2').on('click', ()=> { const d=new Date(); d.setDate(d.getDate()-2);
 $('#itemCatSel,#itemSortSel,#itemTopN').on('change', renderExplorer);
 $('#itemTextSel').on('input', renderExplorer);
 
-// Paginación (delegación)
+// Paginación
 $(document).on('click', '#paginador button[data-page]', function(){
   const p = parseInt(this.getAttribute('data-page'),10);
   if(!Number.isNaN(p)){ currentPage = p; renderTabla(); }
@@ -739,14 +784,22 @@ document.getElementById('panelFiltros')?.addEventListener('click', (e)=>{
   if(e.target.id==='panelFiltros') closeFiltrosPanel();
 });
 
+// Gastos: eventos
+$('#btnGuardarGasto').on('click', guardarGasto);
+$('#btnGastosReload').on('click', cargarGastosRecientes);
+
 // Init
 $(function(){
   applyVisibleFilters();
+  // setear fecha del form de gastos a hoy (si existe input)
+  const hoy = dayKey(new Date());
+  $('#gastoFecha').val(hoy);
   cargarVentas();
+  cargarGastosRecientes();
 });
 window.addEventListener('resize', ()=>{ if(VENTAS_FILTRADAS.length){ renderCharts(); }});
 
-// ================== Cierre ==================
+/* ================== Cierre ================== */
 function ventasDelDiaConHorario(){
   const claveDia = getDiaKeySeleccionado();
   return VENTAS.filter(v => dayKey(v.date) === claveDia && withinHourRange(v.date));
@@ -756,18 +809,26 @@ function renderCierre(){
   const ingresos = delDia.reduce((a,v)=> a + toNumber(v.total), 0);
   const costo    = delDia.reduce((a,v)=> a + toNumber(v.totalCosto), 0);
   const bruta    = ingresos - costo;
-  const gastosInput = Number(document.getElementById('cierreGastos').value || 0);
-  const personas    = Math.max(1, parseInt(document.getElementById('cierrePersonas').value || '4', 10));
-  const neta        = bruta - gastosInput;
+
+  // Gastos reales del día (lista) + input manual
+  const gastosReales = gastosDelDiaSeleccionado().reduce((a,g)=> a + toNumber(g.monto), 0);
+  const gastosInput  = Number(document.getElementById('cierreGastos')?.value || 0);
+  const gastosTotales = gastosReales + gastosInput;
+
+  const personas    = Math.max(1, parseInt(document.getElementById('cierrePersonas')?.value || '4', 10));
+  const neta        = bruta - gastosTotales;
   const porPersona  = neta / personas;
-  document.getElementById('cierreIng').textContent        = $fmt(ingresos);
-  document.getElementById('cierreCosto').textContent      = $fmt(costo);
-  document.getElementById('cierreBruta').textContent      = $fmt(bruta);
-  document.getElementById('cierreGastosLbl').textContent  = $fmt(gastosInput);
-  document.getElementById('cierreNeta').textContent       = $fmt(neta);
-  document.getElementById('cierrePorPersona').textContent = $fmt(porPersona);
+
+  document.getElementById('cierreIng')?.textContent        = $fmt(ingresos);
+  document.getElementById('cierreCosto')?.textContent      = $fmt(costo);
+  document.getElementById('cierreBruta')?.textContent      = $fmt(bruta);
+  document.getElementById('cierreGastosLbl')?.textContent  = $fmt(gastosTotales);
+  document.getElementById('cierreNeta')?.textContent       = $fmt(neta);
+  document.getElementById('cierrePorPersona')?.textContent = $fmt(porPersona);
+
   const hd = $('#horaDesde').val() || '--:--'; const hh = $('#horaHasta').val() || '--:--';
   const franja = (hd==='--:--' && hh==='--:--') ? '' : ` • ${hd}–${hh}`;
-  document.getElementById('cierreRangoLbl').textContent = `Fecha: ${getDiaKeySeleccionado()}${franja}`;
+  const lbl = document.getElementById('cierreRangoLbl');
+  if(lbl) lbl.textContent = `Fecha: ${getDiaKeySeleccionado()}${franja}`;
 }
 $('#cierreGastos,#cierrePersonas').on('change input', renderCierre);
