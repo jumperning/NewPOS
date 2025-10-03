@@ -37,16 +37,15 @@
     .navlink:hover{ background:#f3f4f6 }
     .navlink.active{ background:var(--accent-50); color:var(--accent-600) }
     .badge{ display:inline-flex; align-items:center; gap:.375rem; padding:.25rem .5rem; border-radius:999px; font-size:.75rem; color:#475569; background:#f3f4f6; }
-  </style>
-  <style>
-    /* Texto negro en todo el sitio */
+    /* Todo en negro */
     body { color:#000; }
     .text-slate-800,.text-slate-700,.text-slate-600,.text-slate-500,.text-slate-400,
     .text-gray-800,.text-gray-700,.text-gray-600,.text-gray-500,.text-gray-400 { color:#000 !important; }
     .badge { color:#000; }
+    .chip{display:inline-flex;align-items:center;gap:.375rem;padding:.25rem .5rem;border-radius:999px;font-size:.75rem;background:#f3f4f6}
   </style>
 </head>
-<body class="bg-slate-50 text-black dark:text-black">
+<body class="bg-slate-50 text-black">
 
   <!-- Sidebar -->
   <aside class="hidden md:flex md:flex-col fixed inset-y-0 left-0 w-64 bg-white border-r border-slate-200">
@@ -58,21 +57,12 @@
       </div>
     </div>
     <nav class="mt-2 px-2 space-y-1">
-      <a href="./index.html" class="navlink ${location.pathname.endsWith('index.html') ? 'active' : ''}" title="POS">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <path d="M4 10h16a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-6a2 2 0 0 1 2-2Z"/>
-          <path d="M7 16h10"/><path d="M9.5 13h5"/><path d="M9 4h6v4l-1-.6-1 .6-1-.6-1 .6-1-.6-1 .6V4Z"/>
-        </svg>
+      <a href="./index.html" class="navlink" title="POS">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10h16a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-6a2 2 0 0 1 2-2Z"/><path d="M7 16h10"/><path d="M9.5 13h5"/><path d="M9 4h6v4l-1-.6-1 .6-1-.6-1 .6-1-.6-1 .6V4Z"/></svg>
         <span>POS</span>
       </a>
-
-      <a href="./reporte.html" class="navlink ${location.pathname.endsWith('reporte.html') ? 'active' : ''}" title="Reporte">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <path d="M3 20h18"/>
-          <rect x="5" y="11" width="3" height="6" rx="1"/>
-          <rect x="10.5" y="8" width="3" height="9" rx="1"/>
-          <rect x="16" y="5" width="3" height="12" rx="1"/>
-        </svg>
+      <a href="./reporte.html" class="navlink active" title="Reporte">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20h18"/><rect x="5" y="11" width="3" height="6" rx="1"/><rect x="10.5" y="8" width="3" height="9" rx="1"/><rect x="16" y="5" width="3" height="12" rx="1"/></svg>
         <span>Reporte</span>
       </a>
     </nav>
@@ -97,7 +87,7 @@
   <main class="md:ml-64 p-4 sm:p-6">
     <div class="max-w-7xl mx-auto space-y-6">
 
-      <!-- Header de la página -->
+      <!-- Header -->
       <header class="rounded-2xl bg-white shadow p-6 flex items-center justify-between">
         <div>
           <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight">Reporte de Ventas</h1>
@@ -118,7 +108,6 @@
         <button id="btnReload" class="mt-3 px-3 py-1.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-sm">Recargar</button>
       </section>
 
-      <!-- GRID principal -->
       <div class="container-grid">
         <!-- Filtros -->
         <aside class="lg:col-span-3 col-span-12 bg-white rounded-2xl shadow p-4 space-y-4 h-fit lg:sticky lg:top-6">
@@ -140,22 +129,15 @@
               <button type="button" class="btn" id="btnAyer">Ayer</button>
               <button type="button" class="btn" id="btnMenos2">-2 días</button>
             </div>
-            <p class="text-xs text-slate-500 mt-2">Afecta los KPIs diarios (Ganancia/Ingresos/Unidades/Ventas/Costo).</p>
+            <p class="text-xs text-slate-500 mt-2">Afecta KPIs diarios y, si el alcance es “Día”, también el análisis.</p>
           </div>
 
           <div id="filtHorario">
             <label class="block text-sm font-medium mb-1">Filtrar por horario (del día seleccionado)</label>
             <div class="grid grid-cols-2 gap-2">
-              <div>
-                <span class="text-xs text-slate-600">Desde</span>
-                <input id="horaDesde" type="time" class="w-full rounded-xl border-gray-300" />
-              </div>
-              <div>
-                <span class="text-xs text-slate-600">Hasta</span>
-                <input id="horaHasta" type="time" class="w-full rounded-xl border-gray-300" />
-              </div>
+              <div><span class="text-xs text-slate-600">Desde</span><input id="horaDesde" type="time" class="w-full rounded-xl border-gray-300" /></div>
+              <div><span class="text-xs text-slate-600">Hasta</span><input id="horaHasta" type="time" class="w-full rounded-xl border-gray-300" /></div>
             </div>
-            <p class="text-xs text-slate-500 mt-2">Se aplica a KPIs del día y, si el alcance es “Día”, también al análisis.</p>
           </div>
 
           <div id="filtBuscar">
@@ -176,88 +158,44 @@
               <option value="Whisky">Whisky</option>
               <option value="Tragos">Tragos</option>
             </select>
-            <p class="text-xs text-slate-500 mt-2">Por ejemplo: “Vino”, “Whisky” o “Tragos”.</p>
           </div>
         </aside>
 
         <!-- Contenido -->
         <main class="lg:col-span-9 col-span-12 space-y-4">
-
-          <!-- KPIs (MES) -->
-          <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <!-- KPIs (mes) -->
+          <div class="grid grid-cols-2 sm:grid-cols-5 gap-4">
+            <div class="bg-white rounded-2xl shadow p-4"><div class="text-xs text-slate-500">Ventas (mes)</div><div id="kpiVentas" class="text-2xl font-bold">0</div></div>
+            <div class="bg-white rounded-2xl shadow p-4"><div class="text-xs text-slate-500">Unidades (mes)</div><div id="kpiUnidades" class="text-2xl font-bold">0</div></div>
+            <div class="bg-white rounded-2xl shadow p-4"><div class="text-xs text-slate-500">Ingresos (mes)</div><div id="kpiIngresos" class="text-2xl font-bold">$0</div></div>
+            <!-- NUEVO: Ganancia (mes) -->
+            <div class="bg-white rounded-2xl shadow p-4"><div class="text-xs text-slate-500">Ganancia (mes)</div><div id="kpiGananciaMes" class="text-2xl font-bold">$0</div></div>
+            <!-- NUEVOS: breakdown medios de pago -->
             <div class="bg-white rounded-2xl shadow p-4">
-              <div class="text-xs text-slate-500">Ventas (mes)</div>
-              <div id="kpiVentas" class="text-2xl font-bold money">0</div>
-            </div>
-            <div class="bg-white rounded-2xl shadow p-4">
-              <div class="text-xs text-slate-500">Unidades (mes)</div>
-              <div id="kpiUnidades" class="text-2xl font-bold money">0</div>
-            </div>
-            <div class="bg-white rounded-2xl shadow p-4">
-              <div class="text-xs text-slate-500">Ingresos (mes)</div>
-              <div id="kpiIngresos" class="text-2xl font-bold money">$0</div>
-            </div>
-            <div class="bg-white rounded-2xl shadow p-4">
-              <div class="text-xs text-slate-500">Ganancia (mes)</div>
-              <div id="kpiGananciaMes" class="text-2xl font-bold money">$0</div>
-            </div>
-          </div>
-
-          <!-- Split por método de pago (MES) -->
-          <div class="grid grid-cols-2 gap-4">
-            <div class="bg-white rounded-2xl shadow p-4">
-              <div class="text-xs text-slate-500">Efectivo (mes)</div>
-              <div id="kpiEfectivoMes" class="text-2xl font-bold money">$0</div>
-            </div>
-            <div class="bg-white rounded-2xl shadow p-4">
-              <div class="text-xs text-slate-500">Mercado Pago (mes)</div>
-              <div id="kpiMpMes" class="text-2xl font-bold money">$0</div>
+              <div class="text-xs text-slate-500">Ingresos por método (mes)</div>
+              <div class="mt-1 text-sm">Efectivo: <b id="kpiEfectivoMes">$0</b></div>
+              <div class="text-sm">Mercado Pago: <b id="kpiMpMes">$0</b></div>
             </div>
           </div>
 
           <!-- KPIs del día -->
           <div class="grid grid-cols-2 sm:grid-cols-5 gap-4">
-            <div class="bg-white rounded-2xl shadow p-4"><div class="text-xs text-slate-500">Ganancia (día)</div><div id="kpiGanDia" class="text-2xl font-bold money">$0</div><div id="kpiGanDiaLbl" class="text-xs text-slate-500 mt-1"></div></div>
-            <div class="bg-white rounded-2xl shadow p-4"><div class="text-xs text-slate-500">Ingresos (día)</div><div id="kpiIngDia" class="text-2xl font-bold money">$0</div></div>
-            <div class="bg-white rounded-2xl shadow p-4"><div class="text-xs text-slate-500">Unidades (día)</div><div id="kpiUniDia" class="text-2xl font-bold money">0</div></div>
-            <div class="bg-white rounded-2xl shadow p-4"><div class="text-xs text-slate-500">Ventas (día)</div><div id="kpiVentasDia" class="text-2xl font-bold money">0</div></div>
-            <div class="bg-white rounded-2xl shadow p-4"><div class="text-xs text-slate-500">Costo (día)</div><div id="kpiCostoDia" class="text-2xl font-bold money">$0</div></div>
+            <div class="bg-white rounded-2xl shadow p-4"><div class="text-xs text-slate-500">Ganancia (día)</div><div id="kpiGanDia" class="text-2xl font-bold">$0</div><div id="kpiGanDiaLbl" class="text-xs text-slate-500 mt-1"></div></div>
+            <div class="bg-white rounded-2xl shadow p-4"><div class="text-xs text-slate-500">Ingresos (día)</div><div id="kpiIngDia" class="text-2xl font-bold">$0</div></div>
+            <div class="bg-white rounded-2xl shadow p-4"><div class="text-xs text-slate-500">Unidades (día)</div><div id="kpiUniDia" class="text-2xl font-bold">0</div></div>
+            <div class="bg-white rounded-2xl shadow p-4"><div class="text-xs text-slate-500">Ventas (día)</div><div id="kpiVentasDia" class="text-2xl font-bold">0</div></div>
+            <div class="bg-white rounded-2xl shadow p-4"><div class="text-xs text-slate-500">Costo (día)</div><div id="kpiCostoDia" class="text-2xl font-bold">$0</div></div>
           </div>
 
-          <!-- Análisis por categoría -->
+          <!-- Análisis por categoría (placeholder intacto) -->
           <div class="bg-white rounded-2xl shadow p-4 space-y-4">
             <div class="flex flex-wrap items-center gap-3">
               <h2 class="text-lg font-semibold mr-auto">Análisis por Categoría</h2>
               <div class="flex gap-2">
-                <span class="chip cursor-default">Café</span>
-                <span class="chip cursor-default">Comida</span>
-                <span class="chip cursor-default">Cerveza</span>
-                <span class="chip cursor-default">Gaseosa</span>
-                <span class="chip cursor-default">Agua</span>
-                <span class="chip cursor-default">Vino</span>
-                <span class="chip cursor-default">Whisky</span>
-                <span class="chip cursor-default">Tragos</span>
+                <span class="chip">Café</span><span class="chip">Comida</span><span class="chip">Cerveza</span>
+                <span class="chip">Gaseosa</span><span class="chip">Agua</span><span class="chip">Vino</span>
+                <span class="chip">Whisky</span><span class="chip">Tragos</span>
               </div>
-            </div>
-
-            <div class="flex flex-wrap gap-3 items-end">
-              <div>
-                <label class="block text-xs text-slate-600 mb-1">Alcance</label>
-                <select id="alcanceSel" class="rounded-xl border-gray-300">
-                  <option value="mes">Mes completo (seleccionado)</option>
-                  <option value="dia">Día (usa el selector de la izquierda)</option>
-                  <option value="rango">Rango de fechas</option>
-                </select>
-              </div>
-              <div id="rangoWrap" class="hidden flex items-end gap-2">
-                <div><label class="block text-xs text-slate-600 mb-1">Desde</label><input id="desdeFecha" type="date" class="rounded-xl border-gray-300"></div>
-                <div><label class="block text-xs text-slate-600 mb-1">Hasta</label><input id="hastaFecha" type="date" class="rounded-xl border-gray-300"></div>
-                <button id="btnAplicarRango" class="btn">Aplicar</button>
-              </div>
-              <label class="inline-flex items-center gap-2 ml-auto">
-                <input id="chkDiaDia" type="checkbox" class="rounded">
-                <span class="text-sm">Día a día (serie)</span>
-              </label>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6" id="aggWrap">
@@ -267,77 +205,17 @@
             </div>
 
             <div id="dailyWrap" class="rounded-xl border p-3 hidden">
-              <div class="text-sm text-slate-500 mb-2">Unidades — Día a día (apilado por categoría)</div>
+              <div class="text-sm text-slate-500 mb-2">Unidades — Día a día</div>
               <canvas id="chartDailyQty"></canvas>
             </div>
 
             <div class="overflow-x-auto">
               <table class="w-full text-sm mt-2">
                 <thead class="bg-gray-50 text-slate-600">
-                  <tr>
-                    <th class="text-left p-2">Categoría</th>
-                    <th class="text-right p-2">Unidades</th>
-                    <th class="text-right p-2">Veces</th>
-                    <th class="text-right p-2">Ganancia</th>
-                  </tr>
+                  <tr><th class="text-left p-2">Categoría</th><th class="text-right p-2">Unidades</th><th class="text-right p-2">Veces</th><th class="text-right p-2">Ganancia</th></tr>
                 </thead>
                 <tbody id="tbodyResumenCat" class="divide-y"></tbody>
               </table>
-            </div>
-          </div>
-
-          <!-- Top & Explorador -->
-          <div class="bg-white rounded-2xl shadow p-4 space-y-4">
-            <div class="flex flex-wrap gap-3 items-end">
-              <h2 class="text-lg font-semibold mr-auto">Top & Explorador de Ítems</h2>
-              <div>
-                <label class="block text-xs text-slate-600 mb-1">Categoría (opcional)</label>
-                <select id="itemCatSel" class="rounded-xl border-gray-300">
-                  <option value="">Todas</option>
-                  <option>Café</option><option>Comida</option><option>Cerveza</option>
-                  <option>Gaseosa</option><option>Agua</option><option>Vino</option>
-                  <option>Whisky</option><option>Tragos</option>
-                </select>
-              </div>
-              <div>
-                <label class="block text-xs text-slate-600 mb-1">Filtrar por texto</label>
-                <input id="itemTextSel" type="text" placeholder="ej: hamburguesa, empanada, ipa…" class="rounded-xl border-gray-300"/>
-              </div>
-              <div>
-                <label class="block text-xs text-slate-600 mb-1">Ordenar por</label>
-                <select id="itemSortSel" class="rounded-xl border-gray-300">
-                  <option value="qty">Unidades</option>
-                  <option value="ingreso">Ingresos</option>
-                  <option value="veces">Veces</option>
-                  <option value="ganancia">Ganancia</option>
-                </select>
-              </div>
-              <div>
-                <label class="block text-xs text-slate-600 mb-1">Top N</label>
-                <input id="itemTopN" type="number" min="3" value="10" class="w-20 rounded-xl border-gray-300"/>
-              </div>
-            </div>
-
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div class="rounded-xl border p-3">
-                <div class="text-sm text-slate-500 mb-2">Top por Unidades (según alcance)</div>
-                <canvas id="chartTopItems"></canvas>
-              </div>
-              <div class="overflow-x-auto rounded-xl border">
-                <table class="w-full text-sm">
-                  <thead class="bg-gray-50 text-slate-600">
-                    <tr>
-                      <th class="text-left p-2">Ítem</th>
-                      <th class="text-right p-2">Unid.</th>
-                      <th class="text-right p-2">Veces</th>
-                      <th class="text-right p-2">Ingreso</th>
-                      <th class="text-right p-2">Ganancia</th>
-                      <th class="text-left p-2">Categoría</th>
-                    </tr>
-                  </thead>
-                  <tbody id="tbodyItems" class="divide-y"></tbody>
-                </table>
-              </div>
             </div>
           </div>
 
@@ -370,16 +248,77 @@
             </div>
 
             <div class="grid grid-cols-2 sm:grid-cols-6 gap-4">
-              <div class="rounded-xl border p-3"><div class="text-xs text-slate-500">Ingresos (día)</div><div id="cierreIng" class="text-xl font-bold money">$0</div></div>
-              <div class="rounded-xl border p-3"><div class="text-xs text-slate-500">Costo (día)</div><div id="cierreCosto" class="text-xl font-bold money">$0</div></div>
-              <div class="rounded-xl border p-3"><div class="text-xs text-slate-500">Ganancia bruta</div><div id="cierreBruta" class="text-xl font-bold money">$0</div></div>
-              <div class="rounded-xl border p-3"><div class="text-xs text-slate-500">Gastos del local</div><div id="cierreGastosLbl" class="text-xl font-bold money">$0</div></div>
-              <div class="rounded-xl border p-3"><div class="text-xs text-slate-500">Ganancia neta</div><div id="cierreNeta" class="text-xl font-bold money">$0</div></div>
-              <div class="rounded-xl border p-3"><div class="text-xs text-slate-500">Por persona</div><div id="cierrePorPersona" class="text-xl font-bold money">$0</div></div>
+              <div class="rounded-xl border p-3"><div class="text-xs text-slate-500">Ingresos (día)</div><div id="cierreIng" class="text-xl font-bold">$0</div></div>
+              <div class="rounded-xl border p-3"><div class="text-xs text-slate-500">Costo (día)</div><div id="cierreCosto" class="text-xl font-bold">$0</div></div>
+              <div class="rounded-xl border p-3"><div class="text-xs text-slate-500">Ganancia bruta</div><div id="cierreBruta" class="text-xl font-bold">$0</div></div>
+              <div class="rounded-xl border p-3"><div class="text-xs text-slate-500">Gastos del local</div><div id="cierreGastosLbl" class="text-xl font-bold">$0</div></div>
+              <div class="rounded-xl border p-3"><div class="text-xs text-slate-500">Ganancia neta</div><div id="cierreNeta" class="text-xl font-bold">$0</div></div>
+              <div class="rounded-xl border p-3"><div class="text-xs text-slate-500">Por persona</div><div id="cierrePorPersona" class="text-xl font-bold">$0</div></div>
             </div>
           </div>
 
-          <!-- Tabla -->
+          <!-- ====== Gastos (alta + últimos) ====== -->
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <!-- Alta de gasto -->
+            <div class="bg-white rounded-2xl shadow p-4 space-y-3">
+              <h2 class="text-lg font-semibold">Registrar gasto</h2>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-sm text-slate-600 mb-1">Fecha</label>
+                  <input id="gFecha" type="date" class="w-full rounded-xl border-gray-300" />
+                </div>
+                <div>
+                  <label class="block text-sm text-slate-600 mb-1">Categoría</label>
+                  <select id="gCategoria" class="w-full rounded-xl border-gray-300">
+                    <option value="Mantenimiento de local">Mantenimiento de local</option>
+                    <option value="Compra de comida">Compra de comida</option>
+                    <option value="Compra de bebida">Compra de bebida</option>
+                    <option value="Servicios">Servicios</option>
+                    <option value="Impuestos">Impuestos</option>
+                    <option value="Otros">Otros</option>
+                  </select>
+                </div>
+                <div class="sm:col-span-2">
+                  <label class="block text-sm text-slate-600 mb-1">Concepto / nombre del gasto</label>
+                  <input id="gConcepto" type="text" placeholder="Ej: 2 kilos de papa" class="w-full rounded-xl border-gray-300" />
+                </div>
+                <div>
+                  <label class="block text-sm text-slate-600 mb-1">Proveedor (opcional)</label>
+                  <input id="gProveedor" type="text" class="w-full rounded-xl border-gray-300" />
+                </div>
+                <div>
+                  <label class="block text-sm text-slate-600 mb-1">Monto (ARS)</label>
+                  <input id="gMonto" type="number" min="0" step="1" class="w-full rounded-xl border-gray-300" />
+                </div>
+                <div class="sm:col-span-2">
+                  <label class="block text-sm text-slate-600 mb-1">Nota (opcional)</label>
+                  <input id="gNota" type="text" class="w-full rounded-xl border-gray-300" />
+                </div>
+              </div>
+              <div class="flex justify-end">
+                <button id="btnGuardarGasto" class="btn-primary px-4 py-2 rounded-xl">Guardar gasto</button>
+              </div>
+              <div id="gMsg" class="text-xs text-slate-500"></div>
+            </div>
+
+            <!-- Últimos gastos -->
+            <div class="bg-white rounded-2xl shadow p-4">
+              <div class="flex items-center justify-between mb-2">
+                <h2 class="text-lg font-semibold">Últimos gastos</h2>
+                <button id="btnRecargarGastos" class="btn text-xs">Recargar</button>
+              </div>
+              <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                  <thead class="bg-gray-50 text-slate-600">
+                    <tr><th class="text-left p-2">Fecha</th><th class="text-left p-2">Categoría</th><th class="text-left p-2">Concepto</th><th class="text-right p-2">Monto</th></tr>
+                  </thead>
+                  <tbody id="tbodyGastos" class="divide-y"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tabla de ventas -->
           <div class="bg-white rounded-2xl shadow p-4">
             <div class="flex items-center justify-between mb-3">
               <h2 class="text-lg font-semibold">Ventas</h2>
@@ -412,7 +351,7 @@
     </div>
   </main>
 
-  <!-- Panel flotante para elegir qué filtros se ven -->
+  <!-- Panel filtros (modal) -->
   <div id="panelFiltros" class="hidden fixed inset-0 z-50 flex items-center justify-center">
     <div class="absolute inset-0 bg-black/30"></div>
     <div class="relative bg-white rounded-2xl shadow-xl p-4 w-[min(92vw,420px)]">
@@ -431,97 +370,301 @@
     </div>
   </div>
 
-  <!-- Tu lógica principal -->
-  <script src="report.js"></script>
-
-  <!-- Script auxiliar para Ganancia (mes) + split Efectivo / MP -->
+  <!-- ============= LÓGICA ============= -->
   <script>
+    // Config API (para gastos)
+    const API = '/.netlify/functions/gs-order';
+
     // Helpers
-    const fmt = n => new Intl.NumberFormat('es-AR', { style:'currency', currency:'ARS', maximumFractionDigits:0 }).format(Number(n||0));
-    const norm = s => String(s ?? '').trim().toLowerCase();
-    function isSameYearMonth(ts, year, monthIdx0) {
-      const d = (ts instanceof Date) ? ts : new Date(ts);
-      return d.getFullYear() === year && d.getMonth() === monthIdx0;
-    }
-    function metodoEsEfectivo(m) {
-      const s = norm(m);
-      return s === 'efectivo' || s === 'cash';
-    }
-    function metodoEsMP(m) {
-      const s = norm(m);
-      return s === 'mp' || s === 'mercado pago' || s === 'mercadopago' || s === 'qr';
-    }
-
-    function pintarKPIsMesFromRows(rows) {
-      // Mes seleccionado (YYYY-MM)
-      const sel = document.getElementById('mesFiltro')?.value || '';
-      let year, monthIdx0;
-      if (/^\d{4}-\d{2}$/.test(sel)) {
-        const [y,m] = sel.split('-').map(Number);
-        year = y; monthIdx0 = m - 1;
-      } else {
-        const hoy = new Date();
-        year = hoy.getFullYear(); monthIdx0 = hoy.getMonth();
+    const $fmt = (n) => new Intl.NumberFormat('es-AR', { style:'currency', currency:'ARS', maximumFractionDigits:0 }).format(Number(n||0));
+    const toDate = (s) => {
+      if (!s) return null;
+      // soportar ISO o dd/mm/yyyy
+      const t = String(s).trim();
+      if (/^\d{4}-\d{2}-\d{2}/.test(t)) return new Date(t);
+      if (/^\d{2}\/\d{2}\/\d{4}/.test(t)){
+        const [d,m,y] = t.split('/');
+        return new Date(`${y}-${m}-${d}`);
       }
+      const d = new Date(t);
+      return isNaN(d) ? null : d;
+    };
+    const sameYMonth = (d, y, m) => d && d.getFullYear()===y && (d.getMonth()+1)===m;
 
-      const monthRows = (rows || []).filter(r => {
-        const ts = r.timestamp || r.Timestamp || r.fecha || r.Fecha;
-        return ts && isSameYearMonth(ts, year, monthIdx0);
-        // columnas esperadas: timestamp, cliente, mesa, metodoPago/metodo, total, ganancia, items(json)
+    // Estado
+    let ROWS = [];         // ventas parseadas
+    let MES_OPTS = [];     // {key:'2025-03', label:'Marzo 2025'}
+    let mesSelKey = '';    // yyyy-mm
+
+    // Cargar CSV
+    async function loadCSV(){
+      const url = $('#csvUrl').val().trim();
+      $('#statusBadge').text('Cargando CSV…');
+      return new Promise((resolve, reject)=>{
+        Papa.parse(url, {
+          download: true,
+          header: true,
+          skipEmptyLines: true,
+          complete: (res)=>{
+            try{
+              const rows = (res.data||[]).map(r=>{
+                const ts = r.timestamp || r.fecha || r.Timestamp || '';
+                const d = toDate(ts);
+                return {
+                  ts: ts,
+                  date: d,
+                  y: d? d.getFullYear(): null,
+                  m: d? d.getMonth()+1 : null,
+                  d: d? d.getDate() : null,
+                  cliente: r.cliente || r.Cliente || '',
+                  mesa: r.mesa || r.Mesa || '',
+                  metodo: (r.metodoPago || r.metodo || r.Metodo || '').toString().trim(),
+                  total: Number(r.total || r.Total || 0),
+                  totalCosto: Number(r.totalCosto || r.TotalCosto || 0),
+                  ganancia: Number(r.ganancia || r.Ganancia || (Number(r.total||0)-Number(r.totalCosto||0))),
+                  pago: Number(r.pago || r.Pago || 0),
+                  items: r['items(json)'] || r.items || '[]',
+                  categoria: r.categoria || ''
+                };
+              });
+              ROWS = rows.filter(r => r.date);
+              buildMesOptions();
+              $('#statusBadge').text('Menú sincronizado');
+              resolve();
+            }catch(e){ reject(e); }
+          },
+          error: (err)=> reject(err)
+        });
       });
+    }
 
-      let ventas = 0, unidades = 0, ingresos = 0, gananciaMes = 0, efectivoMes = 0, mpMes = 0;
-
-      monthRows.forEach(r => {
-        ventas += 1;
-        const total = Number(r.total ?? r.Total ?? 0);
-        const gan   = Number(r.ganancia ?? r.Ganancia ?? 0);
-        const metodo= r.metodoPago ?? r.metodo ?? r.Método ?? '';
-
-        ingresos += total;
-        gananciaMes += gan;
-
-        if (metodoEsEfectivo(metodo)) efectivoMes += total;
-        if (metodoEsMP(metodo))       mpMes += total;
-
-        try {
-          const raw = r['items(json)'] ?? r.items ?? '[]';
-          const items = typeof raw === 'string' ? JSON.parse(raw) : (Array.isArray(raw) ? raw : []);
-          unidades += items.reduce((a,it)=> a + Number(it.qty || it.cantidad || 0), 0);
-        } catch(_) {}
+    function buildMesOptions(){
+      const set = new Set(ROWS.map(r=> `${r.y}-${String(r.m).padStart(2,'0')}`));
+      MES_OPTS = [...set].sort().reverse().map(key=>{
+        const [yy, mm] = key.split('-');
+        const d = new Date(Number(yy), Number(mm)-1, 1);
+        const label = d.toLocaleDateString('es-AR', { month:'long', year:'numeric' });
+        return {key, label: label.charAt(0).toUpperCase()+label.slice(1)};
       });
+      const sel = $('#mesFiltro'); sel.empty();
+      MES_OPTS.forEach(o => sel.append(`<option value="${o.key}">${o.label}</option>`));
+      // por defecto: mes actual si existe en datos
+      const now = new Date();
+      const nowKey = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+      mesSelKey = MES_OPTS.find(o=>o.key===nowKey)?.key || MES_OPTS[0]?.key || '';
+      if (mesSelKey) sel.val(mesSelKey);
+      renderAll();
+    }
 
-      // Pintar
+    function mediosMap(met){
+      const s = (met||'').toLowerCase();
+      if (s.includes('efect')) return 'efectivo';
+      if (s.includes('mp') || s.includes('mercado') || s.includes('qr')) return 'mp';
+      return 'otros';
+    }
+
+    function renderAll(){
+      if (!mesSelKey) return;
+      const [yy, mm] = mesSelKey.split('-').map(Number);
+
+      // Mes seleccionado
+      const monthRows = ROWS.filter(r => sameYMonth(r.date, yy, mm));
+
+      // KPIs mes (ventas, unidades, ingresos, ganancia, breakdown)
+      const ventas = monthRows.length;
+      const unidades = monthRows.reduce((a, r)=>{
+        try { const arr = JSON.parse(r.items||'[]'); return a + (Array.isArray(arr)? arr.reduce((s,x)=>s+(Number(x.qty)||0),0) : 0); }
+        catch { return a; }
+      }, 0);
+      const ingresos = monthRows.reduce((a,r)=>a+r.total,0);
+      const costo = monthRows.reduce((a,r)=>a+r.totalCosto,0);
+      const ganMes = monthRows.reduce((a,r)=>a+r.ganancia,0);  // ← SUMA DE TODA LA GANANCIA DEL MES
+
+      // Breakdown métodos
+      const byMethod = { efectivo:0, mp:0, otros:0 };
+      monthRows.forEach(r => { byMethod[mediosMap(r.metodo)] += Number(r.total||0); });
+
       $('#kpiVentas').text(ventas);
       $('#kpiUnidades').text(unidades);
-      $('#kpiIngresos').text(fmt(ingresos));
-      $('#kpiGananciaMes').text(fmt(gananciaMes));
-      $('#kpiEfectivoMes').text(fmt(efectivoMes));
-      $('#kpiMpMes').text(fmt(mpMes));
+      $('#kpiIngresos').text($fmt(ingresos));
+      $('#kpiGananciaMes').text($fmt(ganMes));
+      $('#kpiEfectivoMes').text($fmt(byMethod.efectivo));
+      $('#kpiMpMes').text($fmt(byMethod.mp));
+
+      // KPIs día (usa el selector de día + horario)
+      renderKPIsDia();
+
+      // Tabla simple (puedes adaptarla a paginador si ya lo tenías)
+      const $tb = $('#tbodyVentas'); $tb.empty();
+      monthRows.slice().sort((a,b)=> b.date - a.date).forEach(r=>{
+        $tb.append(`<tr>
+          <td class="p-2">${r.ts.toString().slice(0,19).replace('T',' ')}</td>
+          <td class="p-2">${r.cliente||''}</td>
+          <td class="p-2">${r.mesa||''}</td>
+          <td class="p-2">${r.metodo||''}</td>
+          <td class="p-2">${(function(){ try{const arr=JSON.parse(r.items||'[]'); return arr.map(x=>`${x.nombre||''} x${x.qty||1}`).join(', ')}catch{return ''}})()}</td>
+          <td class="p-2 text-right">${$fmt(r.total)}</td>
+          <td class="p-2 text-right">${$fmt(r.ganancia)}</td>
+        </tr>`);
+      });
     }
 
-    // Integra con report.js:
-    // - Si report.js define VENTAS, lo usamos.
-    // - Recalcula al cambiar el selector de Mes.
-    (function bootKPIMes(){
-      function tryPaint() {
-        if (window.VENTAS && Array.isArray(window.VENTAS) && window.VENTAS.length) {
-          pintarKPIsMesFromRows(window.VENTAS);
-          return true;
-        }
-        return false;
+    function renderKPIsDia(){
+      const dia = $('#diaFiltro').val();
+      if (!dia){
+        // por defecto hoy si pertenece al mes seleccionado
+        const today = new Date();
+        const key = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}`;
+        if (key === mesSelKey) $('#diaFiltro').val(today.toISOString().slice(0,10));
       }
-      // Intento inicial y polling corto por si report.js tarda en cargar los datos
-      if (!tryPaint()) {
-        const t0 = Date.now();
-        const iv = setInterval(() => {
-          if (tryPaint() || Date.now()-t0 > 8000) clearInterval(iv);
-        }, 300);
+      const selDia = $('#diaFiltro').val();
+      if (!selDia) return;
+
+      const [yy, mm] = mesSelKey.split('-').map(Number);
+      const d = toDate(selDia);
+      const hFrom = $('#horaDesde').val();
+      const hTo   = $('#horaHasta').val();
+
+      const rowsDia = ROWS.filter(r => sameYMonth(r.date, yy, mm) && r.date.toISOString().slice(0,10)===selDia);
+
+      // filtro horario
+      const inTime = (dt) => {
+        if (!hFrom && !hTo) return true;
+        const hhmm = dt.toTimeString().slice(0,5);
+        if (hFrom && hhmm < hFrom) return false;
+        if (hTo   && hhmm > hTo)   return false;
+        return true;
+      };
+      const rowsDiaTime = rowsDia.filter(r => inTime(r.date));
+
+      const ing = rowsDiaTime.reduce((a,r)=>a+r.total,0);
+      const cos = rowsDiaTime.reduce((a,r)=>a+r.totalCosto,0);
+      const gan = rowsDiaTime.reduce((a,r)=>a+r.ganancia,0);
+      const uni = rowsDiaTime.reduce((a, r)=>{
+        try { const arr = JSON.parse(r.items||'[]'); return a + (Array.isArray(arr)? arr.reduce((s,x)=>s+(Number(x.qty)||0),0) : 0); }
+        catch { return a; }
+      }, 0);
+
+      $('#kpiIngDia').text($fmt(ing));
+      $('#kpiCostoDia').text($fmt(cos));
+      $('#kpiGanDia').text($fmt(gan));
+      $('#kpiVentasDia').text(rowsDiaTime.length);
+      $('#kpiUniDia').text(uni);
+      $('#cierreIng').text($fmt(ing));
+      $('#cierreCosto').text($fmt(cos));
+      $('#cierreBruta').text($fmt(ing - cos));
+      const gastos = Number($('#cierreGastos').val() || 0);
+      $('#cierreGastosLbl').text($fmt(gastos));
+      const neta = (ing - cos) - gastos;
+      $('#cierreNeta').text($fmt(neta));
+      const personas = Math.max(1, Number($('#cierrePersonas').val() || 1));
+      $('#cierrePorPersona').text($fmt(neta / personas));
+      $('#cierreRangoLbl').text(`${selDia}${(hFrom||hTo)? ` · ${hFrom||'00:00'}–${hTo||'23:59'}` : ''}`);
+      $('#kpiGanDiaLbl').text(`${rowsDiaTime.length} ventas · ${uni} unid.`);
+    }
+
+    // ===== Gastos (usa la misma API del POS) =====
+    const API_G = API;
+    const $fmtG = $fmt;
+
+    (function initGastosUI(){
+      const hoy = new Date().toISOString().slice(0,10);
+      const $f = document.getElementById('gFecha');
+      if ($f && !$f.value) $f.value = hoy;
+    })();
+
+    async function guardarGasto(){
+      const fecha      = (document.getElementById('gFecha').value || '').trim();
+      const categoria  = (document.getElementById('gCategoria').value || 'Otros').trim();
+      const concepto   = (document.getElementById('gConcepto').value || '').trim();
+      const proveedor  = (document.getElementById('gProveedor').value || '').trim();
+      const montoNum   = Number(document.getElementById('gMonto').value || 0);
+      const nota       = (document.getElementById('gNota').value || '').trim();
+      const $btn       = document.getElementById('btnGuardarGasto');
+      const $msg       = document.getElementById('gMsg');
+
+      if (!fecha || !concepto || !Number.isFinite(montoNum) || montoNum <= 0){
+        alert('Completá Fecha, Concepto y un Monto válido.'); return;
       }
-      // Recalcular cuando cambie el mes
-      $(document).on('change', '#mesFiltro', () => {
-        if (window.VENTAS) pintarKPIsMesFromRows(window.VENTAS);
-      });
+
+      const payload = {
+        type: 'expense',
+        fecha,
+        categoria_gasto: categoria,
+        concepto,
+        proveedor,
+        qty: 1,
+        costo_unit: montoNum,
+        nota
+      };
+
+      try{
+        $btn.disabled = true; $btn.textContent = 'Guardando…'; $msg.textContent = '';
+        const res = await fetch(API_G, {
+          method:'POST',
+          headers:{ 'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8' },
+          body: 'payload='+encodeURIComponent(JSON.stringify(payload))
+        });
+        const data = await res.json().catch(()=> ({}));
+        if (!res.ok || data.ok !== true) throw new Error(data.error || `HTTP ${res.status}`);
+
+        document.getElementById('gConcepto').value = '';
+        document.getElementById('gProveedor').value = '';
+        document.getElementById('gMonto').value = '';
+        document.getElementById('gNota').value = '';
+        $msg.textContent = '✅ Gasto guardado';
+        await cargarGastosRecientes();
+      }catch(err){
+        console.error(err);
+        alert('No se pudo guardar el gasto: ' + err.message);
+      }finally{
+        $btn.disabled = false; $btn.textContent = 'Guardar gasto';
+      }
+    }
+
+    async function cargarGastosRecientes(){
+      try{
+        const res = await fetch(`${API_G}?action=items&limit=50`);
+        const json = await res.json();
+        if (json?.ok !== true) throw new Error(json?.error || 'Error al leer ITEMS');
+        const rows = (json.items || []).filter(it => String(it.tipo).toLowerCase() === 'compra');
+
+        const $tb = document.getElementById('tbodyGastos');
+        if (!$tb) return;
+        $tb.innerHTML = rows.map(r => `
+          <tr>
+            <td class="p-2">${(r.fecha||'').toString().slice(0,10)}</td>
+            <td class="p-2">${r.categoria_gasto||'-'}</td>
+            <td class="p-2">${r.concepto||'-'}</td>
+            <td class="p-2 text-right">${$fmtG(r.subtotal || r.costo_unit || 0)}</td>
+          </tr>
+        `).join('');
+      }catch(err){
+        console.error('cargarGastosRecientes', err);
+      }
+    }
+
+    // Eventos UI
+    $('#btnReload').on('click', async ()=>{ await loadCSV(); });
+    $('#mesFiltro').on('change', function(){ mesSelKey = $(this).val(); renderAll(); });
+    $('#diaFiltro, #horaDesde, #horaHasta, #cierrePersonas, #cierreGastos').on('input change', renderKPIsDia);
+    $('#btnHoy').on('click', ()=>{ const t=new Date().toISOString().slice(0,10); $('#diaFiltro').val(t).trigger('change'); });
+    $('#btnAyer').on('click', ()=>{ const d=new Date(); d.setDate(d.getDate()-1); $('#diaFiltro').val(d.toISOString().slice(0,10)).trigger('change'); });
+    $('#btnMenos2').on('click', ()=>{ const d=new Date(); d.setDate(d.getDate()-2); $('#diaFiltro').val(d.toISOString().slice(0,10)).trigger('change'); });
+
+    document.getElementById('btnGuardarGasto')?.addEventListener('click', guardarGasto);
+    document.getElementById('btnRecargarGastos')?.addEventListener('click', cargarGastosRecientes);
+
+    // Init
+    (async function(){
+      try{
+        await loadCSV();
+        await cargarGastosRecientes();
+      }catch(e){
+        console.error(e);
+        $('#statusBadge').text('Error');
+        $('#diag').text(String(e));
+      }
     })();
   </script>
 </body>
