@@ -9,23 +9,18 @@
     return rows.map(tr => {
       const tds = tr.querySelectorAll('td');
       if (!tds || tds.length < 4) return null;
-      const fecha = (tds[0].textContent||'').trim();
+      const fecha = (tds[0].textContent||'').trim();    // YYYY-MM-DD
       const monto = toNum(tds[3].textContent);
       return { fecha, ym: ymKey(fecha), monto };
     }).filter(Boolean);
   }
-  function gastosDelDia(fechaISO) {
-    const rows = leerGastosDesdeTabla();
-    return rows.filter(r => r.fecha === fechaISO).reduce((a,x)=>a+x.monto, 0);
-  }
-  function gastosDelMes(ym) {
-    const rows = leerGastosDesdeTabla();
-    return rows.filter(r => r.ym === ym).reduce((a,x)=>a+x.monto, 0);
-  }
+  const gastosDelDia  = (fechaISO) => leerGastosDesdeTabla().filter(r => r.fecha === fechaISO).reduce((a,x)=>a+x.monto, 0);
+  const gastosDelMes  = (ym)       => leerGastosDesdeTabla().filter(r => r.ym === ym).reduce((a,x)=>a+x.monto, 0);
 
   function renderGastosKPI() {
     const hoy = todayISO();
     const ym  = hoy.slice(0,7);
+
     const dia = gastosDelDia(hoy);
     const mes = gastosDelMes(ym);
 
@@ -42,18 +37,9 @@
       }
     }
 
-    // Ajustar "Costo del mes" en Plan del mes restando Gastos del mes
-    let ymPlan = ym;
-    const labelMes = document.getElementById('planMesLabel')?.textContent || '';
-    const m = labelMes.match(/(\d{1,2})\/(\d{4})/);
-    if (m) { const mm = String(m[1]).padStart(2,'0'); ymPlan = `${m[2]}-${mm}`; }
-    const gastoMesPlan = gastosDelMes(ymPlan);
+    // Mostrar "Costo del mes" en Plan del mes = Gastos del mes (no ventas)
     const costoEl = document.getElementById('alqCostoMes');
-    if (costoEl) {
-      const actual = toNum(costoEl.textContent);
-      const ajustado = Math.max(0, actual - gastoMesPlan);
-      costoEl.textContent = fmt(ajustado);
-    }
+    if (costoEl) costoEl.textContent = fmt(mes);
   }
 
   let tries = 0;

@@ -7,7 +7,6 @@
   let PLAN = { objetivo:990000, pctAlq:40, pctRep:40, pctArr:20, franqHoras:0, franqTarifa:0 };
   let SUELDOS = [];
 
-  const $ = (sel)=> document.querySelector(sel);
   const fmt = (n)=> new Intl.NumberFormat('es-AR',{style:'currency',currency:'ARS',maximumFractionDigits:0}).format(Number(n||0));
   const clamp=(n,min,max)=> Math.max(min, Math.min(max,n));
   const toDate = (s)=>{ if(!s) return null; const t=String(s).trim();
@@ -47,12 +46,32 @@
     return { ventas, pctLibre, destinado, falta, repMonto, arrMonto, libre, totalSueldos, totalFr };
   }
 
+  function ensureSueldoProgressUI(){
+    const anchor = document.getElementById('totalSueldos')?.parentElement;
+    if (!anchor || document.getElementById('sueldosBar')) return;
+    const wrap = document.createElement('div');
+    wrap.className = "mt-3";
+    wrap.innerHTML = `
+      <div class="text-slate-600 mb-1">Cobertura de sueldos con recaudado del mes</div>
+      <div style="height:10px;border-radius:999px;background:#eef2f7;overflow:hidden">
+        <span id="sueldosBar" style="display:block;height:100%;width:0%;background:#111827"></span>
+      </div>
+      <div class="text-sm text-slate-600 mt-1">
+        Falta: <span id="sueldosCoberturaFalta">$0</span>
+        · Cobertura: <span id="sueldosCoberturaPct">0%</span>
+      </div>
+    `;
+    anchor.appendChild(wrap);
+  }
+
   function render(){
+    ensureSueldoProgressUI();
     const c = calcular();
+
     const setText=id=> (val)=>{ const el=document.getElementById(id); if(el) el.textContent=val; };
     const setVal =id=> (val)=>{ const el=document.getElementById(id); if(el) el.value=val; };
 
-    setText('planMesLabel')($('#mesFiltro')?.selectedOptions?.[0]?.text || '-');
+    setText('planMesLabel')(document.getElementById('mesFiltro')?.selectedOptions?.[0]?.text || '-');
     setVal('alqObjetivo')(PLAN.objetivo);
     setVal('alqPct')(PLAN.pctAlq);
     setVal('repPct')(PLAN.pctRep);
@@ -60,9 +79,7 @@
     setVal('franqHoras')(PLAN.franqHoras);
     setVal('franqTarifa')(PLAN.franqTarifa);
 
-    setText('alqCostoMes')(fmt(c.ventas));
     setText('alqDestinado')(fmt(c.destinado));
-    setText('alqFalta')(fmt(c.falta));
     setText('repMonto')(fmt(c.repMonto));
     setText('arrMonto')(fmt(c.arrMonto));
     setText('libreMonto')(fmt(c.libre));
@@ -73,6 +90,15 @@
     const prog = (Number(PLAN.objetivo||0)>0) ? Math.max(0, Math.min(100, Math.round((c.destinado/Number(PLAN.objetivo))*100))) : 0;
     const bar = document.getElementById('alqBar'); if(bar) bar.style.width = prog + '%';
     setText('alqPctProgreso')(`${prog}%`);
+
+    const cobertura = (c.totalSueldos>0) ? Math.min(100, Math.round((c.ventas / c.totalSueldos) * 100)) : 0;
+    const faltaSuel = Math.max(0, c.totalSueldos - c.ventas);
+    const sb = document.getElementById('sueldosBar');
+    const sp = document.getElementById('sueldosCoberturaPct');
+    const sf = document.getElementById('sueldosCoberturaFalta');
+    if (sb) sb.style.width = cobertura + '%';
+    if (sp) sp.textContent = `${cobertura}%`;
+    if (sf) sf.textContent = fmt(faltaSuel);
   }
 
   function renderSueldos(){
@@ -95,12 +121,8 @@
   }
 
   function bindEvents(){
-    const btnReload = document.getElementById('btnReload');
-    if(btnReload){ btnReload.addEventListener('click', ()=> parseCSVAndRender() ); }
-
     const selMes = document.getElementById('mesFiltro');
     if(selMes){ selMes.addEventListener('change', ()=>{ MES=selMes.value; const lab=document.getElementById('planMesLabel'); if(lab) lab.textContent = selMes.options[selMes.selectedIndex]?.text||'-'; render(); }); }
-
     ['alqObjetivo','alqPct','repPct','arrPct','franqHoras','franqTarifa'].forEach(id=>{
       const el = document.getElementById(id);
       if(el) el.addEventListener('input', ()=>{
@@ -113,7 +135,6 @@
         saveLS(); render();
       });
     });
-
     const btnAdd = document.getElementById('btnAddSueldo');
     if(btnAdd){ btnAdd.addEventListener('click', ()=>{
       const nombre = prompt('Nombre del sueldo (ej: Maxi / Javier / Matías):','');
@@ -122,7 +143,6 @@
       SUELDOS.push({nombre, monto});
       saveLS(); renderSueldos(); render();
     });}
-
     const ul = document.getElementById('sueldosList');
     if(ul){ ul.addEventListener('click', (e)=>{
       const btn = e.target.closest('[data-del]'); if(!btn) return;
@@ -145,16 +165,12 @@
       buildMesOptions();
       render();
       return true;
-    }catch(e){
-      console.warn('No se pudo adoptar ROWS global:', e);
-      return false;
-    }
+    }catch(e){ return false; }
   }
 
   function parseCSVAndRender(){
     const url = document.getElementById('csvUrl')?.value?.trim();
-    if(!url){ console.warn('Falta URL CSV'); return; }
-    if(!window.Papa){ console.warn('PapaParse no disponible'); return; }
+    if(!url || !window.Papa) return;
     window.Papa.parse(url,{
       download:true, header:true, skipEmptyLines:true,
       complete:(res)=>{
@@ -166,25 +182,19 @@
             const total = Number(r.total || r.Total || r.monto || r.Monto || r.importe || r.Importe || 0);
             return {date:d, ym: ymKey(d), total};
           }).filter(Boolean);
-          buildMesOptions();
-          render();
+          buildMesOptions(); render();
         }catch(e){ console.error(e); }
-      },
-      error:(err)=> console.error(err)
+      }
     });
   }
 
   function init(){
-    loadLS();
-    bindEvents();
-    renderSueldos();
+    loadLS(); bindEvents(); renderSueldos();
     let adopted = false;
     const start = Date.now();
     const timer = setInterval(()=>{
       if(tryAdoptGlobalRows()){ adopted = true; clearInterval(timer); return; }
-      if(Date.now() - start > 8000){ clearInterval(timer);
-        if(document.getElementById('csvUrl')?.value){ parseCSVAndRender(); }
-      }
+      if(Date.now() - start > 8000){ clearInterval(timer); if(document.getElementById('csvUrl')?.value){ parseCSVAndRender(); } }
     }, 400);
   }
 
