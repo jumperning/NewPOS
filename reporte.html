@@ -11,6 +11,8 @@
   <!-- Libs -->
   <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
   <style>
     :root{
@@ -19,133 +21,753 @@
       --accent-500:#f43f5e; --accent-600:#e11d48;
     }
     html,body{height:100%}
+    .container-grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:1rem}
+    @media (min-width:1024px){ .container-grid{gap:1rem} }
+
     .card{ background:var(--surface); border-radius:1rem; border:1px solid rgba(15,23,42,.08); }
-    .bar{height:10px; background:#eef2f7; border-radius:999px; overflow:hidden}
-    .bar>span{display:block; height:100%; background:#111827}
     .btn{ padding:.5rem .875rem; border-radius:.75rem; border:1px solid rgba(15,23,42,.10); background:#fff; }
     .btn:hover{ background:#f9fafb }
-    .btn-primary{ border:none; background:#111827; color:#fff }
-    .btn-primary:hover{ background:#0b1220 }
-    .mono{font-variant-numeric: tabular-nums}
+    .btn-primary{ border:none; background:var(--accent-600); color:#fff }
+    .btn-primary:hover{ background:var(--accent-500) }
+    .btn-ghost{ border-color:rgba(15,23,42,.10); background:#fff }
+    .btn-ghost:hover{ background:#f9fafb }
+    .inp{ border-radius:.75rem; border:1px solid #e5e7eb; padding:.5rem .75rem }
+    .inp:focus{ outline:none; box-shadow:0 0 0 3px rgba(244,63,94,.15),0 0 0 1px var(--accent-500); border-color:var(--accent-500) }
+    .navlink{ display:flex; gap:.625rem; align-items:center; padding:.5rem .75rem; border-radius:.75rem; color:#334155 }
+    .navlink:hover{ background:#f3f4f6 }
+    .navlink.active{ background:var(--accent-50); color:var(--accent-600) }
+    .badge{ display:inline-flex; align-items:center; gap:.375rem; padding:.25rem .5rem; border-radius:999px; font-size:.75rem; color:#475569; background:#f3f4f6; }
+    /* Todo en negro */
+    body { color:#000; }
+    .text-slate-800,.text-slate-700,.text-slate-600,.text-slate-500,.text-slate-400,
+    .text-gray-800,.text-gray-700,.text-gray-600,.text-gray-500,.text-gray-400 { color:#000 !important; }
+    .badge { color:#000; }
+    .chip{display:inline-flex;align-items:center;gap:.375rem;padding:.25rem .5rem;border-radius:999px;font-size:.75rem;background:#f3f4f6}
   </style>
 </head>
+<body class="bg-slate-50 text-black">
 
-<body class="min-h-full bg-[color:var(--surface-weak)] text-slate-900">
-  <main class="max-w-6xl mx-auto p-4 space-y-4">
+  <!-- Sidebar -->
+  <aside class="hidden md:flex md:flex-col fixed inset-y-0 left-0 w-64 bg-white border-r border-slate-200">
+    <div class="px-5 pt-6 pb-4 flex items-center gap-3">
+      <div class="h-9 w-9 grid place-items-center rounded-xl bg-[var(--accent-600)] text-white font-black">OD</div>
+      <div>
+        <div class="text-lg font-extrabold">OnceyDoce</div>
+        <div class="text-xs text-slate-500">POS & Reportes</div>
+      </div>
+    </div>
+    <nav class="mt-2 px-2 space-y-1">
+      <a href="./index.html" class="navlink" title="POS">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10h16a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-6a2 2 0 0 1 2-2Z"/><path d="M7 16h10"/><path d="M9.5 13h5"/><path d="M9 4h6v4l-1-.6-1 .6-1-.6-1 .6-1-.6-1 .6V4Z"/></svg>
+        <span>POS</span>
+      </a>
+      <a href="./reporte.html" class="navlink active" title="Reporte">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20h18"/><rect x="5" y="11" width="3" height="6" rx="1"/><rect x="10.5" y="8" width="3" height="9" rx="1"/><rect x="16" y="5" width="3" height="12" rx="1"/></svg>
+        <span>Reporte</span>
+      </a>
+    </nav>
+    <div class="mt-auto p-3">
+      <button id="btnLogout" class="btn w-full">Salir</button>
+      <div class="text-[10px] text-slate-400 mt-2 text-center">© 2025 OnceyDoce</div>
+    </div>
+  </aside>
 
-    <!-- Header / Source -->
-    <section class="card p-4">
-      <div class="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+  <!-- Topbar (mobile) -->
+  <header class="md:ml-64 sticky top-0 z-40 bg-white/70 backdrop-blur border-b border-slate-200/60">
+    <div class="px-4 py-3 flex items-center justify-between md:justify-end">
+      <div class="md:hidden flex items-center gap-3">
+        <div class="h-9 w-9 grid place-items-center rounded-xl bg-[var(--accent-600)] text-white font-black">OD</div>
+        <span class="font-bold">OnceyDoce</span>
+      </div>
+      <div class="text-sm text-slate-500">Reporte</div>
+    </div>
+  </header>
+
+  <!-- Contenido -->
+  <main class="md:ml-64 p-4 sm:p-6">
+    <div class="max-w-7xl mx-auto space-y-6">
+
+      <!-- Header -->
+      <header class="rounded-2xl bg-white shadow p-6 flex items-center justify-between">
         <div>
-          <h1 class="text-2xl font-semibold">Reporte de Ventas</h1>
-          <p class="text-sm text-slate-600">Pegá la URL pública de tu Google Sheet (CSV publicado) — detectamos el mes automáticamente.</p>
+          <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight">Reporte de Ventas</h1>
+          <p class="text-sm text-slate-500">Análisis y exportaciones</p>
         </div>
-        <div class="flex gap-2 items-end">
-          <div>
-            <label class="block text-xs text-slate-500 mb-1" for="csvUrl">URL CSV</label>
-            <input id="csvUrl" class="w-[420px] max-w-[80vw] rounded-lg border px-3 py-2" placeholder="https://docs.google.com/spreadsheets/…/pub?output=csv">
-          </div>
-          <div>
-            <label class="block text-xs text-slate-500 mb-1" for="mesFiltro">Mes</label>
-            <select id="mesFiltro" class="rounded-lg border px-3 py-2"></select>
-          </div>
-          <button id="btnCargar" class="btn btn-primary">Cargar</button>
-          <span id="statusBadge" class="text-sm text-slate-600"></span>
+        <div class="flex items-center gap-3">
+          <button id="btnToggleMoneda" class="px-3 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-50" title="Mostrar/ocultar montos">👁️</button>
+          <div id="statusBadge" class="text-xs px-3 py-1 rounded-full bg-gray-100">Sincronizando…</div>
         </div>
-      </div>
-    </section>
+      </header>
 
-    <!-- Plan del mes -->
-    <section class="card p-4">
-      <div class="flex items-center justify-between mb-3">
-        <h2 class="text-2xl font-semibold">Plan del mes</h2>
-        <div class="text-slate-600">Mes: <span id="mesActual">-</span></div>
-      </div>
+      <!-- Config -->
+      <section class="rounded-2xl bg-white shadow p-4">
+        <label class="block text-sm font-medium mb-1">URL CSV publicada (hoja POSOnceyDoce)</label>
+        <input id="csvUrl" type="text" class="w-full rounded-xl border-gray-300"
+          value="https://docs.google.com/spreadsheets/d/e/2PACX-1vTNZmwzwN0zHiYYSEpk0N11IIRouQUu85lzE6eYe4DoR1WbtnV239mtGRXPfBdbbVbSI9Scx3LVcww-/pub?gid=474194648&single=true&output=csv" />
+        <div id="diag" class="text-xs text-slate-500 mt-2"></div>
+        <button id="btnReload" class="mt-3 px-3 py-1.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-sm">Recargar</button>
+      </section>
 
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-
-        <!-- Alquiler -->
-        <div class="card p-4">
-          <div class="flex items-center justify-between mb-2">
-            <h3 class="text-xl font-semibold">Alquiler</h3>
-            <div class="text-slate-500 text-sm">del costo del mes</div>
-          </div>
-
-          <div class="grid grid-cols-2 gap-4 mb-2">
-            <div>
-              <div class="text-slate-600 text-sm">Objetivo (ARS)</div>
-              <div class="text-2xl font-semibold mono" id="alquilerObjetivo">$0</div>
-            </div>
-            <div class="text-right">
-              <div class="text-slate-600 text-sm">% destinado</div>
-              <div class="text-2xl font-semibold mono" id="alquilerPct">0</div>
-            </div>
-          </div>
-
-          <div class="space-y-1 mb-3">
-            <div class="text-slate-600">Costo del mes: <span id="costoMes" class="font-semibold mono">$0</span></div>
-            <div class="text-slate-600">Destinado (mes): <span id="destinadoMes" class="font-semibold mono">$0</span></div>
-          </div>
-
-          <div class="text-slate-600 mb-1">Progreso hacia alquiler</div>
-          <div class="bar mb-1"><span id="barAlquiler" style="width:0%"></span></div>
-          <div class="text-slate-600">Falta: <span id="alquilerFalta" class="font-semibold mono">$0</span></div>
-
-          <hr class="my-3">
-
-          <div class="grid grid-cols-3 gap-4">
-            <div>
-              <div class="text-slate-600 text-sm">% Reposición</div>
-              <div class="text-2xl font-semibold mono" id="repPct">0</div>
-              <div class="text-slate-700 mt-1">Reposición: <span id="repMonto" class="font-semibold mono">$0</span></div>
-            </div>
-            <div>
-              <div class="text-slate-600 text-sm">% Arreglos/Otros</div>
-              <div class="text-2xl font-semibold mono" id="arrPct">0</div>
-              <div class="text-slate-700 mt-1">Arreglos/Otros: <span id="arrMonto" class="font-semibold mono">$0</span></div>
-            </div>
-            <div>
-              <div class="text-slate-600 text-sm">No asignado: <span id="noasigPct" class="font-semibold">0%</span></div>
-              <div class="text-slate-700 mt-1">Libre (no asignado): <span id="noasigMonto" class="font-semibold mono">$0</span></div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Sueldos & Franquero -->
-        <div class="card p-4">
-          <h3 class="text-xl font-semibold mb-2">Sueldos & Franquero</h3>
-
+      <div class="container-grid">
+        <!-- Filtros -->
+        <aside class="lg:col-span-3 col-span-12 bg-white rounded-2xl shadow p-4 space-y-4 h-fit lg:sticky lg:top-6">
           <div class="flex items-center justify-between">
-            <div class="text-slate-700">Sueldos</div>
-            <button id="btnAddSueldo" class="btn">+ Agregar</button>
+            <h3 class="text-sm font-semibold">Filtros</h3>
+            <button id="btnConfigFiltros" class="btn text-xs">Personalizar filtros</button>
           </div>
-          <ul id="listaSueldos" class="mt-2 space-y-1"></ul>
-          <div class="mt-1">Total sueldos: <span id="totalSueldos" class="font-semibold mono">$0</span></div>
 
-          <hr class="my-3">
+          <div id="filtMes">
+            <label class="block text-sm font-medium mb-1">Mes</label>
+            <select id="mesFiltro" class="w-full rounded-xl border-gray-300"></select>
+          </div>
 
-          <div class="grid grid-cols-2 gap-3 items-end">
-            <div>
-              <label class="block text-xs text-slate-500 mb-1" for="horasFr">Horas franquero</label>
-              <input id="horasFr" type="number" min="0" step="1" class="w-full rounded-lg border px-3 py-2" value="0">
+          <div id="filtDia">
+            <label class="block text-sm font-medium mb-1">Día</label>
+            <input id="diaFiltro" type="date" class="w-full rounded-xl border-gray-300" />
+            <div class="flex gap-2 mt-2">
+              <button type="button" class="btn" id="btnHoy">Hoy</button>
+              <button type="button" class="btn" id="btnAyer">Ayer</button>
+              <button type="button" class="btn" id="btnMenos2">-2 días</button>
             </div>
-            <div>
-              <label class="block text-xs text-slate-500 mb-1" for="tarifaFr">Tarifa x hora</label>
-              <input id="tarifaFr" type="number" min="0" step="1" class="w-full rounded-lg border px-3 py-2" value="0">
+            <p class="text-xs text-slate-500 mt-2">Afecta KPIs diarios y, si el alcance es “Día”, también el análisis.</p>
+          </div>
+
+          <div id="filtHorario">
+            <label class="block text-sm font-medium mb-1">Filtrar por horario (del día seleccionado)</label>
+            <div class="grid grid-cols-2 gap-2">
+              <div><span class="text-xs text-slate-600">Desde</span><input id="horaDesde" type="time" class="w-full rounded-xl border-gray-300" /></div>
+              <div><span class="text-xs text-slate-600">Hasta</span><input id="horaHasta" type="time" class="w-full rounded-xl border-gray-300" /></div>
             </div>
           </div>
-          <div class="mt-2">Total franquero: <span id="totalFr" class="font-semibold mono">$0</span></div>
 
-          <hr class="my-3">
+          <div id="filtBuscar">
+            <label class="block text-sm font-medium mb-1">Buscar</label>
+            <input id="buscar" type="text" placeholder="producto, cliente…" class="w-full rounded-xl border-gray-300" />
+          </div>
 
-          <div class="text-lg">Ganancia del mes: <span id="gananciaMes" class="font-bold mono">$0</span></div>
-        </div>
+          <div id="filtCategoria">
+            <label class="block text-sm font-medium mb-1">Filtrar por Categoría</label>
+            <select id="catFiltro" class="w-full rounded-xl border-gray-300">
+              <option value="">Todas</option>
+              <option value="Café">Café</option>
+              <option value="Comida">Comida</option>
+              <option value="Cerveza">Cerveza</option>
+              <option value="Gaseosa">Gaseosa</option>
+              <option value="Agua">Agua</option>
+              <option value="Vino">Vino</option>
+              <option value="Whisky">Whisky</option>
+              <option value="Tragos">Tragos</option>
+            </select>
+          </div>
+        </aside>
 
+        <!-- Contenido -->
+        <main class="lg:col-span-9 col-span-12 space-y-4">
+          <!-- KPIs (mes) -->
+          <div class="grid grid-cols-2 sm:grid-cols-5 gap-4">
+            <div class="bg-white rounded-2xl shadow p-4"><div class="text-xs text-slate-500">Ventas (mes)</div><div id="kpiVentas" class="text-2xl font-bold">0</div></div>
+            <div class="bg-white rounded-2xl shadow p-4"><div class="text-xs text-slate-500">Unidades (mes)</div><div id="kpiUnidades" class="text-2xl font-bold">0</div></div>
+            <div class="bg-white rounded-2xl shadow p-4"><div class="text-xs text-slate-500">Ingresos (mes)</div><div id="kpiIngresos" class="text-2xl font-bold">$0</div></div>
+            <!-- NUEVO: Ganancia (mes) -->
+            <div class="bg-white rounded-2xl shadow p-4"><div class="text-xs text-slate-500">Ganancia (mes)</div><div id="kpiGananciaMes" class="text-2xl font-bold">$0</div></div>
+            <!-- NUEVOS: breakdown medios de pago -->
+            <div class="bg-white rounded-2xl shadow p-4">
+              <div class="text-xs text-slate-500">Ingresos por método (mes)</div>
+              <div class="mt-1 text-sm">Efectivo: <b id="kpiEfectivoMes">$0</b></div>
+              <div class="text-sm">Mercado Pago: <b id="kpiMpMes">$0</b></div>
+            </div>
+          </div>
+
+          <!-- KPIs del día -->
+          <div class="grid grid-cols-2 sm:grid-cols-5 gap-4">
+            <div class="bg-white rounded-2xl shadow p-4"><div class="text-xs text-slate-500">Ganancia (día)</div><div id="kpiGanDia" class="text-2xl font-bold">$0</div><div id="kpiGanDiaLbl" class="text-xs text-slate-500 mt-1"></div></div>
+            <div class="bg-white rounded-2xl shadow p-4"><div class="text-xs text-slate-500">Ingresos (día)</div><div id="kpiIngDia" class="text-2xl font-bold">$0</div></div>
+            <div class="bg-white rounded-2xl shadow p-4"><div class="text-xs text-slate-500">Unidades (día)</div><div id="kpiUniDia" class="text-2xl font-bold">0</div></div>
+            <div class="bg-white rounded-2xl shadow p-4"><div class="text-xs text-slate-500">Ventas (día)</div><div id="kpiVentasDia" class="text-2xl font-bold">0</div></div>
+            <div class="bg-white rounded-2xl shadow p-4"><div class="text-xs text-slate-500">Costo (día)</div><div id="kpiCostoDia" class="text-2xl font-bold">$0</div></div>
+          </div>
+
+          <!-- Análisis por categoría (placeholder intacto) -->
+          <div class="bg-white rounded-2xl shadow p-4 space-y-4">
+            <div class="flex flex-wrap items-center gap-3">
+              <h2 class="text-lg font-semibold mr-auto">Análisis por Categoría</h2>
+              <div class="flex gap-2">
+                <span class="chip">Café</span><span class="chip">Comida</span><span class="chip">Cerveza</span>
+                <span class="chip">Gaseosa</span><span class="chip">Agua</span><span class="chip">Vino</span>
+                <span class="chip">Whisky</span><span class="chip">Tragos</span>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6" id="aggWrap">
+              <div class="rounded-xl border p-3"><div class="text-sm text-slate-500 mb-2">Participación por Unidades (%)</div><canvas id="chartPie"></canvas></div>
+              <div class="rounded-xl border p-3"><div class="text-sm text-slate-500 mb-2">Unidades por Categoría</div><canvas id="chartBarQty"></canvas></div>
+              <div class="rounded-xl border p-3"><div class="text-sm text-slate-500 mb-2">Ganancia por Categoría (ARS)</div><canvas id="chartBarProfit"></canvas></div>
+            </div>
+
+            <div id="dailyWrap" class="rounded-xl border p-3 hidden">
+              <div class="text-sm text-slate-500 mb-2">Unidades — Día a día</div>
+              <canvas id="chartDailyQty"></canvas>
+            </div>
+
+            <div class="overflow-x-auto">
+              <table class="w-full text-sm mt-2">
+                <thead class="bg-gray-50 text-slate-600">
+                  <tr><th class="text-left p-2">Categoría</th><th class="text-right p-2">Unidades</th><th class="text-right p-2">Veces</th><th class="text-right p-2">Ganancia</th></tr>
+                </thead>
+                <tbody id="tbodyResumenCat" class="divide-y"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Horarios -->
+          <div class="bg-white rounded-2xl shadow p-4 space-y-2">
+            <div class="flex items-center justify-between">
+              <h2 class="text-lg font-semibold">Horarios con más ventas</h2>
+              <div class="text-xs text-slate-500" id="lblPeakHour"></div>
+            </div>
+            <div class="rounded-xl border p-3">
+              <div class="text-sm text-slate-500 mb-2">Ingresos por hora (según alcance)</div>
+              <canvas id="chartHoras"></canvas>
+            </div>
+          </div>
+
+          <!-- Cierre y reparto -->
+          <div class="border-t pt-4">
+            <h3 class="text-sm font-semibold mb-2">Cierre y reparto</h3>
+            <div class="grid grid-cols-2 gap-2">
+              <div><label class="block text-xs text-slate-600 mb-1">Personas</label><input id="cierrePersonas" type="number" min="1" value="4" class="w-full rounded-xl border-gray-300" /></div>
+              <div><label class="block text-xs text-slate-600 mb-1">Gastos del día (ARS)</label><input id="cierreGastos" type="number" step="1" value="0" class="w-full rounded-xl border-gray-300" /></div>
+            </div>
+            <p class="text-xs text-slate-500 mt-2">Usa el día y horario seleccionados arriba.</p>
+          </div>
+
+          <div class="bg-white rounded-2xl shadow p-4">
+            <div class="flex items-center justify-between mb-3">
+              <h2 class="text-lg font-semibold">Cierre y reparto</h2>
+              <span class="text-xs text-slate-500" id="cierreRangoLbl"></span>
+            </div>
+
+            <div class="grid grid-cols-2 sm:grid-cols-6 gap-4">
+              <div class="rounded-xl border p-3"><div class="text-xs text-slate-500">Ingresos (día)</div><div id="cierreIng" class="text-xl font-bold">$0</div></div>
+              <div class="rounded-xl border p-3"><div class="text-xs text-slate-500">Costo (día)</div><div id="cierreCosto" class="text-xl font-bold">$0</div></div>
+              <div class="rounded-xl border p-3"><div class="text-xs text-slate-500">Ganancia bruta</div><div id="cierreBruta" class="text-xl font-bold">$0</div></div>
+              <div class="rounded-xl border p-3"><div class="text-xs text-slate-500">Gastos del local</div><div id="cierreGastosLbl" class="text-xl font-bold">$0</div></div>
+              <div class="rounded-xl border p-3"><div class="text-xs text-slate-500">Ganancia neta</div><div id="cierreNeta" class="text-xl font-bold">$0</div></div>
+              <div class="rounded-xl border p-3"><div class="text-xs text-slate-500">Por persona</div><div id="cierrePorPersona" class="text-xl font-bold">$0</div></div>
+            </div>
+          </div>
+
+          <!-- ====== Gastos (alta + últimos) ====== -->
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <!-- Alta de gasto -->
+            <div class="bg-white rounded-2xl shadow p-4 space-y-3">
+              <h2 class="text-lg font-semibold">Registrar gasto</h2>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-sm text-slate-600 mb-1">Fecha</label>
+                  <input id="gFecha" type="date" class="w-full rounded-xl border-gray-300" />
+                </div>
+                <div>
+                  <label class="block text-sm text-slate-600 mb-1">Categoría</label>
+                  <select id="gCategoria" class="w-full rounded-xl border-gray-300">
+                    <option value="Mantenimiento de local">Mantenimiento de local</option>
+                    <option value="Compra de comida">Compra de comida</option>
+                    <option value="Compra de bebida">Compra de bebida</option>
+                    <option value="Servicios">Servicios</option>
+                    <option value="Impuestos">Impuestos</option>
+                    <option value="Otros">Otros</option>
+                  </select>
+                </div>
+                <div class="sm:col-span-2">
+                  <label class="block text-sm text-slate-600 mb-1">Concepto / nombre del gasto</label>
+                  <input id="gConcepto" type="text" placeholder="Ej: 2 kilos de papa" class="w-full rounded-xl border-gray-300" />
+                </div>
+                <div>
+                  <label class="block text-sm text-slate-600 mb-1">Proveedor (opcional)</label>
+                  <input id="gProveedor" type="text" class="w-full rounded-xl border-gray-300" />
+                </div>
+                <div>
+                  <label class="block text-sm text-slate-600 mb-1">Monto (ARS)</label>
+                  <input id="gMonto" type="number" min="0" step="1" class="w-full rounded-xl border-gray-300" />
+                </div>
+                <div class="sm:col-span-2">
+                  <label class="block text-sm text-slate-600 mb-1">Nota (opcional)</label>
+                  <input id="gNota" type="text" class="w-full rounded-xl border-gray-300" />
+                </div>
+              </div>
+              <div class="flex justify-end">
+                <button id="btnGuardarGasto" class="btn-primary px-4 py-2 rounded-xl">Guardar gasto</button>
+              </div>
+              <div id="gMsg" class="text-xs text-slate-500"></div>
+            </div>
+
+            <!-- Últimos gastos -->
+            <div class="bg-white rounded-2xl shadow p-4">
+              <div class="flex items-center justify-between mb-2">
+                <h2 class="text-lg font-semibold">Últimos gastos</h2>
+                <button id="btnRecargarGastos" class="btn text-xs">Recargar</button>
+              </div>
+              <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                  <thead class="bg-gray-50 text-slate-600">
+                    <tr><th class="text-left p-2">Fecha</th><th class="text-left p-2">Categoría</th><th class="text-left p-2">Concepto</th><th class="text-right p-2">Monto</th></tr>
+                  </thead>
+                  <tbody id="tbodyGastos" class="divide-y"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+<!-- Plan del Mes -->
+<section class="bg-white rounded-2xl shadow p-4 space-y-4">
+  <div class="flex items-center justify-between">
+    <h2 class="text-lg font-semibold">Plan del mes</h2>
+    <span class="text-xs text-slate-500">Mes: <span id="planMesLabel">-</span></span>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+    <!-- WIDGET Alquiler -->
+    <div class="rounded-xl border p-4 space-y-3">
+      <div class="flex items-center justify-between">
+        <h3 class="font-medium">Alquiler</h3>
+        <span class="text-xs text-slate-500">del costo del mes</span>
       </div>
-    </section>
 
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs text-slate-600 mb-1">Objetivo (ARS)</label>
+          <input id="alqObjetivo" type="number" min="0" step="1000" class="rounded-xl border-gray-300 w-full" value="990000">
+        </div>
+        <div>
+          <label class="block text-xs text-slate-600 mb-1">% destinado</label>
+          <input id="alqPct" type="number" min="0" max="100" step="1" class="rounded-xl border-gray-300 w-full" value="40">
+        </div>
+      </div>
+
+      <div class="text-sm">
+        <div>Costo del mes: <b id="alqCostoMes">$0</b></div>
+        <div>Destinado (mes): <b id="alqDestinado">$0</b></div>
+      </div>
+
+      <!-- barra progreso -->
+      <div class="mt-1">
+        <div class="flex justify-between text-xs mb-1">
+          <span>Progreso hacia alquiler</span>
+          <span id="alqPctProgreso">0%</span>
+        </div>
+        <div class="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
+          <div id="alqBar" class="h-3 bg-rose-500" style="width:0%"></div>
+        </div>
+        <div class="text-xs text-slate-600 mt-1">Falta: <b id="alqFalta">$0</b></div>
+      </div>
+
+      <!-- Restos de porcentaje -->
+      <div class="grid grid-cols-3 gap-3 pt-2 border-t">
+        <div>
+          <label class="block text-xs text-slate-600 mb-1">% Reposición</label>
+          <input id="repPct" type="number" min="0" max="100" step="1" class="rounded-xl border-gray-300 w-full" value="40">
+        </div>
+        <div>
+          <label class="block text-xs text-slate-600 mb-1">% Arreglos/Otros</label>
+          <input id="arrPct" type="number" min="0" max="100" step="1" class="rounded-xl border-gray-300 w-full" value="20">
+        </div>
+        <div class="self-end">
+          <div class="text-xs text-slate-600">No asignado: <b id="pctLibre">0%</b></div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-3 gap-3 text-sm">
+        <div>Reposición: <b id="repMonto">$0</b></div>
+        <div>Arreglos/Otros: <b id="arrMonto">$0</b></div>
+        <div>Libre (no asignado): <b id="libreMonto">$0</b></div>
+      </div>
+      <div id="pctWarn" class="text-xs text-rose-700 hidden">⚠️ La suma de porcentajes supera 100%</div>
+    </div>
+
+    <!-- WIDGET Sueldos + Franquero -->
+    <div class="rounded-xl border p-4 space-y-3">
+      <h3 class="font-medium">Sueldos & Franquero</h3>
+
+      <div class="space-y-2">
+        <div class="flex items-center justify-between">
+          <span class="text-sm text-slate-600">Sueldos</span>
+          <button id="btnAddSueldo" class="px-2 py-1 rounded-lg bg-gray-100 hover:bg-gray-200 text-xs">+ Agregar</button>
+        </div>
+        <div id="sueldosList" class="space-y-2"></div>
+        <div class="text-sm">Total sueldos: <b id="sueldosTotal">$0</b></div>
+      </div>
+
+      <hr>
+
+      <div class="grid grid-cols-3 gap-3">
+        <div>
+          <label class="block text-xs text-slate-600 mb-1">Horas franquero</label>
+          <input id="franqHoras" type="number" min="0" step="1" class="rounded-xl border-gray-300 w-full" value="0">
+        </div>
+        <div>
+          <label class="block text-xs text-slate-600 mb-1">Tarifa x hora</label>
+          <input id="franqTarifa" type="number" min="0" step="100" class="rounded-xl border-gray-300 w-full" value="0">
+        </div>
+        <div class="self-end">
+          <div class="text-sm">Total franquero: <b id="franqTotal">$0</b></div>
+        </div>
+      </div>
+
+      <div class="pt-2 border-t text-sm">
+        Ganancia del mes: <b id="ganMesLbl">$0</b>
+      </div>
+    </div>
+  </div>
+</section>
+
+          <!-- Tabla de ventas -->
+          <div class="bg-white rounded-2xl shadow p-4">
+            <div class="flex items-center justify-between mb-3">
+              <h2 class="text-lg font-semibold">Ventas</h2>
+              <div class="flex gap-2">
+                <button id="btnExcel" class="text-sm px-3 py-1.5 rounded-xl bg-gray-100 hover:bg-gray-200">Descargar Excel</button>
+                <button id="btnExcelFact" class="text-sm px-3 py-1.5 rounded-xl bg-gray-100 hover:bg-gray-200">Exportar Facturación</button>
+                <button id="btnExpandir" class="text-sm px-3 py-1.5 rounded-xl bg-gray-100 hover:bg-gray-200">Expandir items</button>
+              </div>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="w-full text-sm">
+                <thead class="bg-gray-50 text-slate-600">
+                  <tr>
+                    <th class="text-left p-2">Fecha</th>
+                    <th class="text-left p-2">Cliente</th>
+                    <th class="text-left p-2">Mesa</th>
+                    <th class="text-left p-2">Método</th>
+                    <th class="text-left p-2">Items</th>
+                    <th class="text-right p-2">Total</th>
+                    <th class="text-right p-2">Ganancia</th>
+                  </tr>
+                </thead>
+                <tbody id="tbodyVentas" class="divide-y"></tbody>
+              </table>
+            </div>
+            <div id="paginador" class="flex flex-wrap items-center gap-2 justify-between mt-3 text-sm"></div>
+          </div>
+        </main>
+      </div>
+    </div>
   </main>
 
-  <script src="./report.js"></script>
+  <!-- Panel filtros (modal) -->
+  <div id="panelFiltros" class="hidden fixed inset-0 z-50 flex items-center justify-center">
+    <div class="absolute inset-0 bg-black/30"></div>
+    <div class="relative bg-white rounded-2xl shadow-xl p-4 w-[min(92vw,420px)]">
+      <h4 class="font-semibold mb-3">Mostrar filtros</h4>
+      <div class="space-y-2 text-sm">
+        <label class="flex items-center gap-2"><input type="checkbox" class="chkFilt" value="filtMes"> Mes</label>
+        <label class="flex items-center gap-2"><input type="checkbox" class="chkFilt" value="filtDia"> Día</label>
+        <label class="flex items-center gap-2"><input type="checkbox" class="chkFilt" value="filtHorario"> Horario</label>
+        <label class="flex items-center gap-2"><input type="checkbox" class="chkFilt" value="filtBuscar"> Buscar</label>
+        <label class="flex items-center gap-2"><input type="checkbox" class="chkFilt" value="filtCategoria"> Categoría</label>
+      </div>
+      <div class="flex justify-end gap-2 mt-4">
+        <button id="btnFiltCancelar" class="btn">Cancelar</button>
+        <button id="btnFiltGuardar" class="btn">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============= LÓGICA ============= -->
+  <script>
+    // Config API (para gastos)
+    const API = '/.netlify/functions/gs-order';
+
+    // Helpers
+    const $fmt = (n) => new Intl.NumberFormat('es-AR', { style:'currency', currency:'ARS', maximumFractionDigits:0 }).format(Number(n||0));
+    const toDate = (s) => {
+      if (!s) return null;
+      // soportar ISO o dd/mm/yyyy
+      const t = String(s).trim();
+      if (/^\d{4}-\d{2}-\d{2}/.test(t)) return new Date(t);
+      if (/^\d{2}\/\d{2}\/\d{4}/.test(t)){
+        const [d,m,y] = t.split('/');
+        return new Date(`${y}-${m}-${d}`);
+      }
+      const d = new Date(t);
+      return isNaN(d) ? null : d;
+    };
+    const sameYMonth = (d, y, m) => d && d.getFullYear()===y && (d.getMonth()+1)===m;
+
+    // Estado
+    let ROWS = [];         // ventas parseadas
+    let MES_OPTS = [];     // {key:'2025-03', label:'Marzo 2025'}
+    let mesSelKey = '';    // yyyy-mm
+
+    // Cargar CSV
+    async function loadCSV(){
+      const url = $('#csvUrl').val().trim();
+      $('#statusBadge').text('Cargando CSV…');
+      return new Promise((resolve, reject)=>{
+        Papa.parse(url, {
+          download: true,
+          header: true,
+          skipEmptyLines: true,
+          complete: (res)=>{
+            try{
+              const rows = (res.data||[]).map(r=>{
+                const ts = r.timestamp || r.fecha || r.Timestamp || '';
+                const d = toDate(ts);
+                return {
+                  ts: ts,
+                  date: d,
+                  y: d? d.getFullYear(): null,
+                  m: d? d.getMonth()+1 : null,
+                  d: d? d.getDate() : null,
+                  cliente: r.cliente || r.Cliente || '',
+                  mesa: r.mesa || r.Mesa || '',
+                  metodo: (r.metodoPago || r.metodo || r.Metodo || '').toString().trim(),
+                  total: Number(r.total || r.Total || 0),
+                  totalCosto: Number(r.totalCosto || r.TotalCosto || 0),
+                  ganancia: Number(r.ganancia || r.Ganancia || (Number(r.total||0)-Number(r.totalCosto||0))),
+                  pago: Number(r.pago || r.Pago || 0),
+                  items: r['items(json)'] || r.items || '[]',
+                  categoria: r.categoria || ''
+                };
+              });
+              ROWS = rows.filter(r => r.date);
+              buildMesOptions();
+              $('#statusBadge').text('Menú sincronizado');
+              resolve();
+            }catch(e){ reject(e); }
+          },
+          error: (err)=> reject(err)
+        });
+      });
+    }
+
+    function buildMesOptions(){
+      const set = new Set(ROWS.map(r=> `${r.y}-${String(r.m).padStart(2,'0')}`));
+      MES_OPTS = [...set].sort().reverse().map(key=>{
+        const [yy, mm] = key.split('-');
+        const d = new Date(Number(yy), Number(mm)-1, 1);
+        const label = d.toLocaleDateString('es-AR', { month:'long', year:'numeric' });
+        return {key, label: label.charAt(0).toUpperCase()+label.slice(1)};
+      });
+      const sel = $('#mesFiltro'); sel.empty();
+      MES_OPTS.forEach(o => sel.append(`<option value="${o.key}">${o.label}</option>`));
+      // por defecto: mes actual si existe en datos
+      const now = new Date();
+      const nowKey = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+      mesSelKey = MES_OPTS.find(o=>o.key===nowKey)?.key || MES_OPTS[0]?.key || '';
+      if (mesSelKey) sel.val(mesSelKey);
+      renderAll();
+    }
+
+    function mediosMap(met){
+      const s = (met||'').toLowerCase();
+      if (s.includes('efect')) return 'efectivo';
+      if (s.includes('mp') || s.includes('mercado') || s.includes('qr')) return 'mp';
+      return 'otros';
+    }
+
+    function renderAll(){
+      if (!mesSelKey) return;
+      const [yy, mm] = mesSelKey.split('-').map(Number);
+
+      // Mes seleccionado
+      const monthRows = ROWS.filter(r => sameYMonth(r.date, yy, mm));
+
+      // KPIs mes (ventas, unidades, ingresos, ganancia, breakdown)
+      const ventas = monthRows.length;
+      const unidades = monthRows.reduce((a, r)=>{
+        try { const arr = JSON.parse(r.items||'[]'); return a + (Array.isArray(arr)? arr.reduce((s,x)=>s+(Number(x.qty)||0),0) : 0); }
+        catch { return a; }
+      }, 0);
+      const ingresos = monthRows.reduce((a,r)=>a+r.total,0);
+      const costo = monthRows.reduce((a,r)=>a+r.totalCosto,0);
+      const ganMes = monthRows.reduce((a,r)=>a+r.ganancia,0);  // ← SUMA DE TODA LA GANANCIA DEL MES
+
+      // Breakdown métodos
+      const byMethod = { efectivo:0, mp:0, otros:0 };
+      monthRows.forEach(r => { byMethod[mediosMap(r.metodo)] += Number(r.total||0); });
+
+      $('#kpiVentas').text(ventas);
+      $('#kpiUnidades').text(unidades);
+      $('#kpiIngresos').text($fmt(ingresos));
+      $('#kpiGananciaMes').text($fmt(ganMes));
+      $('#kpiEfectivoMes').text($fmt(byMethod.efectivo));
+      $('#kpiMpMes').text($fmt(byMethod.mp));
+
+      // KPIs día (usa el selector de día + horario)
+      renderKPIsDia();
+
+      // Tabla simple (puedes adaptarla a paginador si ya lo tenías)
+      const $tb = $('#tbodyVentas'); $tb.empty();
+      monthRows.slice().sort((a,b)=> b.date - a.date).forEach(r=>{
+        $tb.append(`<tr>
+          <td class="p-2">${r.ts.toString().slice(0,19).replace('T',' ')}</td>
+          <td class="p-2">${r.cliente||''}</td>
+          <td class="p-2">${r.mesa||''}</td>
+          <td class="p-2">${r.metodo||''}</td>
+          <td class="p-2">${(function(){ try{const arr=JSON.parse(r.items||'[]'); return arr.map(x=>`${x.nombre||''} x${x.qty||1}`).join(', ')}catch{return ''}})()}</td>
+          <td class="p-2 text-right">${$fmt(r.total)}</td>
+          <td class="p-2 text-right">${$fmt(r.ganancia)}</td>
+        </tr>`);
+      });
+    }
+
+    function renderKPIsDia(){
+      const dia = $('#diaFiltro').val();
+      if (!dia){
+        // por defecto hoy si pertenece al mes seleccionado
+        const today = new Date();
+        const key = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}`;
+        if (key === mesSelKey) $('#diaFiltro').val(today.toISOString().slice(0,10));
+      }
+      const selDia = $('#diaFiltro').val();
+      if (!selDia) return;
+
+      const [yy, mm] = mesSelKey.split('-').map(Number);
+      const d = toDate(selDia);
+      const hFrom = $('#horaDesde').val();
+      const hTo   = $('#horaHasta').val();
+
+      const rowsDia = ROWS.filter(r => sameYMonth(r.date, yy, mm) && r.date.toISOString().slice(0,10)===selDia);
+
+      // filtro horario
+      const inTime = (dt) => {
+        if (!hFrom && !hTo) return true;
+        const hhmm = dt.toTimeString().slice(0,5);
+        if (hFrom && hhmm < hFrom) return false;
+        if (hTo   && hhmm > hTo)   return false;
+        return true;
+      };
+      const rowsDiaTime = rowsDia.filter(r => inTime(r.date));
+
+      const ing = rowsDiaTime.reduce((a,r)=>a+r.total,0);
+      const cos = rowsDiaTime.reduce((a,r)=>a+r.totalCosto,0);
+      const gan = rowsDiaTime.reduce((a,r)=>a+r.ganancia,0);
+      const uni = rowsDiaTime.reduce((a, r)=>{
+        try { const arr = JSON.parse(r.items||'[]'); return a + (Array.isArray(arr)? arr.reduce((s,x)=>s+(Number(x.qty)||0),0) : 0); }
+        catch { return a; }
+      }, 0);
+
+      $('#kpiIngDia').text($fmt(ing));
+      $('#kpiCostoDia').text($fmt(cos));
+      $('#kpiGanDia').text($fmt(gan));
+      $('#kpiVentasDia').text(rowsDiaTime.length);
+      $('#kpiUniDia').text(uni);
+      $('#cierreIng').text($fmt(ing));
+      $('#cierreCosto').text($fmt(cos));
+      $('#cierreBruta').text($fmt(ing - cos));
+      const gastos = Number($('#cierreGastos').val() || 0);
+      $('#cierreGastosLbl').text($fmt(gastos));
+      const neta = (ing - cos) - gastos;
+      $('#cierreNeta').text($fmt(neta));
+      const personas = Math.max(1, Number($('#cierrePersonas').val() || 1));
+      $('#cierrePorPersona').text($fmt(neta / personas));
+      $('#cierreRangoLbl').text(`${selDia}${(hFrom||hTo)? ` · ${hFrom||'00:00'}–${hTo||'23:59'}` : ''}`);
+      $('#kpiGanDiaLbl').text(`${rowsDiaTime.length} ventas · ${uni} unid.`);
+    }
+
+    // ===== Gastos (usa la misma API del POS) =====
+    const API_G = API;
+    const $fmtG = $fmt;
+
+    (function initGastosUI(){
+      const hoy = new Date().toISOString().slice(0,10);
+      const $f = document.getElementById('gFecha');
+      if ($f && !$f.value) $f.value = hoy;
+    })();
+
+    async function guardarGasto(){
+      const fecha      = (document.getElementById('gFecha').value || '').trim();
+      const categoria  = (document.getElementById('gCategoria').value || 'Otros').trim();
+      const concepto   = (document.getElementById('gConcepto').value || '').trim();
+      const proveedor  = (document.getElementById('gProveedor').value || '').trim();
+      const montoNum   = Number(document.getElementById('gMonto').value || 0);
+      const nota       = (document.getElementById('gNota').value || '').trim();
+      const $btn       = document.getElementById('btnGuardarGasto');
+      const $msg       = document.getElementById('gMsg');
+
+      if (!fecha || !concepto || !Number.isFinite(montoNum) || montoNum <= 0){
+        alert('Completá Fecha, Concepto y un Monto válido.'); return;
+      }
+
+      const payload = {
+        type: 'expense',
+        fecha,
+        categoria_gasto: categoria,
+        concepto,
+        proveedor,
+        qty: 1,
+        costo_unit: montoNum,
+        nota
+      };
+
+      try{
+        $btn.disabled = true; $btn.textContent = 'Guardando…'; $msg.textContent = '';
+        const res = await fetch(API_G, {
+          method:'POST',
+          headers:{ 'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8' },
+          body: 'payload='+encodeURIComponent(JSON.stringify(payload))
+        });
+        const data = await res.json().catch(()=> ({}));
+        if (!res.ok || data.ok !== true) throw new Error(data.error || `HTTP ${res.status}`);
+
+        document.getElementById('gConcepto').value = '';
+        document.getElementById('gProveedor').value = '';
+        document.getElementById('gMonto').value = '';
+        document.getElementById('gNota').value = '';
+        $msg.textContent = '✅ Gasto guardado';
+        await cargarGastosRecientes();
+      }catch(err){
+        console.error(err);
+        alert('No se pudo guardar el gasto: ' + err.message);
+      }finally{
+        $btn.disabled = false; $btn.textContent = 'Guardar gasto';
+      }
+    }
+
+    async function cargarGastosRecientes(){
+      try{
+        const res = await fetch(`${API_G}?action=items&limit=50`);
+        const json = await res.json();
+        if (json?.ok !== true) throw new Error(json?.error || 'Error al leer ITEMS');
+        const rows = (json.items || []).filter(it => String(it.tipo).toLowerCase() === 'compra');
+
+        const $tb = document.getElementById('tbodyGastos');
+        if (!$tb) return;
+        $tb.innerHTML = rows.map(r => `
+          <tr>
+            <td class="p-2">${(r.fecha||'').toString().slice(0,10)}</td>
+            <td class="p-2">${r.categoria_gasto||'-'}</td>
+            <td class="p-2">${r.concepto||'-'}</td>
+            <td class="p-2 text-right">${$fmtG(r.subtotal || r.costo_unit || 0)}</td>
+          </tr>
+        `).join('');
+      }catch(err){
+        console.error('cargarGastosRecientes', err);
+      }
+    }
+
+    // Eventos UI
+    $('#btnReload').on('click', async ()=>{ await loadCSV(); });
+    $('#mesFiltro').on('change', function(){ mesSelKey = $(this).val(); renderAll(); });
+    $('#diaFiltro, #horaDesde, #horaHasta, #cierrePersonas, #cierreGastos').on('input change', renderKPIsDia);
+    $('#btnHoy').on('click', ()=>{ const t=new Date().toISOString().slice(0,10); $('#diaFiltro').val(t).trigger('change'); });
+    $('#btnAyer').on('click', ()=>{ const d=new Date(); d.setDate(d.getDate()-1); $('#diaFiltro').val(d.toISOString().slice(0,10)).trigger('change'); });
+    $('#btnMenos2').on('click', ()=>{ const d=new Date(); d.setDate(d.getDate()-2); $('#diaFiltro').val(d.toISOString().slice(0,10)).trigger('change'); });
+
+    document.getElementById('btnGuardarGasto')?.addEventListener('click', guardarGasto);
+    document.getElementById('btnRecargarGastos')?.addEventListener('click', cargarGastosRecientes);
+
+    // Init
+    (async function(){
+      try{
+        await loadCSV();
+        await cargarGastosRecientes();
+      }catch(e){
+        console.error(e);
+        $('#statusBadge').text('Error');
+        $('#diag').text(String(e));
+      }
+    })();
+  </script>
+  <script src="./fixes/planfix.js"></script>
 </body>
 </html>
