@@ -977,3 +977,4 @@ $(function(){
   cargarGastosRecientes();
 });
 window.addEventListener('resize', ()=>{ if(VENTAS_FILTRADAS.length){ renderCharts(); }});
+
