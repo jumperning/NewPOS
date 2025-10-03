@@ -317,6 +317,107 @@
               </div>
             </div>
           </div>
+<!-- Plan del Mes -->
+<section class="bg-white rounded-2xl shadow p-4 space-y-4">
+  <div class="flex items-center justify-between">
+    <h2 class="text-lg font-semibold">Plan del mes</h2>
+    <span class="text-xs text-slate-500">Mes: <span id="planMesLabel">-</span></span>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+    <!-- WIDGET Alquiler -->
+    <div class="rounded-xl border p-4 space-y-3">
+      <div class="flex items-center justify-between">
+        <h3 class="font-medium">Alquiler</h3>
+        <span class="text-xs text-slate-500">del costo del mes</span>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-xs text-slate-600 mb-1">Objetivo (ARS)</label>
+          <input id="alqObjetivo" type="number" min="0" step="1000" class="rounded-xl border-gray-300 w-full" value="990000">
+        </div>
+        <div>
+          <label class="block text-xs text-slate-600 mb-1">% destinado</label>
+          <input id="alqPct" type="number" min="0" max="100" step="1" class="rounded-xl border-gray-300 w-full" value="40">
+        </div>
+      </div>
+
+      <div class="text-sm">
+        <div>Costo del mes: <b id="alqCostoMes">$0</b></div>
+        <div>Destinado (mes): <b id="alqDestinado">$0</b></div>
+      </div>
+
+      <!-- barra progreso -->
+      <div class="mt-1">
+        <div class="flex justify-between text-xs mb-1">
+          <span>Progreso hacia alquiler</span>
+          <span id="alqPctProgreso">0%</span>
+        </div>
+        <div class="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
+          <div id="alqBar" class="h-3 bg-rose-500" style="width:0%"></div>
+        </div>
+        <div class="text-xs text-slate-600 mt-1">Falta: <b id="alqFalta">$0</b></div>
+      </div>
+
+      <!-- Restos de porcentaje -->
+      <div class="grid grid-cols-3 gap-3 pt-2 border-t">
+        <div>
+          <label class="block text-xs text-slate-600 mb-1">% Reposición</label>
+          <input id="repPct" type="number" min="0" max="100" step="1" class="rounded-xl border-gray-300 w-full" value="40">
+        </div>
+        <div>
+          <label class="block text-xs text-slate-600 mb-1">% Arreglos/Otros</label>
+          <input id="arrPct" type="number" min="0" max="100" step="1" class="rounded-xl border-gray-300 w-full" value="20">
+        </div>
+        <div class="self-end">
+          <div class="text-xs text-slate-600">No asignado: <b id="pctLibre">0%</b></div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-3 gap-3 text-sm">
+        <div>Reposición: <b id="repMonto">$0</b></div>
+        <div>Arreglos/Otros: <b id="arrMonto">$0</b></div>
+        <div>Libre (no asignado): <b id="libreMonto">$0</b></div>
+      </div>
+      <div id="pctWarn" class="text-xs text-rose-700 hidden">⚠️ La suma de porcentajes supera 100%</div>
+    </div>
+
+    <!-- WIDGET Sueldos + Franquero -->
+    <div class="rounded-xl border p-4 space-y-3">
+      <h3 class="font-medium">Sueldos & Franquero</h3>
+
+      <div class="space-y-2">
+        <div class="flex items-center justify-between">
+          <span class="text-sm text-slate-600">Sueldos</span>
+          <button id="btnAddSueldo" class="px-2 py-1 rounded-lg bg-gray-100 hover:bg-gray-200 text-xs">+ Agregar</button>
+        </div>
+        <div id="sueldosList" class="space-y-2"></div>
+        <div class="text-sm">Total sueldos: <b id="sueldosTotal">$0</b></div>
+      </div>
+
+      <hr>
+
+      <div class="grid grid-cols-3 gap-3">
+        <div>
+          <label class="block text-xs text-slate-600 mb-1">Horas franquero</label>
+          <input id="franqHoras" type="number" min="0" step="1" class="rounded-xl border-gray-300 w-full" value="0">
+        </div>
+        <div>
+          <label class="block text-xs text-slate-600 mb-1">Tarifa x hora</label>
+          <input id="franqTarifa" type="number" min="0" step="100" class="rounded-xl border-gray-300 w-full" value="0">
+        </div>
+        <div class="self-end">
+          <div class="text-sm">Total franquero: <b id="franqTotal">$0</b></div>
+        </div>
+      </div>
+
+      <div class="pt-2 border-t text-sm">
+        Ganancia del mes: <b id="ganMesLbl">$0</b>
+      </div>
+    </div>
+  </div>
+</section>
 
           <!-- Tabla de ventas -->
           <div class="bg-white rounded-2xl shadow p-4">
