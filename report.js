@@ -832,3 +832,155 @@ function renderCierre(){
   if(lbl) lbl.textContent = `Fecha: ${getDiaKeySeleccionado()}${franja}`;
 }
 $('#cierreGastos,#cierrePersonas').on('change input', renderCierre);
+
+
+
+/* ================== Widgets Plan del Mes ================== */
+const SETTINGS_KEY = 'reporte-plan-mes';
+
+let PLAN = {
+  alquilerObjetivo: 990000,
+  pctAlquiler: 40,
+  pctReposicion: 40,
+  pctArreglos: 20,
+  sueldos: [
+    // {nombre:'Matías', monto: 0},
+    // {nombre:'Javier', monto: 0},
+    // {nombre:'Maxi',   monto: 0},
+  ],
+  franquero: { horas: 0, tarifa: 0 }
+};
+
+function loadPlanSettings(){
+  try{
+    const raw = localStorage.getItem(SETTINGS_KEY);
+    if(raw){
+      const s = JSON.parse(raw);
+      PLAN = Object.assign({}, PLAN, s, {
+        franquero: Object.assign({horas:0,tarifa:0}, s?.franquero||{})
+      });
+    }
+  }catch{}
+}
+function savePlanSettings(){
+  try{ localStorage.setItem(SETTINGS_KEY, JSON.stringify(PLAN)); }catch{}
+}
+
+function monthAggregates(){
+  // Usa VENTAS_FILTRADAS (ya aplicadas por mes) para el mes seleccionado
+  const costoMes    = VENTAS_FILTRADAS.reduce((a,v)=> a + (Number(v.totalCosto)||0), 0);
+  const gananciaMes = VENTAS_FILTRADAS.reduce((a,v)=> a + (Number(v.ganancia)||0), 0);
+  const ingresosMes = VENTAS_FILTRADAS.reduce((a,v)=> a + (Number(v.total)||0), 0);
+  return { costoMes, gananciaMes, ingresosMes };
+}
+
+function renderSueldosList(){
+  const wrap = document.getElementById('sueldosList'); if(!wrap) return;
+  wrap.innerHTML = '';
+  PLAN.sueldos.forEach((s,idx)=>{
+    const row = document.createElement('div');
+    row.className = 'grid grid-cols-12 gap-2 items-center';
+    row.innerHTML = `
+      <input data-idx="${idx}" data-k="nombre" class="col-span-6 rounded-xl border-gray-300 px-2 py-1 text-sm" placeholder="Nombre" value="${s.nombre||''}">
+      <input data-idx="${idx}" data-k="monto"  type="number" min="0" step="1000" class="col-span-4 rounded-xl border-gray-300 px-2 py-1 text-sm" placeholder="Monto" value="${Number(s.monto||0)}">
+      <button data-idx="${idx}" data-k="del" class="col-span-2 px-2 py-1 rounded-lg bg-gray-100 hover:bg-gray-200 text-xs">✕</button>
+    `;
+    wrap.appendChild(row);
+  });
+
+  wrap.addEventListener('input', onSueldosInput, { once:true });
+  wrap.addEventListener('click', onSueldosClick, { once:true });
+
+  const tot = PLAN.sueldos.reduce((a,s)=> a + (Number(s.monto)||0), 0);
+  document.getElementById('sueldosTotal')?.replaceChildren(document.createTextNode($fmt(tot)));
+}
+function onSueldosInput(e){
+  const idx = Number(e.target.getAttribute('data-idx'));
+  const k   = e.target.getAttribute('data-k');
+  if(!Number.isInteger(idx) || !k) return;
+  if(k==='nombre'){ PLAN.sueldos[idx].nombre = e.target.value; }
+  if(k==='monto'){  PLAN.sueldos[idx].monto  = Number(e.target.value||0); }
+  savePlanSettings(); renderSueldosList();
+}
+function onSueldosClick(e){
+  if(e.target.getAttribute('data-k')==='del'){
+    const idx = Number(e.target.getAttribute('data-idx'));
+    PLAN.sueldos.splice(idx,1);
+    savePlanSettings(); renderSueldosList();
+  }
+}
+
+function renderPlanMes(){
+  // Label mes
+  const mesSel = ($('#mesFiltro').val() || '').trim();
+  document.getElementById('planMesLabel')?.replaceChildren(document.createTextNode(mesSel || '-'));
+
+  // Inputs -> estado
+  const elObj = document.getElementById('alqObjetivo');
+  const elPctAlq = document.getElementById('alqPct');
+  const elPctRep = document.getElementById('repPct');
+  const elPctArr = document.getElementById('arrPct');
+  const elFH = document.getElementById('franqHoras');
+  const elFT = document.getElementById('franqTarifa');
+
+  if(elObj) elObj.value = PLAN.alquilerObjetivo;
+  if(elPctAlq) elPctAlq.value = PLAN.pctAlquiler;
+  if(elPctRep) elPctRep.value = PLAN.pctReposicion;
+  if(elPctArr) elPctArr.value = PLAN.pctArreglos;
+  if(elFH) elFH.value = PLAN.franquero.horas;
+  if(elFT) elFT.value = PLAN.franquero.tarifa;
+
+  // Agregados mes
+  const { costoMes, gananciaMes } = monthAggregates();
+  document.getElementById('ganMesLbl')?.replaceChildren(document.createTextNode($fmt(gananciaMes)));
+  document.getElementById('alqCostoMes')?.replaceChildren(document.createTextNode($fmt(costoMes)));
+
+  // MONTOS por porcentaje (del COSTO del mes)
+  const mAlq = Math.max(0, Math.round(costoMes * (PLAN.pctAlquiler/100)));
+  const mRep = Math.max(0, Math.round(costoMes * (PLAN.pctReposicion/100)));
+  const mArr = Math.max(0, Math.round(costoMes * (PLAN.pctArreglos/100)));
+  const sumPct = PLAN.pctAlquiler + PLAN.pctReposicion + PLAN.pctArreglos;
+
+  // Libre si no llega a 100; negativo si se pasaron (lo mostramos 0 y warning)
+  const pctLibre = Math.max(0, 100 - sumPct);
+  const libreMonto = Math.max(0, Math.round(costoMes * (pctLibre/100)));
+
+  document.getElementById('repMonto')?.replaceChildren(document.createTextNode($fmt(mRep)));
+  document.getElementById('arrMonto')?.replaceChildren(document.createTextNode($fmt(mArr)));
+  document.getElementById('libreMonto')?.replaceChildren(document.createTextNode($fmt(libreMonto)));
+  document.getElementById('pctLibre')?.replaceChildren(document.createTextNode(`${pctLibre}%`));
+  document.getElementById('pctWarn')?.classList.toggle('hidden', sumPct<=100);
+
+  // Progreso alquiler vs objetivo
+  const objetivo = Math.max(0, Number(PLAN.alquilerObjetivo||0));
+  const prog = objetivo>0 ? Math.min(100, Math.round((mAlq / objetivo)*100)) : 0;
+  document.getElementById('alqDestinado')?.replaceChildren(document.createTextNode($fmt(mAlq)));
+  document.getElementById('alqPctProgreso')?.replaceChildren(document.createTextNode(`${prog}%`));
+  const bar = document.getElementById('alqBar'); if(bar) bar.style.width = `${prog}%`;
+  const falta = Math.max(0, objetivo - mAlq);
+  document.getElementById('alqFalta')?.replaceChildren(document.createTextNode($fmt(falta)));
+
+  // Sueldos
+  renderSueldosList();
+
+  // Franquero
+  const franqTotal = Math.max(0, Math.round((Number(PLAN.franquero.horas)||0) * (Number(PLAN.franquero.tarifa)||0)));
+  document.getElementById('franqTotal')?.replaceChildren(document.createTextNode($fmt(franqTotal)));
+}
+
+/* Listeners de los widgets */
+function bindPlanMesEvents(){
+  $('#alqObjetivo').on('input', function(){ PLAN.alquilerObjetivo = Number(this.value||0); savePlanSettings(); renderPlanMes(); });
+  $('#alqPct').on('input',       function(){ PLAN.pctAlquiler     = Math.min(100, Math.max(0, Number(this.value||0))); savePlanSettings(); renderPlanMes(); });
+  $('#repPct').on('input',       function(){ PLAN.pctReposicion   = Math.min(100, Math.max(0, Number(this.value||0))); savePlanSettings(); renderPlanMes(); });
+  $('#arrPct').on('input',       function(){ PLAN.pctArreglos     = Math.min(100, Math.max(0, Number(this.value||0))); savePlanSettings(); renderPlanMes(); });
+
+  $('#btnAddSueldo').on('click', function(){
+    PLAN.sueldos.push({nombre:'', monto:0});
+    savePlanSettings(); renderSueldosList();
+  });
+
+  $('#franqHoras').on('input', function(){ PLAN.franquero.horas  = Number(this.value||0); savePlanSettings(); renderPlanMes(); });
+  $('#franqTarifa').on('input', function(){ PLAN.franquero.tarifa = Number(this.value||0); savePlanSettings(); renderPlanMes(); });
+}
+
