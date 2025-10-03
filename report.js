@@ -1,11 +1,9 @@
 // ================== Mostrar/Ocultar montos ==================
 let mostrarMoneda = true;
-
 function toggleMoneda(){
   mostrarMoneda = !mostrarMoneda;
   document.body.classList.toggle('hide-money', !mostrarMoneda);
 }
-
 $('#btnToggleMoneda').on('click', toggleMoneda);
 
 // ================== Utils ==================
@@ -53,11 +51,11 @@ function ensureItemsArray(raw){
   return [];
 }
 
-// ====== Canonización (reemplazá estos placeholders por tus mapas/reglas si ya los tenías) ======
+// ====== Canonización ======
 const stripAccents = s => s.normalize('NFD').replace(/[\u0300-\u036f]/g,'');
 const normKey = s => stripAccents(String(s||'').toLowerCase()).replace(/[^a-z0-9]+/g,' ').replace(/\s+/g,' ').trim();
-const CANON = {};        // <-- pegá aquí tu mapa CANON si lo tenías
-const CANON_RULES = [];  // <-- pegá aquí tus reglas CANON_RULES si las tenías
+const CANON = {};
+const CANON_RULES = [];
 
 function isNoiseItemName(nRaw){
   const n = normKey(nRaw);
@@ -171,7 +169,6 @@ function applyVisibleFilters(){
   });
 }
 function openFiltrosPanel(){
-  // set checks to current visibility
   const vis = loadVisibleFilters();
   document.querySelectorAll('#panelFiltros .chkFilt').forEach(chk=>{
     chk.checked = !!vis[chk.value];
@@ -252,7 +249,6 @@ function aplicarFiltros(){
     return okMes && okBuscar && okCat;
   });
 
-  // Resetear a página 1 al cambiar filtros
   currentPage = 1;
 
   renderKPIs();
@@ -269,7 +265,7 @@ function getVentasAlcance(){
   if(alcance==='dia'){
     const clave = getDiaKeySeleccionado();
     return VENTAS.filter(v => dayKey(v.date)===clave && withinHourRange(v.date));
-  }
+    }
   if(alcance==='rango'){
     const d1 = $('#desdeFecha').val();
     const d2 = $('#hastaFecha').val();
@@ -316,14 +312,38 @@ function aggregateByDayAndCategory(ventas){
   return byDay;
 }
 
-// ================== KPIs / Tabla (con paginación) ==================
-function renderKPIs(){
-  $('#kpiVentas').text(VENTAS_FILTRADAS.length);
-  const unidadesMes=VENTAS_FILTRADAS.reduce((a,v)=>a+(v.items||[]).reduce((s,i)=>s+toNumber(i.qty),0),0);
-  $('#kpiUnidades').text(unidadesMes);
-  const ingresosMes=VENTAS_FILTRADAS.reduce((a,v)=>a+toNumber(v.total),0);
-  $('#kpiIngresos').text($fmt(ingresosMes));
+// ================== Medios de pago (helpers para KPIs del mes) ==================
+const isEfectivo = (m) => /efec/.test(String(m||'').toLowerCase());
+const isMP       = (m) => /(mercado\s*pago|\bmp\b)/.test(String(m||'').toLowerCase());
 
+// ================== KPIs / Tabla ==================
+function renderKPIs(){
+  // ——— KPIs de la tabla filtrada (como ya tenías) ———
+  $('#kpiVentas').text(VENTAS_FILTRADAS.length);
+  const unidadesMesFiltrado=VENTAS_FILTRADAS.reduce((a,v)=>a+(v.items||[]).reduce((s,i)=>s+toNumber(i.qty),0),0);
+  $('#kpiUnidades').text(unidadesMesFiltrado);
+  const ingresosMesFiltrado=VENTAS_FILTRADAS.reduce((a,v)=>a+toNumber(v.total),0);
+  $('#kpiIngresos').text($fmt(ingresosMesFiltrado));
+
+  // ——— NUEVO: KPIs “del mes” IGNORANDO texto/categoría ———
+  const mesSel = $('#mesFiltro').val();
+  const baseMes = VENTAS.filter(v => monthKey(v.date)===mesSel);
+
+  const ganMes = baseMes.reduce((a,v)=> a + toNumber(v.ganancia), 0);
+  const efectivoMes = baseMes.filter(v=>isEfectivo(v.metodo)).reduce((a,v)=> a + toNumber(v.total), 0);
+  const mpMes       = baseMes.filter(v=>isMP(v.metodo)).reduce((a,v)=> a + toNumber(v.total), 0);
+
+  // Pinta solo si existen los elementos en el HTML
+  const elGan = document.getElementById('kpiGanMes');
+  if(elGan) elGan.textContent = $fmt(ganMes);
+
+  const elEf = document.getElementById('kpiEfectivoMes');
+  if(elEf) elEf.textContent = $fmt(efectivoMes);
+
+  const elMP = document.getElementById('kpiMPMes');
+  if(elMP) elMP.textContent = $fmt(mpMes);
+
+  // ——— KPIs del día ———
   const claveDia = getDiaKeySeleccionado();
   const delDia = VENTAS.filter(v => dayKey(v.date) === claveDia && withinHourRange(v.date));
   const ganDia = delDia.reduce((a,v)=> a + toNumber(v.ganancia), 0);
@@ -382,15 +402,12 @@ function renderPaginador(){
   const from = (currentPage - 1) * PAGE_SIZE + 1;
   const to = Math.min(currentPage * PAGE_SIZE, total);
 
-  // construir lista de páginas (compacta)
   const pageButtons = [];
   const pushBtn = (p,label=String(p),disabled=false,active=false)=>{
     pageButtons.push(`<button data-page="${p}" class="px-2 py-1 rounded ${active?'bg-gray-900 text-white':'bg-gray-100 hover:bg-gray-200'} ${disabled?'opacity-50 cursor-not-allowed':''}" ${disabled?'disabled':''}>${label}</button>`);
   };
 
   pushBtn(currentPage-1,'«',currentPage===1);
-  // mostrar primeras/últimas + rango alrededor de la actual
-  const around = 1;
   const set = new Set([1, pages, currentPage-1, currentPage, currentPage+1]);
   const sorted = [...set].filter(p=>p>=1 && p<=pages).sort((a,b)=>a-b);
 
@@ -414,7 +431,6 @@ function destroyCharts(){
   [PIE,BAR_QTY,BAR_PROF,DAILY_QTY].forEach(c=>{ if(c) c.destroy(); });
   PIE=BAR_QTY=BAR_PROF=DAILY_QTY=null;
 }
-
 function renderCharts(){
   const diaDia = $('#chkDiaDia').is(':checked');
   const ventasBase = getVentasAlcance();
@@ -423,7 +439,6 @@ function renderCharts(){
   const qtyArr = labels.map(l=> dataAgg[l].unidades);
   const profitArr = labels.map(l=> dataAgg[l].ganancia);
 
-  // Tabla resumen
   const tb = document.getElementById('tbodyResumenCat'); tb.innerHTML = '';
   labels.forEach(l=>{
     const r = dataAgg[l];
@@ -531,7 +546,6 @@ function renderExplorer(){
 
   items.sort((a,b)=> (toNumber(b[sort]) - toNumber(a[sort])) || (b.qty - a.qty));
 
-  // Tabla
   const tb = document.getElementById('tbodyItems'); tb.innerHTML='';
   items.forEach(r=>{
     tb.innerHTML += `<tr>
@@ -544,7 +558,6 @@ function renderExplorer(){
     </tr>`;
   });
 
-  // Top chart (por unidades para visual)
   if(TOP_ITEMS) TOP_ITEMS.destroy();
   const top = items.slice(0, topN);
   const ctxTop = document.getElementById('chartTopItems').getContext('2d');
@@ -556,6 +569,7 @@ function renderExplorer(){
 }
 
 // ================== Horarios ==================
+let HORAS;
 function renderHoras(){
   const ventas = getVentasAlcance();
   const buckets = Array.from({length:24},()=>0);
@@ -602,7 +616,7 @@ async function cargarVentas(){
     cargarMeses();
     applyVisibleFilters();
     setDia(new Date());
-    aplicarFiltros();     // incluye renderTabla() + renderPaginador()
+    aplicarFiltros();
     renderExplorer();
     renderHoras();
     $('#statusBadge').attr('class','text-xs px-3 py-1 rounded-full bg-emerald-100 text-emerald-700').text('Listo');
@@ -721,7 +735,6 @@ $(document).on('click', '#paginador button[data-page]', function(){
 $('#btnConfigFiltros').on('click', openFiltrosPanel);
 $('#btnFiltCancelar').on('click', closeFiltrosPanel);
 $('#btnFiltGuardar').on('click', saveFiltrosFromPanel);
-// cerrar al clickear el fondo oscuro
 document.getElementById('panelFiltros')?.addEventListener('click', (e)=>{
   if(e.target.id==='panelFiltros') closeFiltrosPanel();
 });
