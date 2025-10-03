@@ -13,7 +13,8 @@
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-<style>
+
+  <style>
     :root{
       --surface:#ffffff; --surface-weak:#f6f7f9;
       --accent-50:#fff1f2; --accent-100:#ffe4e6;
@@ -38,18 +39,14 @@
     .badge{ display:inline-flex; align-items:center; gap:.375rem; padding:.25rem .5rem; border-radius:999px; font-size:.75rem; color:#475569; background:#f3f4f6; }
   </style>
   <style>
-  /* Tipografías en negro en todo el sitio */
-  body { color:#000; }
-  .text-slate-800,.text-slate-700,.text-slate-600,.text-slate-500,.text-slate-400,
-  .text-gray-800,.text-gray-700,.text-gray-600,.text-gray-500,.text-gray-400 {
-    color:#000 !important;
-  }
-  /* Badges y textos “muted” también en negro */
-  .badge { color:#000; }
-</style>
+    /* Texto negro en todo el sitio */
+    body { color:#000; }
+    .text-slate-800,.text-slate-700,.text-slate-600,.text-slate-500,.text-slate-400,
+    .text-gray-800,.text-gray-700,.text-gray-600,.text-gray-500,.text-gray-400 { color:#000 !important; }
+    .badge { color:#000; }
+  </style>
 </head>
-<body class="bg-slate-50  text-black dark:text-black">
-
+<body class="bg-slate-50 text-black dark:text-black">
 
   <!-- Sidebar -->
   <aside class="hidden md:flex md:flex-col fixed inset-y-0 left-0 w-64 bg-white border-r border-slate-200">
@@ -61,31 +58,23 @@
       </div>
     </div>
     <nav class="mt-2 px-2 space-y-1">
-     <a href="./index.html" class="navlink ${location.pathname.endsWith('index.html') ? 'active' : ''}" title="POS">
-    <!-- Cash/Ticket -->
-    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-      <!-- base -->
-      <path d="M4 10h16a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-6a2 2 0 0 1 2-2Z"/>
-      <!-- gaveta -->
-      <path d="M7 16h10"/>
-      <path d="M9.5 13h5"/>
-      <!-- ticketcito arriba -->
-      <path d="M9 4h6v4l-1-.6-1 .6-1-.6-1 .6-1-.6-1 .6V4Z"/>
-    </svg>
-    <span>POS</span>
-  </a>
+      <a href="./index.html" class="navlink ${location.pathname.endsWith('index.html') ? 'active' : ''}" title="POS">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M4 10h16a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-6a2 2 0 0 1 2-2Z"/>
+          <path d="M7 16h10"/><path d="M9.5 13h5"/><path d="M9 4h6v4l-1-.6-1 .6-1-.6-1 .6-1-.6-1 .6V4Z"/>
+        </svg>
+        <span>POS</span>
+      </a>
 
-  <!-- Reporte -->
-  <a href="./reporte.html" class="navlink ${location.pathname.endsWith('reporte.html') ? 'active' : ''}" title="Reporte">
-    <!-- Chart bars -->
-    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-      <path d="M3 20h18"/>
-      <rect x="5" y="11" width="3" height="6" rx="1"/>
-      <rect x="10.5" y="8" width="3" height="9" rx="1"/>
-      <rect x="16" y="5" width="3" height="12" rx="1"/>
-    </svg>
-    <span>Reporte</span>
-  </a>
+      <a href="./reporte.html" class="navlink ${location.pathname.endsWith('reporte.html') ? 'active' : ''}" title="Reporte">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M3 20h18"/>
+          <rect x="5" y="11" width="3" height="6" rx="1"/>
+          <rect x="10.5" y="8" width="3" height="9" rx="1"/>
+          <rect x="16" y="5" width="3" height="12" rx="1"/>
+        </svg>
+        <span>Reporte</span>
+      </a>
     </nav>
     <div class="mt-auto p-3">
       <button id="btnLogout" class="btn w-full">Salir</button>
@@ -97,7 +86,7 @@
   <header class="md:ml-64 sticky top-0 z-40 bg-white/70 backdrop-blur border-b border-slate-200/60">
     <div class="px-4 py-3 flex items-center justify-between md:justify-end">
       <div class="md:hidden flex items-center gap-3">
-       <div class="h-9 w-9 grid place-items-center rounded-xl bg-[var(--accent-600)] text-white font-black">OD</div>
+        <div class="h-9 w-9 grid place-items-center rounded-xl bg-[var(--accent-600)] text-white font-black">OD</div>
         <span class="font-bold">OnceyDoce</span>
       </div>
       <div class="text-sm text-slate-500">Reporte</div>
@@ -115,7 +104,6 @@
           <p class="text-sm text-slate-500">Análisis y exportaciones</p>
         </div>
         <div class="flex items-center gap-3">
-          <!-- 👁️ mostrar/ocultar montos -->
           <button id="btnToggleMoneda" class="px-3 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-50" title="Mostrar/ocultar montos">👁️</button>
           <div id="statusBadge" class="text-xs px-3 py-1 rounded-full bg-gray-100">Sincronizando…</div>
         </div>
@@ -130,7 +118,7 @@
         <button id="btnReload" class="mt-3 px-3 py-1.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-sm">Recargar</button>
       </section>
 
-      <!-- GRID principal (mismo esquema que index) -->
+      <!-- GRID principal -->
       <div class="container-grid">
         <!-- Filtros -->
         <aside class="lg:col-span-3 col-span-12 bg-white rounded-2xl shadow p-4 space-y-4 h-fit lg:sticky lg:top-6">
@@ -194,11 +182,37 @@
 
         <!-- Contenido -->
         <main class="lg:col-span-9 col-span-12 space-y-4">
-          <!-- KPIs -->
-          <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
-            <div class="bg-white rounded-2xl shadow p-4"><div class="text-xs text-slate-500">Ventas (mes)</div><div id="kpiVentas" class="text-2xl font-bold money">0</div></div>
-            <div class="bg-white rounded-2xl shadow p-4"><div class="text-xs text-slate-500">Unidades (mes)</div><div id="kpiUnidades" class="text-2xl font-bold money">0</div></div>
-            <div class="bg-white rounded-2xl shadow p-4"><div class="text-xs text-slate-500">Ingresos (mes)</div><div id="kpiIngresos" class="text-2xl font-bold money">$0</div></div>
+
+          <!-- KPIs (MES) -->
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div class="bg-white rounded-2xl shadow p-4">
+              <div class="text-xs text-slate-500">Ventas (mes)</div>
+              <div id="kpiVentas" class="text-2xl font-bold money">0</div>
+            </div>
+            <div class="bg-white rounded-2xl shadow p-4">
+              <div class="text-xs text-slate-500">Unidades (mes)</div>
+              <div id="kpiUnidades" class="text-2xl font-bold money">0</div>
+            </div>
+            <div class="bg-white rounded-2xl shadow p-4">
+              <div class="text-xs text-slate-500">Ingresos (mes)</div>
+              <div id="kpiIngresos" class="text-2xl font-bold money">$0</div>
+            </div>
+            <div class="bg-white rounded-2xl shadow p-4">
+              <div class="text-xs text-slate-500">Ganancia (mes)</div>
+              <div id="kpiGananciaMes" class="text-2xl font-bold money">$0</div>
+            </div>
+          </div>
+
+          <!-- Split por método de pago (MES) -->
+          <div class="grid grid-cols-2 gap-4">
+            <div class="bg-white rounded-2xl shadow p-4">
+              <div class="text-xs text-slate-500">Efectivo (mes)</div>
+              <div id="kpiEfectivoMes" class="text-2xl font-bold money">$0</div>
+            </div>
+            <div class="bg-white rounded-2xl shadow p-4">
+              <div class="text-xs text-slate-500">Mercado Pago (mes)</div>
+              <div id="kpiMpMes" class="text-2xl font-bold money">$0</div>
+            </div>
           </div>
 
           <!-- KPIs del día -->
@@ -417,7 +431,98 @@
     </div>
   </div>
 
-  <!-- Tu lógica -->
+  <!-- Tu lógica principal -->
   <script src="report.js"></script>
+
+  <!-- Script auxiliar para Ganancia (mes) + split Efectivo / MP -->
+  <script>
+    // Helpers
+    const fmt = n => new Intl.NumberFormat('es-AR', { style:'currency', currency:'ARS', maximumFractionDigits:0 }).format(Number(n||0));
+    const norm = s => String(s ?? '').trim().toLowerCase();
+    function isSameYearMonth(ts, year, monthIdx0) {
+      const d = (ts instanceof Date) ? ts : new Date(ts);
+      return d.getFullYear() === year && d.getMonth() === monthIdx0;
+    }
+    function metodoEsEfectivo(m) {
+      const s = norm(m);
+      return s === 'efectivo' || s === 'cash';
+    }
+    function metodoEsMP(m) {
+      const s = norm(m);
+      return s === 'mp' || s === 'mercado pago' || s === 'mercadopago' || s === 'qr';
+    }
+
+    function pintarKPIsMesFromRows(rows) {
+      // Mes seleccionado (YYYY-MM)
+      const sel = document.getElementById('mesFiltro')?.value || '';
+      let year, monthIdx0;
+      if (/^\d{4}-\d{2}$/.test(sel)) {
+        const [y,m] = sel.split('-').map(Number);
+        year = y; monthIdx0 = m - 1;
+      } else {
+        const hoy = new Date();
+        year = hoy.getFullYear(); monthIdx0 = hoy.getMonth();
+      }
+
+      const monthRows = (rows || []).filter(r => {
+        const ts = r.timestamp || r.Timestamp || r.fecha || r.Fecha;
+        return ts && isSameYearMonth(ts, year, monthIdx0);
+        // columnas esperadas: timestamp, cliente, mesa, metodoPago/metodo, total, ganancia, items(json)
+      });
+
+      let ventas = 0, unidades = 0, ingresos = 0, gananciaMes = 0, efectivoMes = 0, mpMes = 0;
+
+      monthRows.forEach(r => {
+        ventas += 1;
+        const total = Number(r.total ?? r.Total ?? 0);
+        const gan   = Number(r.ganancia ?? r.Ganancia ?? 0);
+        const metodo= r.metodoPago ?? r.metodo ?? r.Método ?? '';
+
+        ingresos += total;
+        gananciaMes += gan;
+
+        if (metodoEsEfectivo(metodo)) efectivoMes += total;
+        if (metodoEsMP(metodo))       mpMes += total;
+
+        try {
+          const raw = r['items(json)'] ?? r.items ?? '[]';
+          const items = typeof raw === 'string' ? JSON.parse(raw) : (Array.isArray(raw) ? raw : []);
+          unidades += items.reduce((a,it)=> a + Number(it.qty || it.cantidad || 0), 0);
+        } catch(_) {}
+      });
+
+      // Pintar
+      $('#kpiVentas').text(ventas);
+      $('#kpiUnidades').text(unidades);
+      $('#kpiIngresos').text(fmt(ingresos));
+      $('#kpiGananciaMes').text(fmt(gananciaMes));
+      $('#kpiEfectivoMes').text(fmt(efectivoMes));
+      $('#kpiMpMes').text(fmt(mpMes));
+    }
+
+    // Integra con report.js:
+    // - Si report.js define VENTAS, lo usamos.
+    // - Recalcula al cambiar el selector de Mes.
+    (function bootKPIMes(){
+      function tryPaint() {
+        if (window.VENTAS && Array.isArray(window.VENTAS) && window.VENTAS.length) {
+          pintarKPIsMesFromRows(window.VENTAS);
+          return true;
+        }
+        return false;
+      }
+      // Intento inicial y polling corto por si report.js tarda en cargar los datos
+      if (!tryPaint()) {
+        const t0 = Date.now();
+        const iv = setInterval(() => {
+          if (tryPaint() || Date.now()-t0 > 8000) clearInterval(iv);
+        }, 300);
+      }
+      // Recalcular cuando cambie el mes
+      $(document).on('change', '#mesFiltro', () => {
+        if (window.VENTAS) pintarKPIsMesFromRows(window.VENTAS);
+      });
+    })();
+  </script>
 </body>
 </html>
