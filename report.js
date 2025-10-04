@@ -522,3 +522,4 @@ document.getElementById('btnRecargarGastos')?.addEventListener('click', cargarGa
     }
   })();
 })();
+
