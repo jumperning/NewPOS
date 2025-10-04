@@ -409,6 +409,43 @@
         Ganancia del mes: <b id="ganMesLbl">$0</b>
       </div>
     </div>
+    <!-- KPI: Costo vs. Gasto (mes) -->
+<div class="rounded-2xl shadow-sm bg-white p-5">
+  <div class="flex items-center justify-between">
+    <div class="text-sm font-medium text-gray-500">Costo vs. Gasto (mes)</div>
+    <span id="kpi-ratio-chip" class="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-700">—</span>
+  </div>
+
+  <div class="mt-3">
+    <div class="h-2 w-full rounded-full bg-gray-100 overflow-hidden">
+      <!-- ancho dinámico -->
+      <div id="kpi-ratio-bar" class="h-2 rounded-full" style="width:0%"></div>
+    </div>
+
+    <div class="mt-2 text-xs text-gray-400">
+      <span id="kpi-ratio-label">—</span>
+    </div>
+  </div>
+</div>
+<!-- KPI: Presupuesto del mes (Gasto vs Presupuesto) -->
+<div class="rounded-2xl shadow-sm bg-white p-5">
+  <div class="flex items-center justify-between">
+    <div class="text-sm font-medium text-gray-500">Presupuesto del mes</div>
+    <span id="kpi-presu-chip" class="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-700">—</span>
+  </div>
+
+  <div class="mt-2 text-3xl font-extrabold tracking-tight" id="kpi-presu-monto">—</div>
+  <div class="text-xs text-gray-400">Gasto / Presupuesto</div>
+
+  <div class="mt-3">
+    <div class="h-2 w-full rounded-full bg-gray-100 overflow-hidden">
+      <div id="kpi-presu-bar" class="h-2 rounded-full" style="width:0%"></div>
+    </div>
+    <div class="mt-2 text-xs text-gray-400" id="kpi-presu-label">—</div>
+    <div class="mt-1 text-xs" id="kpi-presu-restante">—</div>
+  </div>
+</div>
+
   </div>
 </section>
 
@@ -466,6 +503,182 @@
 
   <!-- ============= LÓGICA ============= -->
   <script>
+    // ===== Presupuesto mensual =====
+// Setealo una vez por mes o al cargar configuración
+let _PRESUPUESTO_MENSUAL = 0;
+
+// Opción A: pasar un número directo
+function setPresupuestoMensual(monto) {
+  _PRESUPUESTO_MENSUAL = Number(monto || 0);
+  refrescarPresupuesto();
+}
+
+// Opción B: calcular desde componentes
+function setPresupuestoComponentes({ alquiler=0, servicios=0, sueldos=0, otros=0 } = {}) {
+  _PRESUPUESTO_MENSUAL = [alquiler, servicios, sueldos, otros]
+    .map(Number).reduce((a,b)=>a+b,0);
+  refrescarPresupuesto();
+}
+
+function gastoMensualActual() {
+  const r = rangoMes(new Date());
+  return _GASTOS_RAW
+    .map(normalizarGasto)
+    .filter(g => enRango(g.fecha, r))
+    .reduce((acc, g) => acc + g.monto, 0);
+}
+
+function refrescarPresupuesto() {
+  const gasto = gastoMensualActual();
+  const presu = Math.max(0, _PRESUPUESTO_MENSUAL);
+  const pct   = presu > 0 ? Math.min(100, Math.round((gasto / presu) * 100)) : 0;
+
+  const bar   = document.querySelector('#kpi-presu-bar');
+  const chip  = document.querySelector('#kpi-presu-chip');
+  const lbl   = document.querySelector('#kpi-presu-label');
+  const monto = document.querySelector('#kpi-presu-monto');
+  const rest  = document.querySelector('#kpi-presu-restante');
+
+  if (monto) monto.textContent = `${fmtARS(gasto)} / ${fmtARS(presu)}`;
+  if (lbl)   lbl.textContent   = `Avance: ${pct}%`;
+  if (rest)  rest.textContent  = presu > 0
+    ? `Restante: ${fmtARS(Math.max(0, presu - gasto))}`
+    : 'Definí un presupuesto para ver el avance.';
+
+  if (bar) {
+    bar.style.width = pct + '%';
+    bar.className = 'h-2 rounded-full';
+  }
+  if (chip) chip.className = 'text-xs px-2 py-1 rounded-full';
+
+  // Semáforo
+  if (presu === 0) {
+    if (bar)  bar.classList.add('bg-gray-300');
+    if (chip) { chip.classList.add('bg-gray-100','text-gray-700'); chip.textContent = 'Sin presupuesto'; }
+    return;
+  }
+  if (gasto / presu <= 0.8) {
+    if (bar)  bar.classList.add('bg-green-500');
+    if (chip) { chip.classList.add('bg-green-100','text-green-700'); chip.textContent = 'Saludable'; }
+  } else if (gasto / presu <= 1) {
+    if (bar)  bar.classList.add('bg-yellow-500');
+    if (chip) { chip.classList.add('bg-yellow-100','text-yellow-700'); chip.textContent = 'Al límite'; }
+  } else {
+    if (bar)  bar.classList.add('bg-red-500');
+    if (chip) { chip.classList.add('bg-red-100','text-red-700'); chip.textContent = 'Excedido'; }
+  }
+}
+
+// Llamá esto cada vez que se actualiza la lista de "Últimos gastos"
+const _oldSetGastosDesdeUltimos = setGastosDesdeUltimos;
+setGastosDesdeUltimos = function(list) {
+  _oldSetGastosDesdeUltimos(list);
+  refrescarPresupuesto();
+};
+
+    // ===== Helpers base =====
+const fmtARS = n => (isFinite(n) ? n : 0).toLocaleString('es-AR', {
+  style: 'currency', currency: 'ARS', maximumFractionDigits: 0
+});
+function rangoMes(fechaBase = new Date()) {
+  const y = fechaBase.getFullYear(), m = fechaBase.getMonth();
+  return { from: new Date(y, m, 1, 0, 0, 0), to: new Date(y, m + 1, 0, 23, 59, 59) };
+}
+const enRango = (d, r) => d >= r.from && d <= r.to;
+
+// ===== Cálculo de costos (COGS) a partir de las ventas =====
+function costoDeVenta(venta) {
+  if (typeof venta?.costoTotal === 'number') return venta.costoTotal;
+
+  if (Array.isArray(venta?.items)) {
+    return venta.items.reduce((acc, it) => {
+      const cu = Number(it.costoUnidad ?? it.costo ?? 0);
+      const q  = Number(it.qty ?? it.cantidad ?? 1);
+      return acc + cu * q;
+    }, 0);
+  }
+  return Number(venta?.costo ?? 0); // fallback
+}
+
+// ===== Estado interno para reusar fuentes =====
+let _VENTAS_MES = [];   // poné acá lo que ya cargás del Sheet de ventas
+let _GASTOS_RAW = [];   // la MISMA lista que mostrás en "Últimos gastos"
+
+// Llamala cuando tengas ventas del mes
+function setVentasMes(list) {
+  _VENTAS_MES = Array.isArray(list) ? list : [];
+  refrescarKPIs();
+}
+
+// Llamala desde el render de "Últimos gastos" con la misma lista que usás ahí
+function setGastosDesdeUltimos(list) {
+  _GASTOS_RAW = Array.isArray(list) ? list : [];
+  refrescarKPIs();
+}
+
+// Normaliza el gasto (por si vienen claves distintas)
+function normalizarGasto(g) {
+  const fecha = new Date(g.fecha || g.date || g.created_at || Date.now());
+  const monto = Number(g.monto ?? g.amount ?? g.total ?? 0);
+  return { fecha, monto };
+}
+
+// ===== Refresco de las tres cards =====
+function refrescarKPIs() {
+  const r = rangoMes(new Date());
+
+  // 1) Costo del mes (COGS de ventas en el mes)
+  const costoMes = _VENTAS_MES
+    .filter(v => enRango(new Date(v.fecha || v.date || v.created_at || Date.now()), r))
+    .reduce((acc, v) => acc + costoDeVenta(v), 0);
+
+  // 2) Gasto mensual (misma fuente que "Últimos gastos")
+  const gastoMensual = _GASTOS_RAW
+    .map(normalizarGasto)
+    .filter(g => enRango(g.fecha, r))
+    .reduce((acc, g) => acc + g.monto, 0);
+
+  // Pintar cards de valor
+  const elCosto = document.querySelector('#kpi-costo-mes');
+  const elGasto = document.querySelector('#kpi-gasto-mensual');
+  if (elCosto) elCosto.textContent = fmtARS(costoMes);
+  if (elGasto) elGasto.textContent = fmtARS(gastoMensual);
+
+  // 3) Comparativa (ratio = Costo / Gasto)
+  const ratio = gastoMensual > 0 ? (costoMes / gastoMensual) : 0;
+  const pct = Math.min(100, Math.round((ratio || 0) * 100));
+
+  const bar  = document.querySelector('#kpi-ratio-bar');
+  const chip = document.querySelector('#kpi-ratio-chip');
+  const lbl  = document.querySelector('#kpi-ratio-label');
+
+  if (bar) bar.style.width = pct + '%';
+  if (lbl) lbl.textContent = `${fmtARS(costoMes)} de ${fmtARS(gastoMensual)} (${pct}%)`;
+
+  // Colores según estado
+  const ok      = ratio <= 0.8;      // verde
+  const warning = ratio > 0.8 && ratio <= 1; // amarillo
+  const danger  = ratio > 1;         // rojo
+
+  // Reset clases
+  if (bar) bar.className = 'h-2 rounded-full';
+  if (chip) chip.className = 'text-xs px-2 py-1 rounded-full';
+
+  if (ok) {
+    if (bar)  bar.classList.add('bg-green-500');
+    if (chip) { chip.classList.add('bg-green-100','text-green-700'); chip.textContent = 'Saludable'; }
+  } else if (warning) {
+    if (bar)  bar.classList.add('bg-yellow-500');
+    if (chip) { chip.classList.add('bg-yellow-100','text-yellow-700'); chip.textContent = 'Al límite'; }
+  } else if (danger) {
+    if (bar)  bar.classList.add('bg-red-500');
+    if (chip) { chip.classList.add('bg-red-100','text-red-700'); chip.textContent = 'Superado'; }
+  } else {
+    if (bar)  bar.classList.add('bg-gray-300');
+    if (chip) { chip.classList.add('bg-gray-100','text-gray-700'); chip.textContent = '—'; }
+  }
+}
+
     // Config API (para gastos)
     const API = '/.netlify/functions/gs-order';
 
