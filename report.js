@@ -1,189 +1,307 @@
-/* ========= Helpers seguros ========= */
-const $fmt = n => new Intl.NumberFormat('es-AR',{style:'currency',currency:'ARS',maximumFractionDigits:0}).format(Number(n||0));
-const getEl = id => document.getElementById(id);
-const setText = (id, v) => { const el = getEl(id); if (el) el.textContent = v; };
-const setHTML = (id, v) => { const el = getEl(id); if (el) el.innerHTML = v; };
-const setWidth = (id, pct) => { const el = getEl(id); if (el) el.style.width = `${Math.max(0,Math.min(100, Number(pct)||0))}%`; };
-
-const toDate = (s)=>{
-  if(!s) return null;
-  const t=String(s).trim();
-  if(/^\d{4}-\d{2}-\d{2}/.test(t)) return new Date(t);
-  if(/^\d{2}\/\d{2}\/\d{4}/.test(t)){ const [d,m,y]=t.split('/'); return new Date(`${y}-${m}-${d}`); }
-  const d=new Date(t); return isNaN(d)? null:d;
+/* ================= Helpers ================= */
+const $fmt = (n) => new Intl.NumberFormat('es-AR', { style:'currency', currency:'ARS', maximumFractionDigits:0 }).format(Number(n||0));
+const toDate = (s) => {
+  if (!s) return null;
+  const t = String(s).trim();
+  if (/^\d{4}-\d{2}-\d{2}/.test(t)) return new Date(t);
+  if (/^\d{2}\/\d{2}\/\d{4}/.test(t)){ const [d,m,y]=t.split('/'); return new Date(`${y}-${m}-${d}`); }
+  const d = new Date(t);
+  return isNaN(d) ? null : d;
 };
-const sameYMonth = (d, y, m)=> d && d.getFullYear()===y && (d.getMonth()+1)===m;
-const dayKey = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+const sameYMonth = (d, y, m) => d && d.getFullYear()===y && (d.getMonth()+1)===m;
 
-/* ========= Estado ========= */
-let ROWS = [];
+/* ================= Estado ================= */
+const API = '/.netlify/functions/gs-order'; // tu endpoint de gastos
+let ROWS = [];   // ventas del CSV
+let GASTOS = []; // compras del API (carne/almacén/bebidas/etc.)
 let mesSelKey = '';
-let GASTOS = [];
 let CHARTS = { pie:null, barQty:null, barProf:null, horas:null };
 
-/* ========= Carga CSV ========= */
+/* ================= CSV ================= */
 async function loadCSV(){
-  const url = getEl('csvUrl') ? getEl('csvUrl').value.trim() : '';
-  setText('statusBadge', 'Cargando CSV…');
-  return new Promise((resolve,reject)=>{
-    Papa.parse(url,{
-      download:true, header:true, skipEmptyLines:true,
-      complete:(res)=>{
+  const url = $('#csvUrl').val().trim();
+  $('#statusBadge').text('Cargando CSV…');
+  return new Promise((resolve, reject)=>{
+    Papa.parse(url, {
+      download: true,
+      header: true,
+      skipEmptyLines: true,
+      complete: (res)=>{
         try{
-          ROWS = (res.data||[])
-            .map(r=>{
-              const ts = r.timestamp || r.fecha || r.Timestamp || '';
-              const d  = toDate(ts);
-              if(!d) return null;
-              const itemsRaw = r['items(json)'] || r.items || '[]';
-              let unidades = 0;
-              try{
-                const arr = JSON.parse(itemsRaw||'[]');
-                if(Array.isArray(arr)) unidades = arr.reduce((a,x)=> a + (Number(x.qty)||0), 0);
-              }catch{}
-              return {
-                ts: ts,
-                date: d,
-                y: d.getFullYear(),
-                m: d.getMonth()+1,
-                metodo: (r.metodoPago || r.metodo || r.Metodo || '').toString().trim(),
-                total: Number(r.total || r.Total || 0),
-                totalCosto: Number(r.totalCosto || r.TotalCosto || 0),
-                // si el CSV trae ganancia inconsist., la calculo mínima por ticket
-                ganancia: Number(r.ganancia || r.Ganancia || (Number(r.total||0)-Number(r.totalCosto||0))),
-                unidades,
-                items: itemsRaw
-              };
-            })
-            .filter(Boolean);
+          const rows = (res.data||[]).map(r=>{
+            const ts = r.timestamp || r.fecha || r.Timestamp || '';
+            const d = toDate(ts);
+            return {
+              ts: ts,
+              date: d,
+              y: d? d.getFullYear(): null,
+              m: d? d.getMonth()+1 : null,
+              d: d? d.getDate() : null,
+              cliente: r.cliente || r.Cliente || '',
+              mesa: r.mesa || r.Mesa || '',
+              metodo: (r.metodoPago || r.metodo || r.Metodo || '').toString().trim(),
+              total: Number(r.total || r.Total || 0),
+              totalCosto: Number(r.totalCosto || r.TotalCosto || 0),
+              // si no viene ganancia, la calculo mínima por ticket (ingreso - costo)
+              ganancia: Number(r.ganancia || r.Ganancia || (Number(r.total||0)-Number(r.totalCosto||0))),
+              pago: Number(r.pago || r.Pago || 0),
+              items: r['items(json)'] || r.items || '[]',
+              categoria: r.categoria || ''
+            };
+          });
+          ROWS = rows.filter(r => r.date);
           buildMesOptions();
-          setText('statusBadge', 'Listo');
+          $('#statusBadge').text('Menú sincronizado');
           resolve();
         }catch(e){ reject(e); }
       },
-      error: reject
+      error: (err)=> reject(err)
     });
   });
 }
 
 function buildMesOptions(){
-  const set = new Set(ROWS.map(r=>`${r.y}-${String(r.m).padStart(2,'0')}`));
-  const opts = [...set].sort().reverse();
-  const sel = getEl('mesFiltro'); if(!sel) return;
-  sel.innerHTML = '';
-  opts.forEach(key=>{
-    const [yy,mm] = key.split('-').map(Number);
-    const label = new Date(yy,mm-1,1).toLocaleDateString('es-AR',{month:'long',year:'numeric'});
-    const opt = document.createElement('option');
-    opt.value = key; opt.textContent = label.charAt(0).toUpperCase()+label.slice(1);
-    sel.appendChild(opt);
+  const set = new Set(ROWS.map(r=> `${r.y}-${String(r.m).padStart(2,'0')}`));
+  const MES_OPTS = [...set].sort().reverse().map(key=>{
+    const [yy, mm] = key.split('-');
+    const d = new Date(Number(yy), Number(mm)-1, 1);
+    const label = d.toLocaleDateString('es-AR', { month:'long', year:'numeric' });
+    return {key, label: label.charAt(0).toUpperCase()+label.slice(1)};
   });
+  const sel = $('#mesFiltro'); sel.empty();
+  MES_OPTS.forEach(o => sel.append(`<option value="${o.key}">${o.label}</option>`));
   const now = new Date();
   const nowKey = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
-  mesSelKey = opts.includes(nowKey) ? nowKey : (opts[0]||'');
-  if(mesSelKey) sel.value = mesSelKey;
+  mesSelKey = MES_OPTS.find(o=>o.key===nowKey)?.key || MES_OPTS[0]?.key || '';
+  if (mesSelKey) sel.val(mesSelKey);
   renderAll();
 }
 
-/* ========= KPIs ========= */
-function monthRows(){
-  if(!mesSelKey) return [];
-  const [yy,mm] = mesSelKey.split('-').map(Number);
-  return ROWS.filter(r => sameYMonth(r.date,yy,mm));
-}
-function monthAgg(){
-  const rows = monthRows();
-  return {
-    ingresos: rows.reduce((a,r)=>a+r.total,0),
-    costo:    rows.reduce((a,r)=>a+r.totalCosto,0),
-    // 'gan' queda para retrocompatibilidad, pero NO lo uso para el KPI
-    gan:      rows.reduce((a,r)=>a+r.ganancia,0),
-    ventas:   rows.length,
-    unidades: rows.reduce((a,r)=>a+r.unidades,0),
-    byMethod: rows.reduce((acc,r)=>{
-      const s = (r.metodo||'').toLowerCase();
-      const k = s.includes('efect') ? 'efectivo' : (s.includes('mp')||s.includes('mercado')||s.includes('qr')) ? 'mp' : 'otros';
-      acc[k]+=Number(r.total||0); return acc;
-    },{efectivo:0, mp:0, otros:0})
+/* ================= Gastos (API) ================= */
+(function initGastosUI(){
+  const hoy = new Date().toISOString().slice(0,10);
+  const $f = document.getElementById('gFecha');
+  if ($f && !$f.value) $f.value = hoy;
+})();
+
+async function guardarGasto(){
+  const fecha      = (document.getElementById('gFecha').value || '').trim();
+  const categoria  = (document.getElementById('gCategoria').value || 'Otros').trim();
+  const concepto   = (document.getElementById('gConcepto').value || '').trim();
+  const proveedor  = (document.getElementById('gProveedor').value || '').trim();
+  const montoNum   = Number(document.getElementById('gMonto').value || 0);
+  const nota       = (document.getElementById('gNota').value || '').trim();
+  const $btn       = document.getElementById('btnGuardarGasto');
+  const $msg       = document.getElementById('gMsg');
+
+  if (!fecha || !concepto || !Number.isFinite(montoNum) || montoNum <= 0){
+    alert('Completá Fecha, Concepto y un Monto válido.'); return;
+  }
+
+  const payload = {
+    type: 'expense',
+    fecha,
+    categoria_gasto: categoria,
+    concepto,
+    proveedor,
+    qty: 1,
+    costo_unit: montoNum,
+    nota
   };
+
+  try{
+    if($btn){ $btn.disabled = true; $btn.textContent = 'Guardando…'; }
+    if($msg) $msg.textContent = '';
+    const res = await fetch(API, {
+      method:'POST',
+      headers:{ 'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8' },
+      body: 'payload='+encodeURIComponent(JSON.stringify(payload))
+    });
+    const data = await res.json().catch(()=> ({}));
+    if (!res.ok || data.ok !== true) throw new Error(data.error || `HTTP ${res.status}`);
+
+    // limpiar
+    const ids = ['gConcepto','gProveedor','gMonto','gNota'];
+    ids.forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
+    if($msg) $msg.textContent = '✅ Gasto guardado';
+
+    await cargarGastosRecientes();
+  }catch(err){
+    console.error(err);
+    alert('No se pudo guardar el gasto: ' + err.message);
+  }finally{
+    if($btn){ $btn.disabled = false; $btn.textContent = 'Guardar gasto'; }
+  }
 }
 
-function renderKPIsMes(){
-  const m = monthAgg();
-  const gananciaMesCalc = Math.max(0, m.ingresos - m.costo); // ✅ Ingresos − Costo
+async function cargarGastosRecientes(){
+  try{
+    // podés subir a 1000 si tenés muchísimas compras en el mes
+    const res = await fetch(`${API}?action=items&limit=200`);
+    const json = await res.json();
+    if (json?.ok !== true) throw new Error(json?.error || 'Error al leer ITEMS');
+    GASTOS = (json.items || []).filter(it => String(it.tipo).toLowerCase() === 'compra');
 
-  setText('kpiVentas', m.ventas);
-  setText('kpiUnidades', m.unidades);
-  setText('kpiIngresos', $fmt(m.ingresos));
-  setText('kpiGananciaMes', $fmt(gananciaMesCalc));
-  // distintos IDs de “Costo (mes)” según versión de tu HTML
-  setText('kpiCostoMes', $fmt(m.costo));
-  setText('kpi-costo-mes', $fmt(m.costo));
-  setText('kpiEfectivoMes', $fmt(m.byMethod.efectivo));
-  setText('kpiMpMes', $fmt(m.byMethod.mp));
+    // pintar tabla si existe
+    const $tb = document.getElementById('tbodyGastos');
+    if ($tb){
+      $tb.innerHTML = GASTOS.map(r => `
+        <tr>
+          <td class="p-2">${(r.fecha||'').toString().slice(0,10)}</td>
+          <td class="p-2">${r.categoria_gasto||'-'}</td>
+          <td class="p-2">${r.concepto||'-'}</td>
+          <td class="p-2 text-right">${$fmt(r.subtotal || r.costo_unit || 0)}</td>
+        </tr>
+      `).join('');
+    }
 
-  // === NUEVO: Gastos (mes) y Saldo real (mes) ===
+    // refresco KPIs
+    renderKPIsMes();
+    renderKPIsDia();
+  }catch(err){
+    console.error('cargarGastosRecientes', err);
+  }
+}
+
+/* ===== Sumatorias de gastos (día y mes) ===== */
+function gastosDelDiaISO(yyyy_mm_dd){
+  if (!yyyy_mm_dd) return 0;
+  return GASTOS
+    .filter(g => (g.fecha||'').slice(0,10) === yyyy_mm_dd)
+    .reduce((a,g)=> a + Number(g.subtotal || g.costo_unit || 0), 0);
+}
+
+function gastosMesTotal(){
+  if(!mesSelKey) return 0;
+  const [yy, mm] = mesSelKey.split('-').map(Number);
+  return GASTOS.reduce((acc,g)=>{
+    const f = (g.fecha||'').slice(0,10);
+    if(!f) return acc;
+    const d = new Date(f);
+    const ok = d && d.getFullYear() === yy && (d.getMonth()+1) === mm;
+    return ok ? acc + Number(g.subtotal || g.costo_unit || 0) : acc;
+  }, 0);
+}
+
+/* ================= KPIs & Render ================= */
+function mediosMap(met){
+  const s = (met||'').toLowerCase();
+  if (s.includes('efect')) return 'efectivo';
+  if (s.includes('mp') || s.includes('mercado') || s.includes('qr')) return 'mp';
+  return 'otros';
+}
+
+function renderAll(){
+  if (!mesSelKey) return;
+  const [yy, mm] = mesSelKey.split('-').map(Number);
+
+  // Filas del mes
+  const monthRows = ROWS.filter(r => sameYMonth(r.date, yy, mm));
+
+  // KPIs mes
+  const ventas = monthRows.length;
+  const unidades = monthRows.reduce((a, r)=>{
+    try { const arr = JSON.parse(r.items||'[]'); return a + (Array.isArray(arr)? arr.reduce((s,x)=>s+(Number(x.qty)||0),0) : 0); }
+    catch { return a; }
+  }, 0);
+  const ingresos = monthRows.reduce((a,r)=>a+r.total,0);
+  const costo = monthRows.reduce((a,r)=>a+r.totalCosto,0);
+  const gananciaMesCalc = Math.max(0, ingresos - costo); // ✅ corregido
+
+  // Breakdown métodos
+  const byMethod = { efectivo:0, mp:0, otros:0 };
+  monthRows.forEach(r => { byMethod[mediosMap(r.metodo)] += Number(r.total||0); });
+
+  $('#kpiVentas').text(ventas);
+  $('#kpiUnidades').text(unidades);
+  $('#kpiIngresos').text($fmt(ingresos));
+  $('#kpiGananciaMes').text($fmt(gananciaMesCalc));
+  $('#kpiEfectivoMes').text($fmt(byMethod.efectivo));
+  $('#kpiMpMes').text($fmt(byMethod.mp));
+
+  // NUEVO: Gastos (mes)
   const gMes = gastosMesTotal();
-  const saldoRealMes = Math.max(0, (m.ingresos - m.costo) - gMes);
-  setText('kpiGastosMes', $fmt(gMes));
-  setText('kpiSaldoRealMes', $fmt(saldoRealMes));
+  $('#kpiGastosMes').text($fmt(gMes));
+
+  // KPIs día
+  renderKPIsDia();
+
+  // Tabla de ventas
+  const $tb = $('#tbodyVentas'); $tb.empty();
+  monthRows.slice().sort((a,b)=> b.date - a.date).forEach(r=>{
+    $tb.append(`<tr>
+      <td class="p-2">${r.ts.toString().slice(0,19).replace('T',' ')}</td>
+      <td class="p-2">${r.cliente||''}</td>
+      <td class="p-2">${r.mesa||''}</td>
+      <td class="p-2">${r.metodo||''}</td>
+      <td class="p-2">${(function(){ try{const arr=JSON.parse(r.items||'[]'); return arr.map(x=>`${x.nombre||''} x${x.qty||1}`).join(', ')}catch{return ''}})()}</td>
+      <td class="p-2 text-right">${$fmt(r.total)}</td>
+      <td class="p-2 text-right">${$fmt(r.ganancia)}</td>
+    </tr>`);
+  });
+
+  // Charts (si existen)
+  renderCharts(monthRows);
 }
 
 function renderKPIsDia(){
-  let selDia = (getEl('diaFiltro')?.value) || '';
-  if(!selDia){
-    const now = new Date();
-    const key = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
-    if(key===mesSelKey){ selDia = now.toISOString().slice(0,10); if(getEl('diaFiltro')) getEl('diaFiltro').value = selDia; }
+  let selDia = $('#diaFiltro').val();
+  if (!selDia){
+    // por defecto hoy si pertenece al mes seleccionado
+    const today = new Date();
+    const key = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}`;
+    if (key === mesSelKey){ selDia = today.toISOString().slice(0,10); $('#diaFiltro').val(selDia); }
   }
-  if(!selDia) return;
+  if (!selDia) return;
 
-  const [yy,mm] = mesSelKey.split('-').map(Number);
-  const rows = ROWS.filter(r=> sameYMonth(r.date,yy,mm) && dayKey(r.date)===selDia);
+  const [yy, mm] = mesSelKey.split('-').map(Number);
+  const hFrom = $('#horaDesde').val();
+  const hTo   = $('#horaHasta').val();
 
-  // Filtro horario opcional (si existen los inputs)
-  const hFrom=getEl('horaDesde')?.value, hTo=getEl('horaHasta')?.value;
-  const inTime = (dt)=>{
-    if(!hFrom && !hTo) return true;
+  const rowsDia = ROWS.filter(r => sameYMonth(r.date, yy, mm) && r.date.toISOString().slice(0,10)===selDia);
+
+  const inTime = (dt) => {
+    if (!hFrom && !hTo) return true;
     const hhmm = dt.toTimeString().slice(0,5);
-    if(hFrom && hhmm < hFrom) return false;
-    if(hTo   && hhmm > hTo)   return false;
+    if (hFrom && hhmm < hFrom) return false;
+    if (hTo   && hhmm > hTo)   return false;
     return true;
   };
-  const r2 = rows.filter(r=> inTime(r.date));
+  const r2 = rowsDia.filter(r => inTime(r.date));
 
   const ing = r2.reduce((a,r)=>a+r.total,0);
   const cos = r2.reduce((a,r)=>a+r.totalCosto,0);
   const gan = r2.reduce((a,r)=>a+r.ganancia,0);
-  const uni = r2.reduce((a,r)=>a+r.unidades,0);
+  const uni = r2.reduce((a, r)=>{
+    try { const arr = JSON.parse(r.items||'[]'); return a + (Array.isArray(arr)? arr.reduce((s,x)=>s+(Number(x.qty)||0),0) : 0); }
+    catch { return a; }
+  }, 0);
 
-  // GASTOS (mantiene tu widget “Registrar gasto / Últimos gastos”)
-  const gastosApi = GASTOS
-    .filter(g => (g.fecha||'').slice(0,10)===selDia)
-    .reduce((a,g)=> a + Number(g.subtotal || g.costo_unit || 0), 0);
-  const gastosInput = Number(getEl('cierreGastos')?.value || 0);
-  const gastosTot = gastosApi + gastosInput;
+  // Gastos del día: API + (input manual si existe)
+  const gastosApiDia = gastosDelDiaISO(selDia);
+  const gastosManuales = Number($('#cierreGastos').val() || 0); // si no existe el input, queda 0
+  const gastosTot = gastosApiDia + gastosManuales;
 
-  setText('kpiIngDia', $fmt(ing));
-  setText('kpiCostoDia', $fmt(cos));
-  setText('kpiGanDia', $fmt(gan));
-  setText('kpiVentasDia', r2.length);
-  setText('kpiUniDia', uni);
+  $('#kpiIngDia').text($fmt(ing));
+  $('#kpiCostoDia').text($fmt(cos));
+  $('#kpiGanDia').text($fmt(gan));
+  $('#kpiVentasDia').text(r2.length);
+  $('#kpiUniDia').text(uni);
 
-  setText('cierreIng', $fmt(ing));
-  setText('cierreCosto', $fmt(cos));
-  setText('cierreBruta', $fmt(ing - cos));
-  setText('cierreGastosLbl', $fmt(gastosTot));
+  $('#cierreIng').text($fmt(ing));
+  $('#cierreCosto').text($fmt(cos));
+  $('#cierreBruta').text($fmt(ing - cos));
+  $('#cierreGastosLbl').text($fmt(gastosTot));
   const neta = (ing - cos) - gastosTot;
-  setText('cierreNeta', $fmt(neta));
-  const personas = Math.max(1, Number(getEl('cierrePersonas')?.value||1));
-  setText('cierrePorPersona', $fmt(neta/personas));
+  $('#cierreNeta').text($fmt(neta));
+  const personas = Math.max(1, Number($('#cierrePersonas').val() || 1));
+  $('#cierrePorPersona').text($fmt(neta / personas));
+  $('#cierreRangoLbl').text(`${selDia}${(hFrom||hTo)? ` · ${hFrom||'00:00'}–${hTo||'23:59'}` : ''}`);
 
-  const rango = `${selDia}${(hFrom||hTo)? ` · ${hFrom||'00:00'}–${hTo||'23:59'}`:''}`;
-  setText('cierreRangoLbl', rango);
+  $('#kpiGanDiaLbl').text(`${r2.length} ventas · ${uni} unid.`);
 }
 
-/* ========= Charts (no rompen si el canvas no existe) ========= */
+/* ================= Charts (opcional, no rompe si falta) ================= */
 const CAT_LABELS = ['Café','Comida','Cerveza','Gaseosa','Agua','Vino','Whisky','Tragos'];
 function categorizar(nombre=''){
   const n = String(nombre).toLowerCase();
@@ -196,12 +314,20 @@ function categorizar(nombre=''){
   if (/(gaseosa|coca|sprite|fanta|pepsi|manaos|pomelo|cola|ginger ale|t[oó]nica|schweppes)/.test(n)) return 'Gaseosa';
   return 'Comida';
 }
-function renderCharts(){
+
+function renderCharts(rows){
   // destruir anteriores
   Object.values(CHARTS).forEach(c=>{try{c?.destroy()}catch{}});
   CHARTS = { pie:null, barQty:null, barProf:null, horas:null };
 
-  const rows = monthRows();
+  // si no hay canvases, salgo
+  const ctxPie  = document.getElementById('chartPie')?.getContext('2d');
+  const ctxQty  = document.getElementById('chartBarQty')?.getContext('2d');
+  const ctxProf = document.getElementById('chartBarProfit')?.getContext('2d');
+  const ctxH    = document.getElementById('chartHoras')?.getContext('2d');
+  if(!ctxPie && !ctxQty && !ctxProf && !ctxH) return;
+
+  // Agregado por categoría a partir de items(json)
   const agg = CAT_LABELS.reduce((m,c)=>{m[c]={unidades:0,gan:0}; return m;},{});
   rows.forEach(r=>{
     try{
@@ -226,28 +352,24 @@ function renderCharts(){
   const qtyArr = labels.map(l=> Math.round(agg[l].unidades));
   const profArr= labels.map(l=> Math.round(agg[l].gan));
 
-  const ctxPie = document.getElementById('chartPie')?.getContext('2d');
   if(ctxPie){
     CHARTS.pie = new Chart(ctxPie,{ type:'pie', data:{ labels, datasets:[{ data: qtyArr }] },
       options:{ plugins:{ legend:{position:'bottom'} } }});
   }
-  const ctxQty = document.getElementById('chartBarQty')?.getContext('2d');
   if(ctxQty){
     CHARTS.barQty = new Chart(ctxQty,{ type:'bar', data:{ labels, datasets:[{ label:'Unidades', data: qtyArr }] },
       options:{ scales:{ y:{beginAtZero:true, ticks:{precision:0}}}, plugins:{legend:{display:false}} }});
   }
-  const ctxProf = document.getElementById('chartBarProfit')?.getContext('2d');
   if(ctxProf){
     CHARTS.barProf = new Chart(ctxProf,{ type:'bar', data:{ labels, datasets:[{ label:'Ganancia (ARS)', data: profArr }] },
       options:{ scales:{ y:{beginAtZero:true}}, plugins:{legend:{display:false}} }});
   }
 
-  // Horas (solo si existe el canvas)
-  const selDia = getEl('diaFiltro')?.value;
-  const rowsDia = selDia ? ROWS.filter(r=> dayKey(r.date)===selDia) : [];
+  // Horas (día seleccionado)
+  const selDia = $('#diaFiltro').val();
+  const rowsDia = selDia ? ROWS.filter(r=> r.date && r.date.toISOString().slice(0,10)===selDia) : [];
   const buckets = Array.from({length:24},()=>0);
   rowsDia.forEach(r=>{ buckets[r.date.getHours()] += Number(r.total||0); });
-  const ctxH = document.getElementById('chartHoras')?.getContext('2d');
   if(ctxH){
     CHARTS.horas = new Chart(ctxH,{ type:'bar',
       data:{ labels:Array.from({length:24},(_,h)=>String(h).padStart(2,'0')+':00'), datasets:[{ label:'Ingresos', data:buckets }] },
@@ -255,199 +377,25 @@ function renderCharts(){
   }
 }
 
-/* ========= Gastos (conserva tus widgets) ========= */
-const API = '/.netlify/functions/gs-order';
+/* ================= Eventos ================= */
+$('#btnReload').on('click', async ()=>{ await loadCSV(); });
+$('#mesFiltro').on('change', function(){ mesSelKey = $(this).val(); renderAll(); });
+$('#diaFiltro, #horaDesde, #horaHasta, #cierrePersonas, #cierreGastos').on('input change', renderKPIsDia);
+$('#btnHoy').on('click', ()=>{ const t=new Date().toISOString().slice(0,10); $('#diaFiltro').val(t).trigger('change'); });
+$('#btnAyer').on('click', ()=>{ const d=new Date(); d.setDate(d.getDate()-1); $('#diaFiltro').val(d.toISOString().slice(0,10)).trigger('change'); });
+$('#btnMenos2').on('click', ()=>{ const d=new Date(); d.setDate(d.getDate()-2); $('#diaFiltro').val(d.toISOString().slice(0,10)).trigger('change'); });
 
-async function guardarGasto(){
-  const fecha = (getEl('gFecha')?.value||'').trim();
-  const categoria = (getEl('gCategoria')?.value||'Otros').trim();
-  const concepto = (getEl('gConcepto')?.value||'').trim();
-  const proveedor = (getEl('gProveedor')?.value||'').trim();
-  const monto = Number(getEl('gMonto')?.value||0);
-  const nota = (getEl('gNota')?.value||'').trim();
-  if(!fecha || !concepto || !Number.isFinite(monto) || monto<=0){ alert('Completá Fecha, Concepto y un Monto válido.'); return; }
-  const payload = { type:'expense', fecha, categoria_gasto:categoria, concepto, proveedor, qty:1, costo_unit:monto, nota };
-  const $btn=getEl('btnGuardarGasto'); const $msg=getEl('gMsg');
+document.getElementById('btnGuardarGasto')?.addEventListener('click', guardarGasto);
+document.getElementById('btnRecargarGastos')?.addEventListener('click', cargarGastosRecientes);
+
+/* ================= Init ================= */
+(async function(){
   try{
-    if($btn){ $btn.disabled=true; $btn.textContent='Guardando…'; } if($msg) $msg.textContent='';
-    const res = await fetch(API,{ method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},
-      body: 'payload='+encodeURIComponent(JSON.stringify(payload)) });
-    const data = await res.json().catch(()=>({}));
-    if(!res.ok || data.ok!==true) throw new Error(data.error || `HTTP ${res.status}`);
-    // limpiar
-    if(getEl('gConcepto')) getEl('gConcepto').value='';
-    if(getEl('gProveedor')) getEl('gProveedor').value='';
-    if(getEl('gMonto')) getEl('gMonto').value='';
-    if(getEl('gNota')) getEl('gNota').value='';
-    if($msg) $msg.textContent='✅ Gasto guardado';
-    await cargarGastosRecientes();
-  }catch(err){ alert('No se pudo guardar el gasto: '+err.message); }
-  finally{ if($btn){ $btn.disabled=false; $btn.textContent='Guardar gasto'; } }
-}
-
-async function cargarGastosRecientes(){
-  try{
-    // SUBIDO a 1000 para cubrir el mes entero si hay muchas compras
-    const res = await fetch(`${API}?action=items&limit=1000`);
-    const json = await res.json();
-    if(json?.ok!==true) throw new Error(json?.error||'Error al leer ITEMS');
-    GASTOS = (json.items||[]).filter(it => String(it.tipo).toLowerCase()==='compra');
-    const $tb=getEl('tbodyGastos');
-    if($tb){
-      $tb.innerHTML = GASTOS.slice(0,200).map(r=>`
-        <tr class="border-b border-gray-100">
-          <td class="p-2">${(r.fecha||'').toString().slice(0,10)}</td>
-          <td class="p-2">${r.categoria_gasto||'-'}</td>
-          <td class="p-2">${r.concepto||'-'}</td>
-          <td class="p-2 text-right">${$fmt(r.subtotal || r.costo_unit || 0)}</td>
-        </tr>`).join('');
-    }
-    renderKPIsDia();   // refleja “Gastos del local” diarios
-    renderKPIsMes();   // ahora también impacta en Gastos (mes) y Saldo real (mes)
-  }catch(e){ console.error('cargarGastosRecientes',e); }
-}
-
-/* ==== NUEVO: Gastos del MES (total y por categoría) ==== */
-function gastosMesTotal() {
-  if (!mesSelKey) return 0;
-  const [yy, mm] = mesSelKey.split('-').map(Number);
-  return GASTOS
-    .filter(g => {
-      const f = (g.fecha||'').slice(0,10);
-      const d = f ? new Date(f) : null;
-      return d && sameYMonth(d, yy, mm);
-    })
-    .reduce((a,g)=> a + Number(g.subtotal || g.costo_unit || 0), 0);
-}
-
-function gastosMesPorCategoria() {
-  if (!mesSelKey) return {};
-  const [yy, mm] = mesSelKey.split('-').map(Number);
-  const out = {};
-  GASTOS.forEach(g=>{
-    const f = (g.fecha||'').slice(0,10);
-    const d = f ? new Date(f) : null;
-    if (!d || !sameYMonth(d,yy,mm)) return;
-    const cat = (g.categoria_gasto || 'Otros').toString();
-    const m = Number(g.subtotal || g.costo_unit || 0);
-    out[cat] = (out[cat]||0) + m;
-  });
-  return out;
-}
-
-/* ========= Buckets (solo si existen en tu HTML) ========= */
-const BUCKET_PCTS = { alquiler: 0.39, sueldos: 0.47, luz: 0.10, eventos: 0.04 };
-
-function aggMes(){
-  if(!mesSelKey) return {rows:[], ingresos:0, costo:0, bruta:0, ventas:0, costoDiario:0};
-  const [yy, mm] = mesSelKey.split('-').map(Number);
-  const rows = ROWS.filter(r => sameYMonth(r.date, yy, mm));
-  const ingresos = rows.reduce((a,r)=>a+(Number(r.total)||0),0);
-  const costo    = rows.reduce((a,r)=>a+(Number(r.totalCosto)||0),0);
-  const diasSet  = new Set(rows.map(r => r.date.toISOString().slice(0,10)));
-  const costoDiario = diasSet.size ? (costo / diasSet.size) : 0;
-  return { rows, ingresos, costo, bruta: Math.max(0, ingresos - costo), ventas: rows.length, costoDiario };
-}
-
-function renderBuckets(){
-  // si el bloque no existe, salgo sin hacer nada
-  if(!getEl('metaAlquiler') && !getEl('bkAlqBar')) return;
-
-  const { bruta, costoDiario } = aggMes();
-  const metas = {
-    alquiler: Number(getEl('metaAlquiler')?.value || 990000),
-    luz:      Number(getEl('metaLuz')?.value      || 200000),
-    sueldos:  Number(getEl('metaSueldos')?.value  || 1200000),
-    eventos:  Number(getEl('metaEventos')?.value  || 100000),
-  };
-  const asig = {
-    alquiler: Math.round(bruta * BUCKET_PCTS.alquiler),
-    sueldos:  Math.round(bruta * BUCKET_PCTS.sueldos),
-    luz:      Math.round(bruta * BUCKET_PCTS.luz),
-    eventos:  Math.round(bruta * BUCKET_PCTS.eventos),
-  };
-
-  // etiquetas (si existen)
-  setText('bkAlqMonto', `· Meta ${$fmt(metas.alquiler)}`);
-  setText('bkLuzMonto', `· Meta ${$fmt(metas.luz)}`);
-  setText('bkSuelMonto', `· Meta ${$fmt(metas.sueldos)}`);
-  setText('bkEvtMonto', `· Meta ${$fmt(metas.eventos)}`);
-
-  // barras + faltantes (si existen)
-  const upd = (pref, asignado, meta)=>{
-    setText(`${pref}Asig`, $fmt(asignado));
-    setText(`${pref}Falta`, $fmt(Math.max(0, meta - asignado)));
-    setWidth(`${pref}Bar`, meta>0 ? (asignado/meta)*100 : 0);
-  };
-  upd('bkAlq', asig.alquiler, metas.alquiler);
-  upd('bkLuz', asig.luz, metas.luz);
-  upd('bkSuel', asig.sueldos, metas.sueldos);
-  upd('bkEvt', asig.eventos, metas.eventos);
-
-  setText('bkCostoDiario', $fmt(costoDiario));
-  setText('bkColchon', $fmt(costoDiario * 5));
-}
-
-/* ========= Tabla ventas ========= */
-function renderTablaVentas(){
-  const tb = getEl('tbodyVentas'); if(!tb) return;
-  const rows = monthRows().slice().sort((a,b)=> b.date-a.date);
-  tb.innerHTML = '';
-  rows.forEach(r=>{
-    let itemsTxt = '';
-    try{
-      const arr=JSON.parse(r.items||'[]');
-      itemsTxt = Array.isArray(arr) ? arr.map(x=>`${x.nombre||''} x${x.qty||1}`).join(', ') : '';
-    }catch{}
-    tb.insertAdjacentHTML('beforeend', `
-      <tr>
-        <td class="p-2">${r.ts.toString().slice(0,19).replace('T',' ')}</td>
-        <td class="p-2"></td><td class="p-2"></td>
-        <td class="p-2">${r.metodo||''}</td>
-        <td class="p-2">${itemsTxt}</td>
-        <td class="p-2 text-right">${$fmt(r.total)}</td>
-        <td class="p-2 text-right">${$fmt(r.ganancia)}</td>
-      </tr>
-    `);
-  });
-}
-
-/* ========= Render general ========= */
-function renderAll(){
-  renderKPIsMes();
-  renderKPIsDia();
-  renderCharts();        // no dibuja si los canvas no existen
-  renderBuckets();       // no hace nada si el bloque no existe
-  renderTablaVentas();
-}
-
-/* ========= Eventos ========= */
-getEl('btnReload')?.addEventListener('click', async ()=>{ await loadCSV(); renderAll(); });
-getEl('mesFiltro')?.addEventListener('change', function(){ mesSelKey=this.value; renderAll(); });
-['diaFiltro','horaDesde','horaHasta','cierrePersonas','cierreGastos'].forEach(id=>{
-  getEl(id)?.addEventListener('input', ()=>{ renderKPIsDia(); renderCharts(); });
-});
-getEl('btnGuardarGasto')?.addEventListener('click', guardarGasto);
-getEl('btnRecargarGastos')?.addEventListener('click', cargarGastosRecientes);
-// metas editables (si existen) → refrescar buckets
-;['metaAlquiler','metaLuz','metaSueldos','metaEventos'].forEach(id=>{
-  getEl(id)?.addEventListener('input', renderBuckets);
-});
-
-/* ========= Init ========= */
-(function init(){
-  const hoy = new Date().toISOString().slice(0,10);
-  if(getEl('gFecha') && !getEl('gFecha').value) getEl('gFecha').value = hoy;
-
-  (async()=>{
-    try{
-      await loadCSV();
-      await cargarGastosRecientes();
-      renderAll();
-    }catch(e){
-      console.error(e);
-      setText('statusBadge','Error');
-      setText('diag', String(e));
-    }
-  })();
+    await loadCSV();
+    await cargarGastosRecientes(); // llena GASTOS y refresca KPIs
+  }catch(e){
+    console.error(e);
+    $('#statusBadge').text('Error');
+    $('#diag').text(String(e));
+  }
 })();
