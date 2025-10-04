@@ -310,6 +310,79 @@
               </div>
             </div>
           </div>
+
+
+<!-- Buckets fijos (Alquiler, Luz, Sueldos, Eventos) -->
+<section class="bg-white rounded-2xl shadow p-4 space-y-4">
+  <div class="flex items-center justify-between">
+    <h2 class="text-lg font-semibold">Buckets fijos</h2>
+    <span class="text-xs text-slate-500">Distribución 39/47/10/4 sobre Ganancia bruta del mes</span>
+  </div>
+
+  <!-- Metas -->
+  <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+    <div>
+      <label class="block text-xs text-slate-600 mb-1">Meta Alquiler</label>
+      <input id="metaAlquiler" type="number" min="0" step="1000" class="rounded-xl border-gray-300 w-full" value="990000">
+    </div>
+    <div>
+      <label class="block text-xs text-slate-600 mb-1">Meta Luz</label>
+      <input id="metaLuz" type="number" min="0" step="1000" class="rounded-xl border-gray-300 w-full" value="200000">
+    </div>
+    <div>
+      <label class="block text-xs text-slate-600 mb-1">Meta Sueldos</label>
+      <input id="metaSueldos" type="number" min="0" step="1000" class="rounded-xl border-gray-300 w-full" value="1200000">
+    </div>
+    <div>
+      <label class="block text-xs text-slate-600 mb-1">Meta Eventos</label>
+      <input id="metaEventos" type="number" min="0" step="1000" class="rounded-xl border-gray-300 w-full" value="100000">
+    </div>
+  </div>
+
+  <!-- Progreso -->
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div class="rounded-xl border p-4">
+      <div class="text-sm font-medium mb-1">Alquiler <span id="bkAlqMonto" class="text-slate-500 font-normal"></span></div>
+      <div class="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
+        <div id="bkAlqBar" class="h-3 bg-rose-500" style="width:0%"></div>
+      </div>
+      <div class="text-xs mt-1">Falta: <b id="bkAlqFalta">$0</b> — Asignado: <b id="bkAlqAsig">$0</b></div>
+    </div>
+
+    <div class="rounded-xl border p-4">
+      <div class="text-sm font-medium mb-1">Luz <span id="bkLuzMonto" class="text-slate-500 font-normal"></span></div>
+      <div class="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
+        <div id="bkLuzBar" class="h-3 bg-rose-500" style="width:0%"></div>
+      </div>
+      <div class="text-xs mt-1">Falta: <b id="bkLuzFalta">$0</b> — Asignado: <b id="bkLuzAsig">$0</b></div>
+    </div>
+
+    <div class="rounded-xl border p-4">
+      <div class="text-sm font-medium mb-1">Sueldos <span id="bkSuelMonto" class="text-slate-500 font-normal"></span></div>
+      <div class="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
+        <div id="bkSuelBar" class="h-3 bg-rose-500" style="width:0%"></div>
+      </div>
+      <div class="text-xs mt-1">Falta: <b id="bkSuelFalta">$0</b> — Asignado: <b id="bkSuelAsig">$0</b></div>
+    </div>
+
+    <div class="rounded-xl border p-4">
+      <div class="text-sm font-medium mb-1">Eventos <span id="bkEvtMonto" class="text-slate-500 font-normal"></span></div>
+      <div class="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
+        <div id="bkEvtBar" class="h-3 bg-rose-500" style="width:0%"></div>
+      </div>
+      <div class="text-xs mt-1">Falta: <b id="bkEvtFalta">$0</b> — Asignado: <b id="bkEvtAsig">$0</b></div>
+    </div>
+  </div>
+
+  <!-- Reposición -->
+  <div class="rounded-xl border p-4">
+    <div class="text-sm font-medium mb-1">Colchón de Reposición (5 días)</div>
+    <div class="text-sm">Costo promedio diario: <b id="bkCostoDiario">$0</b> · Colchón recomendado: <b id="bkColchon">$0</b></div>
+  </div>
+</section>
+
+
+          
 <!-- Plan del Mes -->
 <section class="bg-white rounded-2xl shadow p-4 space-y-4">
   <div class="flex items-center justify-between">
