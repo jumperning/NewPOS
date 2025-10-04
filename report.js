@@ -14,7 +14,6 @@ function aggMes() {
   return { rows, ingresos, costo, bruta: Math.max(0, ingresos - costo), ventas, costoDiario };
 }
 
-
 /* ================== Utiles ================== */
 const $fmt = n => new Intl.NumberFormat('es-AR',{style:'currency',currency:'ARS',maximumFractionDigits:0}).format(Number(n||0));
 const toDate = (s)=>{
@@ -116,10 +115,12 @@ function monthAgg(){
 }
 function renderKPIsMes(){
   const m = monthAgg();
+  const gananciaMesCalc = Math.max(0, m.ingresos - m.costo); // ✅ ganancia = ingresos - costo
+
   $('#kpiVentas').text(m.ventas);
   $('#kpiUnidades').text(m.unidades);
   $('#kpiIngresos').text($fmt(m.ingresos));
-  $('#kpiGananciaMes').text($fmt(m.gan));
+  $('#kpiGananciaMes').text($fmt(gananciaMesCalc)); // ✅ en vez de m.gan
   $('#kpiEfectivoMes').text($fmt(m.byMethod.efectivo));
   $('#kpiMpMes').text($fmt(m.byMethod.mp));
 }
@@ -370,7 +371,10 @@ function renderPlan(){
   if(el('franqTarifa')) el('franqTarifa').value = PLAN.franquero.tarifa;
 
   const m = monthAgg();
-  document.getElementById('ganMesLbl')?.replaceChildren(document.createTextNode($fmt(m.gan)));
+  // ✅ Ganancia del mes correcta
+  document.getElementById('ganMesLbl')?.replaceChildren(
+    document.createTextNode($fmt(Math.max(0, m.ingresos - m.costo)))
+  );
   document.getElementById('alqCostoMes')?.replaceChildren(document.createTextNode($fmt(m.costo)));
 
   const mAlq = Math.max(0, Math.round(m.costo * (PLAN.pctAlquiler/100)));
@@ -399,6 +403,55 @@ function renderPlan(){
   const franqTotal = Math.max(0, Math.round((Number(PLAN.franquero.horas)||0) * (Number(PLAN.franquero.tarifa)||0)));
   document.getElementById('franqTotal')?.replaceChildren(document.createTextNode($fmt(franqTotal)));
 }
+function pct(x, goal){ return goal>0 ? Math.min(100, Math.round((x/goal)*100)) : 0; }
+
+function renderBucketsUI(asig, metas, costoDiario){
+  const $ = (id)=>document.getElementById(id);
+  const fmt = (n)=> new Intl.NumberFormat('es-AR',{style:'currency',currency:'ARS',maximumFractionDigits:0}).format(Number(n||0));
+
+  // metas
+  $('#bkAlqMonto').text(`· Meta ${fmt(metas.alquiler)}`);
+  $('#bkLuzMonto').text(`· Meta ${fmt(metas.luz)}`);
+  $('#bkSuelMonto').text(`· Meta ${fmt(metas.sueldos)}`);
+  $('#bkEvtMonto').text(`· Meta ${fmt(metas.eventos)}`);
+
+  // barras + faltantes
+  const setBar = (pref, asignado, meta)=>{
+    $(`${pref}Asig`).textContent = fmt(asignado);
+    $(`${pref}Falta`).textContent = fmt(Math.max(0, meta - asignado));
+    const bar = $(`${pref}Bar`); if(bar) bar.style.width = pct(asignado, meta) + '%';
+  };
+  setBar('bkAlq', asig.alquiler, metas.alquiler);
+  setBar('bkLuz', asig.luz, metas.luz);
+  setBar('bkSuel', asig.sueldos, metas.sueldos);
+  setBar('bkEvt', asig.eventos, metas.eventos);
+
+  // reposición (5 días)
+  $('#bkCostoDiario').textContent = fmt(costoDiario);
+  $('#bkColchon').textContent     = fmt(costoDiario * 5);
+}
+
+function renderBuckets(){
+  const { bruta, costoDiario } = aggMes();
+
+  // metas (tomadas de inputs para que sean editables)
+  const metas = {
+    alquiler: Number(document.getElementById('metaAlquiler')?.value || 990000),
+    luz:      Number(document.getElementById('metaLuz')?.value      || 200000),
+    sueldos:  Number(document.getElementById('metaSueldos')?.value  || 1200000),
+    eventos:  Number(document.getElementById('metaEventos')?.value  || 100000),
+  };
+
+  // asignación 39/47/10/4 sobre la GANANCIA BRUTA del mes
+  const asig = {
+    alquiler: Math.round(bruta * BUCKET_PCTS.alquiler),
+    sueldos:  Math.round(bruta * BUCKET_PCTS.sueldos),
+    luz:      Math.round(bruta * BUCKET_PCTS.luz),
+    eventos:  Math.round(bruta * BUCKET_PCTS.eventos),
+  };
+
+  renderBucketsUI(asig, metas, costoDiario);
+}
 
 function bindPlanEvents(){
   $('#alqObjetivo').on('input', function(){ PLAN.alquilerObjetivo = Number(this.value||0); savePlan(); renderPlan(); });
@@ -417,6 +470,8 @@ function renderAll(){
   renderKPIsDia();
   renderCharts();
   renderPlan();
+  renderBuckets(); // ✅ calcula y dibuja los buckets
+
   // tabla de ventas (simple)
   const $tb = $('#tbodyVentas'); if($tb.length){
     const rows = monthRows().slice().sort((a,b)=> b.date-a.date);
@@ -438,6 +493,11 @@ function renderAll(){
 $('#btnReload').on('click', async ()=>{ await loadCSV(); renderAll(); });
 $('#mesFiltro').on('change', function(){ mesSelKey=$(this).val(); renderAll(); });
 $('#diaFiltro, #horaDesde, #horaHasta, #cierrePersonas, #cierreGastos').on('input change', ()=>{ renderKPIsDia(); renderCharts(); });
+
+// metas editables → refrescar buckets
+['metaAlquiler','metaLuz','metaSueldos','metaEventos'].forEach(id=>{
+  document.getElementById(id)?.addEventListener('input', renderBuckets);
+});
 
 document.getElementById('btnGuardarGasto')?.addEventListener('click', guardarGasto);
 document.getElementById('btnRecargarGastos')?.addEventListener('click', cargarGastosRecientes);
