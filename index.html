@@ -575,10 +575,9 @@
     `;
   }
 
-  
-function openPrintWindow(innerHTML, title='Impresión POS'){
-  // Abrimos una nueva ventana SIN 'noreferrer' para poder escribirle el HTML
-  const w = window.open('', '_blank', 'popup=yes,width=420,height=800,noopener');
+  function openPrintWindow(innerHTML, title='Impresión POS'){
+  // Ventana nueva sin 'noopener' para asegurar acceso al documento en todos los navegadores
+  const w = window.open('', '_blank', 'width=420,height=800'); 
   if(!w){ alert('El navegador bloqueó la ventana de impresión. Permití popups para este sitio.'); return; }
 
   const css = `
@@ -604,7 +603,7 @@ function openPrintWindow(innerHTML, title='Impresión POS'){
     </style>
   `;
 
-  const html = `<!DOCTYPE html>
+  const htmlDoc = `<!DOCTYPE html>
   <html>
     <head>
       <meta charset="utf-8"/>
@@ -612,42 +611,22 @@ function openPrintWindow(innerHTML, title='Impresión POS'){
       <title>${title}</title>
       ${css}
     </head>
-    <body>
+    <body onload="setTimeout(function(){ try{ window.print(); }catch(e){} }, 0)">
       ${innerHTML}
-      <script>
-        // Robusto: imprime al cargar y cierra al terminar (o luego de un timeout)
-        (function(){
-          function tryClose(){ try{ window.close(); }catch(e){} }
-          function doPrint(){
-            window.focus();
-            window.print();
-            if ('onafterprint' in window){
-              window.addEventListener('afterprint', tryClose, { once:true });
-            } else {
-              setTimeout(tryClose, 600);
-            }
-          }
-          if (document.readyState === 'complete' || document.readyState === 'interactive'){
-            setTimeout(doPrint, 0);
-          } else {
-            document.addEventListener('DOMContentLoaded', doPrint, { once:true });
-          }
-        })();
-      <\/script>
     </body>
   </html>`;
 
   try{
     w.document.open();
-    w.document.write(html);
+    w.document.write(htmlDoc);
     w.document.close();
-    w.focus();
+    // Disparo adicional desde el padre para navegadores que no ejecutan el onload del hijo en about:blank
+    setTimeout(()=>{ try{ w.focus(); w.print(); }catch(e){} }, 50);
   }catch(err){
-    // Fallback con data URL si el navegador bloquea la escritura
-    const blob = new Blob([html], {type:'text/html'});
+    // Fallback con data URL
+    const blob = new Blob([htmlDoc], {type:'text/html'});
     const url = URL.createObjectURL(blob);
     w.location.href = url;
-    // No podemos cerrar automáticamente en este flujo, el usuario cierra manualmente
   }
 }
   /* ======== FIN IMPRESIÓN EN VENTANA NUEVA ======== */
