@@ -537,7 +537,7 @@ function refreshReporteKPIs(){
   } else presu = presupuesto;
   const ppct = presu>0 ? Math.min(100, Math.round((gastosTotal/presu)*100)) : 0;
   qs('#kpi-presu-monto')    && (qs('#kpi-presu-monto').textContent    = `${fmtARS(gastosTotal)} / ${fmtARS(presu)}`);
-  qs('#kpi-presu-bar')      && (qs('#kpi-presu-bar').style.width      = ppct+'%',
+  qs('#kpi-presu-bar')      && (qs('#kpi-presu-bar').style.width      = ppct+'%';
                                 qs('#kpi-presu-bar').style.background = presu===0 ? '#9ca3af' : (gastosTotal/presu<=0.8 ? '#16a34a' : (gastosTotal/presu<=1 ? '#f59e0b' : '#ef4444'));
   qs('#kpi-presu-label')    && (qs('#kpi-presu-label').textContent    = presu>0 ? `Avance: ${ppct}%` : 'Definí un presupuesto');
   qs('#kpi-presu-restante') && (qs('#kpi-presu-restante').textContent = presu>0 ? `Restante: ${fmtARS(Math.max(0,presu-gastosTotal))}` : '—');
