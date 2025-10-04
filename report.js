@@ -23,8 +23,7 @@ let CHARTS = { pie:null, barQty:null, barProf:null, horas:null };
 
 /* ========= Carga CSV ========= */
 async function loadCSV(){
-  const urlInput = getEl('csvUrl');
-  const url = urlInput ? urlInput.value.trim() : '';
+  const url = getEl('csvUrl') ? getEl('csvUrl').value.trim() : '';
   setText('statusBadge', 'Cargando CSV…');
   return new Promise((resolve,reject)=>{
     Papa.parse(url,{
@@ -97,7 +96,7 @@ function monthAgg(){
   return {
     ingresos: rows.reduce((a,r)=>a+r.total,0),
     costo:    rows.reduce((a,r)=>a+r.totalCosto,0),
-    // 'gan' queda para retrocompat, pero NO lo uso para el KPI
+    // 'gan' queda para retrocompatibilidad, pero NO lo uso para el KPI
     gan:      rows.reduce((a,r)=>a+r.ganancia,0),
     ventas:   rows.length,
     unidades: rows.reduce((a,r)=>a+r.unidades,0),
@@ -112,6 +111,7 @@ function monthAgg(){
 function renderKPIsMes(){
   const m = monthAgg();
   const gananciaMesCalc = Math.max(0, m.ingresos - m.costo); // ✅ Ingresos − Costo
+
   setText('kpiVentas', m.ventas);
   setText('kpiUnidades', m.unidades);
   setText('kpiIngresos', $fmt(m.ingresos));
@@ -121,6 +121,12 @@ function renderKPIsMes(){
   setText('kpi-costo-mes', $fmt(m.costo));
   setText('kpiEfectivoMes', $fmt(m.byMethod.efectivo));
   setText('kpiMpMes', $fmt(m.byMethod.mp));
+
+  // === NUEVO: Gastos (mes) y Saldo real (mes) ===
+  const gMes = gastosMesTotal();
+  const saldoRealMes = Math.max(0, (m.ingresos - m.costo) - gMes);
+  setText('kpiGastosMes', $fmt(gMes));
+  setText('kpiSaldoRealMes', $fmt(saldoRealMes));
 }
 
 function renderKPIsDia(){
@@ -236,7 +242,7 @@ function renderCharts(){
       options:{ scales:{ y:{beginAtZero:true}}, plugins:{legend:{display:false}} }});
   }
 
-  // Horas (sólo si existe el canvas)
+  // Horas (solo si existe el canvas)
   const selDia = getEl('diaFiltro')?.value;
   const rowsDia = selDia ? ROWS.filter(r=> dayKey(r.date)===selDia) : [];
   const buckets = Array.from({length:24},()=>0);
@@ -278,15 +284,17 @@ async function guardarGasto(){
   }catch(err){ alert('No se pudo guardar el gasto: '+err.message); }
   finally{ if($btn){ $btn.disabled=false; $btn.textContent='Guardar gasto'; } }
 }
+
 async function cargarGastosRecientes(){
   try{
-    const res = await fetch(`${API}?action=items&limit=100`);
+    // SUBIDO a 1000 para cubrir el mes entero si hay muchas compras
+    const res = await fetch(`${API}?action=items&limit=1000`);
     const json = await res.json();
     if(json?.ok!==true) throw new Error(json?.error||'Error al leer ITEMS');
     GASTOS = (json.items||[]).filter(it => String(it.tipo).toLowerCase()==='compra');
     const $tb=getEl('tbodyGastos');
     if($tb){
-      $tb.innerHTML = GASTOS.slice(0,50).map(r=>`
+      $tb.innerHTML = GASTOS.slice(0,200).map(r=>`
         <tr class="border-b border-gray-100">
           <td class="p-2">${(r.fecha||'').toString().slice(0,10)}</td>
           <td class="p-2">${r.categoria_gasto||'-'}</td>
@@ -294,8 +302,37 @@ async function cargarGastosRecientes(){
           <td class="p-2 text-right">${$fmt(r.subtotal || r.costo_unit || 0)}</td>
         </tr>`).join('');
     }
-    renderKPIsDia();
+    renderKPIsDia();   // refleja “Gastos del local” diarios
+    renderKPIsMes();   // ahora también impacta en Gastos (mes) y Saldo real (mes)
   }catch(e){ console.error('cargarGastosRecientes',e); }
+}
+
+/* ==== NUEVO: Gastos del MES (total y por categoría) ==== */
+function gastosMesTotal() {
+  if (!mesSelKey) return 0;
+  const [yy, mm] = mesSelKey.split('-').map(Number);
+  return GASTOS
+    .filter(g => {
+      const f = (g.fecha||'').slice(0,10);
+      const d = f ? new Date(f) : null;
+      return d && sameYMonth(d, yy, mm);
+    })
+    .reduce((a,g)=> a + Number(g.subtotal || g.costo_unit || 0), 0);
+}
+
+function gastosMesPorCategoria() {
+  if (!mesSelKey) return {};
+  const [yy, mm] = mesSelKey.split('-').map(Number);
+  const out = {};
+  GASTOS.forEach(g=>{
+    const f = (g.fecha||'').slice(0,10);
+    const d = f ? new Date(f) : null;
+    if (!d || !sameYMonth(d,yy,mm)) return;
+    const cat = (g.categoria_gasto || 'Otros').toString();
+    const m = Number(g.subtotal || g.costo_unit || 0);
+    out[cat] = (out[cat]||0) + m;
+  });
+  return out;
 }
 
 /* ========= Buckets (solo si existen en tu HTML) ========= */
