@@ -40,34 +40,6 @@
     .text-gray-800,.text-gray-700,.text-gray-600,.text-gray-500,.text-gray-400 { color:#000 !important; }
   </style>
 
-  <!-- Impresión 58mm -->
-  <style>
-    .print-sheet{
-      display:none;
-      width:58mm;
-      padding:8px 6px;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
-      color:#000;
-    }
-    .print-sheet hr{ border:0; border-top:1px dashed #000; margin:6px 0; }
-    .print-sheet .row{ display:flex; justify-content:space-between; gap:8px; }
-    .print-sheet .title{ text-align:center; font-weight:700; font-size:16px; }
-    .print-sheet .muted{ font-size:13px; text-align:center; }
-
-    @media print {
-      @page { size: 58mm auto; margin: 0; }
-      html, body { margin:0; padding:0; width:58mm; }
-      body * { visibility: hidden !important; }
-      .print-active, .print-active * { visibility: visible !important; }
-      .print-active{
-        display:block !important;
-        position:absolute; left:0; top:0;
-        width:58mm; box-sizing: border-box;
-        font-size:14px; line-height:1.25;
-      }
-    }
-  </style>
-
   <!-- Config global -->
   <script>
     // Si preferís CSV directo:
@@ -237,29 +209,6 @@
               </div>
             </div>
           </section>
-
-          <!-- Hojas de impresión -->
-          <section id="ticketCliente" class="print-sheet">
-            <div class="title" id="tck-store">OnceyDoce</div>
-            <div class="muted" id="tck-meta">--</div>
-            <hr>
-            <div id="tck-items"></div>
-            <hr>
-            <div class="row"><span>Total</span><span id="tck-total">$0</span></div>
-            <div class="row"><span>Pago</span><span id="tck-pago">$0</span></div>
-            <div class="row"><span>Vuelto</span><span id="tck-vuelto">$0</span></div>
-            <div class="muted" style="margin-top:6px">¡Gracias por su compra!</div>
-          </section>
-
-          <section id="comandaCocina" class="print-sheet">
-            <div class="title" id="cmd-store">ONCEYDOCE — COMANDA</div>
-            <div class="muted" id="cmd-meta">--</div>
-            <hr>
-            <div id="cmd-items"></div>
-            <hr>
-            <div class="muted">Preparar y despachar</div>
-          </section>
-
         </section>
       </div>
     </div>
@@ -581,63 +530,106 @@
     }
   }
 
-  // ==== Tickets ====
-  function buildTicketCliente(m){
-    const meta = `${new Date().toLocaleString('es-AR')} · ${m.nombre} · ${m.metodo || 'Efectivo'} · Cliente: ${m.cliente||'-'}`;
-    const store = STORE_NAME || 'OnceyDoce';
-    const elStore = document.getElementById('tck-store');
-    const elMeta  = document.getElementById('tck-meta');
-    const cont    = document.getElementById('tck-items');
-    const elTot   = document.getElementById('tck-total');
-    const elPago  = document.getElementById('tck-pago');
-    const elVuel  = document.getElementById('tck-vuelto');
+  /* ======== IMPRESIÓN EN VENTANA NUEVA (58mm) ======== */
+  function buildTicketHTML(m){
+    const fmt = (n) => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(Number(n||0));
+    const meta   = `${new Date().toLocaleString('es-AR')} · ${m.nombre} · ${m.metodo || 'Efectivo'} · Cliente: ${m.cliente||'-'}`;
+    const store  = (typeof STORE_NAME!=='undefined' && STORE_NAME) ? STORE_NAME : 'OnceyDoce';
+    const total  = (m.items||[]).reduce((a,x)=>a + (Number(x.precio)||0)*x.qty, 0);
+    const pago   = Number(m.pago||0);
+    const vuelto = Math.max(0, pago - total);
 
-    if(elStore) elStore.textContent = store;
-    if(elMeta)  elMeta.textContent  = meta;
-    if(cont){
-      cont.innerHTML='';
-      m.items.forEach(x=>{
-        const row=document.createElement('div'); row.className='row';
-        row.innerHTML=`<span>${x.qty}× ${x.nombre}</span><span>${$fmt(x.qty*x.precio)}</span>`;
-        cont.appendChild(row);
-      });
-    }
-    const total = m.items.reduce((a,x)=>a + x.precio*x.qty, 0);
-    const pago  = Number(m.pago||0);
-    const vuelto= Math.max(0, pago-total);
-    if(elTot)  elTot.textContent  = $fmt(total);
-    if(elPago) elPago.textContent  = $fmt(pago);
-    if(elVuel) elVuel.textContent  = $fmt(vuelto);
-  }
-  function buildComandaCocina(m){
-    const meta = `${new Date().toLocaleString('es-AR')} · ${m.nombre} · Cliente: ${m.cliente||'-'}`;
-    const store = STORE_NAME || 'OnceyDoce';
-    const elStore = document.getElementById('cmd-store');
-    const elMeta  = document.getElementById('cmd-meta');
-    const cont    = document.getElementById('cmd-items');
+    const itemsHTML = (m.items||[]).map(x=>{
+      const linea = (Number(x.precio)||0) * x.qty;
+      return `<div class="row"><span>${x.qty}× ${x.nombre}</span><span>${fmt(linea)}</span></div>`;
+    }).join('');
 
-    if(elStore) elStore.textContent = store + ' — COMANDA';
-    if(elMeta)  elMeta.textContent  = meta;
-    if(cont){
-      cont.innerHTML='';
-      m.items.forEach(x=>{
-        const row=document.createElement('div');
-        row.style.display='flex'; row.style.justifyContent='space-between'; row.style.gap='8px';
-        row.innerHTML = `<span>${x.qty}× ${x.nombre}</span><span>${x.notas ? x.notas : ''}</span>`;
-        cont.appendChild(row);
-      });
-    }
+    return `
+      <div class="title">${store}</div>
+      <div class="muted">${meta}</div>
+      <hr/>
+      ${itemsHTML}
+      <hr/>
+      <div class="row"><span>Total</span><span>${fmt(total)}</span></div>
+      <div class="row"><span>Pago</span><span>${fmt(pago)}</span></div>
+      <div class="row"><span>Vuelto</span><span>${fmt(vuelto)}</span></div>
+      <div class="muted" style="margin-top:6px">¡Gracias por su compra!</div>
+    `;
   }
-  function printSection(sectionId){
-    const a = document.getElementById('ticketCliente');
-    const b = document.getElementById('comandaCocina');
-    if(a) a.classList.remove('print-active');
-    if(b) b.classList.remove('print-active');
-    const target = document.getElementById(sectionId);
-    if(target) target.classList.add('print-active');
-    window.print();
-    setTimeout(()=>{ if(target) target.classList.remove('print-active'); }, 250);
+
+  function buildComandaHTML(m){
+    const meta  = `${new Date().toLocaleString('es-AR')} · ${m.nombre} · Cliente: ${m.cliente||'-'}`;
+    const store = (typeof STORE_NAME!=='undefined' && STORE_NAME) ? STORE_NAME : 'OnceyDoce';
+    const itemsHTML = (m.items||[]).map(x=>{
+      const nota = x.notas ? ` — <em>${String(x.notas).replace(/[<>&]/g, s=>({ '<':'&lt;','>':'&gt;','&':'&amp;' }[s]))}</em>` : '';
+      return `<div class="row"><span>${x.qty}× ${x.nombre}${nota}</span><span></span></div>`;
+    }).join('');
+
+    return `
+      <div class="title">${store} — COMANDA</div>
+      <div class="muted">${meta}</div>
+      <hr/>
+      ${itemsHTML}
+      <hr/>
+      <div class="muted">Preparar y despachar</div>
+    `;
   }
+
+  function openPrintWindow(innerHTML, title='Impresión POS'){
+    const w = window.open('', '_blank', 'width=420,height=800,noopener,noreferrer');
+    if(!w){ alert('El navegador bloqueó la ventana de impresión. Permití popups para este sitio.'); return; }
+
+    const css = `
+      <style>
+        :root{ color-scheme: light only; }
+        html,body{ margin:0; padding:0; }
+        body{
+          width:58mm; box-sizing:border-box;
+          padding:8px 6px; color:#000;
+          font-family: ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono",monospace;
+          font-size:14px; line-height:1.25;
+        }
+        .title{ text-align:center; font-weight:700; font-size:16px; }
+        .muted{ font-size:13px; text-align:center; }
+        .row{ display:flex; justify-content:space-between; gap:8px; }
+        hr{ border:0; border-top:1px dashed #000; margin:6px 0; }
+        @media print {
+          @page { size: 58mm auto; margin: 0; }
+          body { width:58mm; }
+        }
+      </style>
+    `;
+
+    const html = `
+      <!doctype html>
+      <html lang="es">
+      <head>
+        <meta charset="utf-8"/>
+        <title>${title}</title>
+        ${css}
+      </head>
+      <body>
+        ${innerHTML}
+        <script>
+          window.addEventListener('load', () => {
+            const tryClose = ()=>{ try{ window.close(); }catch(e){} };
+            if ('onafterprint' in window) {
+              window.addEventListener('afterprint', tryClose);
+            } else {
+              setTimeout(tryClose, 600);
+            }
+            window.print();
+          });
+        <\/script>
+      </body>
+      </html>
+    `;
+
+    w.document.open();
+    w.document.write(html);
+    w.document.close();
+  }
+  /* ======== FIN IMPRESIÓN EN VENTANA NUEVA ======== */
 
   // ===== Eventos UI =====
   function bindEvents(){
@@ -666,9 +658,15 @@
     $('#btnDuplicarMesa').on('click', function(){ duplicarMesa(MESA_ACTUAL); });
     $('#btnGuardar').on('click', saveOrder);
 
-    // Impresión
-    $('#btnTicket').on('click', ()=>{ const m=mesaActual(); if(!m || (m.items||[]).length===0){ alert('No hay items.'); return; } buildTicketCliente(m); printSection('ticketCliente'); });
-    $('#btnComanda').on('click', ()=>{ const m=mesaActual(); if(!m || (m.items||[]).length===0){ alert('No hay items.'); return; } buildComandaCocina(m); printSection('comandaCocina'); });
+    // Impresión -> ventana nueva
+    $('#btnTicket').on('click', ()=>{
+      const m=mesaActual(); if(!m || (m.items||[]).length===0){ alert('No hay items.'); return; }
+      openPrintWindow( buildTicketHTML(m), 'Ticket — OnceyDoce' );
+    });
+    $('#btnComanda').on('click', ()=>{
+      const m=mesaActual(); if(!m || (m.items||[]).length===0){ alert('No hay items.'); return; }
+      openPrintWindow( buildComandaHTML(m), 'Comanda — OnceyDoce' );
+    });
   }
 
   // ===== Carga de menú (CSV publicado) =====
