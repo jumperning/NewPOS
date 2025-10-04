@@ -187,6 +187,11 @@
               <div class="rounded-2xl border p-4"><div class="text-xs text-slate-500">Ingresos (mes)</div><div id="kpiIngresos" class="text-2xl font-bold">$0</div></div>
               <div class="rounded-2xl border p-4"><div class="text-xs text-slate-500">Ganancia (mes)</div><div id="kpiGananciaMes" class="text-2xl font-bold">$0</div></div>
               <div class="rounded-2xl border p-4">
+  <div class="text-xs text-slate-500">Gastos (mes)</div>
+  <div id="kpiGastosMes" class="text-2xl font-bold">$0</div>
+</div>
+
+              <div class="rounded-2xl border p-4">
                 <div class="text-xs text-slate-500">Ingresos por método (mes)</div>
                 <div class="mt-1 text-sm">Efectivo: <b id="kpiEfectivoMes">$0</b></div>
                 <div class="text-sm">Mercado Pago: <b id="kpiMpMes">$0</b></div>
@@ -279,6 +284,24 @@
               </div>
             </div>
           </details>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+  <div>
+    <label class="block text-xs text-slate-600 mb-1">Saldo Mercado Pago (actual)</label>
+    <input id="concMpInput" type="number" class="rounded-xl border-gray-300 w-full" placeholder="Ej: 321287" />
+  </div>
+  <div>
+    <label class="block text-xs text-slate-600 mb-1">Efectivo en caja (actual)</label>
+    <input id="concEfInput" type="number" class="rounded-xl border-gray-300 w-full" placeholder="Ej: 150000" />
+  </div>
+  <div class="self-end text-sm">
+    <div>MP reportado (mes): <b id="concMpRep">$0</b></div>
+    <div>Efectivo reportado (mes): <b id="concEfRep">$0</b></div>
+    <div class="mt-1">Dif. MP: <b id="concMpDiff">$0</b></div>
+    <div>Dif. Efectivo: <b id="concEfDiff">$0</b></div>
+    <div class="mt-1">Diferencia total: <b id="concTotalDiff">$0</b></div>
+  </div>
+</div>
+
 <hr class="my-3">
 
 <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
