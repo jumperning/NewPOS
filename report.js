@@ -1,20 +1,7 @@
-// ===== Buckets: metas y porcentajes (pueden editarse desde la UI) =====
+/* ========= Config de buckets ========= */
 const BUCKET_PCTS = { alquiler: 0.39, sueldos: 0.47, luz: 0.10, eventos: 0.04 };
 
-// Obtiene métricas del mes seleccionado (usa tus ROWS existentes)
-function aggMes() {
-  const [yy, mm] = mesSelKey.split('-').map(Number);
-  const rows = ROWS.filter(r => sameYMonth(r.date, yy, mm));
-  const ingresos = rows.reduce((a,r)=>a+(Number(r.total)||0),0);
-  const costo    = rows.reduce((a,r)=>a+(Number(r.totalCosto)||0),0);
-  const ventas   = rows.length;
-  // costo promedio diario (sobre días con movimiento)
-  const diasSet = new Set(rows.map(r => r.date.toISOString().slice(0,10)));
-  const costoDiario = diasSet.size ? (costo / diasSet.size) : 0;
-  return { rows, ingresos, costo, bruta: Math.max(0, ingresos - costo), ventas, costoDiario };
-}
-
-/* ================== Utiles ================== */
+/* ========= Utils ========= */
 const $fmt = n => new Intl.NumberFormat('es-AR',{style:'currency',currency:'ARS',maximumFractionDigits:0}).format(Number(n||0));
 const toDate = (s)=>{
   if(!s) return null;
@@ -26,13 +13,13 @@ const toDate = (s)=>{
 const sameYMonth = (d, y, m)=> d && d.getFullYear()===y && (d.getMonth()+1)===m;
 const dayKey = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 
-/* ================== Estado ================== */
-let ROWS = [];               // ventas
-let mesSelKey = '';          // 'yyyy-mm'
-let GASTOS = [];             // gastos (desde API)
+/* ========= Estado ========= */
+let ROWS = [];
+let mesSelKey = '';
+let GASTOS = [];
 let CHARTS = { pie:null, barQty:null, barProf:null, horas:null };
 
-/* ================== Carga CSV ================== */
+/* ========= Carga CSV ========= */
 async function loadCSV(){
   const url = $('#csvUrl').val().trim();
   $('#statusBadge').text('Cargando CSV…');
@@ -92,7 +79,7 @@ function buildMesOptions(){
   renderAll();
 }
 
-/* ================== KPIs ================== */
+/* ========= KPIs ========= */
 function monthRows(){
   if(!mesSelKey) return [];
   const [yy,mm] = mesSelKey.split('-').map(Number);
@@ -115,12 +102,11 @@ function monthAgg(){
 }
 function renderKPIsMes(){
   const m = monthAgg();
-  const gananciaMesCalc = Math.max(0, m.ingresos - m.costo); // ✅ ganancia = ingresos - costo
-
+  const gananciaMesCalc = Math.max(0, m.ingresos - m.costo); // fix: ganancia = ingresos - costo
   $('#kpiVentas').text(m.ventas);
   $('#kpiUnidades').text(m.unidades);
   $('#kpiIngresos').text($fmt(m.ingresos));
-  $('#kpiGananciaMes').text($fmt(gananciaMesCalc)); // ✅ en vez de m.gan
+  $('#kpiGananciaMes').text($fmt(gananciaMesCalc));
   $('#kpiEfectivoMes').text($fmt(m.byMethod.efectivo));
   $('#kpiMpMes').text($fmt(m.byMethod.mp));
 }
@@ -176,10 +162,9 @@ function renderKPIsDia(){
   $('#cierrePorPersona').text($fmt(neta/personas));
 
   $('#cierreRangoLbl').text(`${selDia}${(hFrom||hTo)? ` · ${hFrom||'00:00'}–${hTo||'23:59'}`:''}`);
-  $('#kpiGanDiaLbl').text(`${r2.length} ventas · ${uni} unid.`);
 }
 
-/* ================== Categorías y Horas (Chart.js) ================== */
+/* ========= Categorías y horas ========= */
 const CAT_LABELS = ['Café','Comida','Cerveza','Gaseosa','Agua','Vino','Whisky','Tragos'];
 function categorizar(nombre=''){
   const n = String(nombre).toLowerCase();
@@ -198,7 +183,6 @@ function renderCharts(){
   CHARTS = { pie:null, barQty:null, barProf:null, horas:null };
 
   const rows = monthRows();
-  // Agregado por categoría a partir de items(json)
   const agg = CAT_LABELS.reduce((m,c)=>{m[c]={unidades:0,gan:0}; return m;},{});
   rows.forEach(r=>{
     try{
@@ -213,9 +197,7 @@ function renderCharts(){
         const imp = precio*qty;
         let gan = 0;
         if(costo){ gan = (precio-costo)*qty; }
-        else if(totalItemsImporte>0){ // prorrateo por ticket si no hay costo de item
-          gan = (r.ganancia||0) * (imp/totalItemsImporte);
-        }
+        else if(totalItemsImporte>0){ gan = (r.ganancia||0) * (imp/totalItemsImporte); }
         agg[cat].unidades += qty;
         agg[cat].gan += gan;
       });
@@ -257,7 +239,7 @@ function renderCharts(){
     `).join('');
   }
 
-  // Horas: ingresos por hora del día seleccionado
+  // Horas
   const selDia = $('#diaFiltro').val();
   const rowsDia = selDia ? ROWS.filter(r=> dayKey(r.date)===selDia) : [];
   const buckets = Array.from({length:24},()=>0);
@@ -270,7 +252,7 @@ function renderCharts(){
   }
 }
 
-/* ================== Gastos (API) ================== */
+/* ========= Gastos (API) ========= */
 const API = '/.netlify/functions/gs-order';
 
 async function guardarGasto(){
@@ -293,7 +275,7 @@ async function guardarGasto(){
     document.getElementById('gConcepto').value=''; document.getElementById('gProveedor').value='';
     document.getElementById('gMonto').value=''; document.getElementById('gNota').value='';
     $msg.textContent='✅ Gasto guardado';
-    await cargarGastosRecientes();  // refresca lista y KPIs
+    await cargarGastosRecientes();
   }catch(err){ alert('No se pudo guardar el gasto: '+err.message); }
   finally{ $btn.disabled=false; $btn.textContent='Guardar gasto'; }
 }
@@ -302,7 +284,6 @@ async function cargarGastosRecientes(){
     const res = await fetch(`${API}?action=items&limit=100`);
     const json = await res.json();
     if(json?.ok!==true) throw new Error(json?.error||'Error al leer ITEMS');
-    // Solo “compra” (gastos)
     GASTOS = (json.items||[]).filter(it => String(it.tipo).toLowerCase()==='compra');
     const $tb=document.getElementById('tbodyGastos');
     if($tb){
@@ -314,11 +295,11 @@ async function cargarGastosRecientes(){
           <td class="p-2 text-right">${$fmt(r.subtotal || r.costo_unit || 0)}</td>
         </tr>`).join('');
     }
-    renderKPIsDia(); // para reflejar “Gastos del local”
+    renderKPIsDia();
   }catch(e){ console.error('cargarGastosRecientes',e); }
 }
 
-/* ================== Plan del mes (alquiler/sueldos/franquero) ================== */
+/* ========= Plan del mes ========= */
 const SETTINGS_KEY = 'reporte-plan-mes';
 let PLAN = {
   alquilerObjetivo: 990000,
@@ -344,7 +325,6 @@ function renderSueldos(){
   `).join('');
   const tot = PLAN.sueldos.reduce((a,s)=> a + (Number(s.monto)||0), 0);
   document.getElementById('sueldosTotal')?.replaceChildren(document.createTextNode($fmt(tot)));
-  // delegación
   wrap.oninput = (e)=>{
     const idx=Number(e.target.dataset.idx), k=e.target.dataset.k;
     if(!Number.isInteger(idx)||!k) return;
@@ -357,24 +337,12 @@ function renderSueldos(){
   };
 }
 
+function pct(x, goal){ return goal>0 ? Math.min(100, Math.round((x/goal)*100)) : 0; }
+
 function renderPlan(){
-  // label mes
-  document.getElementById('planMesLabel')?.replaceChildren(document.createTextNode(mesSelKey || '-'));
-
-  // set inputs (si existen)
-  const el = id => document.getElementById(id);
-  if(el('alqObjetivo')) el('alqObjetivo').value = PLAN.alquilerObjetivo;
-  if(el('alqPct'))      el('alqPct').value      = PLAN.pctAlquiler;
-  if(el('repPct'))      el('repPct').value      = PLAN.pctReposicion;
-  if(el('arrPct'))      el('arrPct').value      = PLAN.pctArreglos;
-  if(el('franqHoras'))  el('franqHoras').value  = PLAN.franquero.horas;
-  if(el('franqTarifa')) el('franqTarifa').value = PLAN.franquero.tarifa;
-
+  // (widgets del “Plan del mes” ya están en tu HTML original; si los estás montando dinámicamente, llamá a esta función después)
   const m = monthAgg();
-  // ✅ Ganancia del mes correcta
-  document.getElementById('ganMesLbl')?.replaceChildren(
-    document.createTextNode($fmt(Math.max(0, m.ingresos - m.costo)))
-  );
+  document.getElementById('ganMesLbl')?.replaceChildren(document.createTextNode($fmt(Math.max(0, m.ingresos - m.costo))));
   document.getElementById('alqCostoMes')?.replaceChildren(document.createTextNode($fmt(m.costo)));
 
   const mAlq = Math.max(0, Math.round(m.costo * (PLAN.pctAlquiler/100)));
@@ -399,21 +367,20 @@ function renderPlan(){
   document.getElementById('alqFalta')?.replaceChildren(document.createTextNode($fmt(falta)));
 
   renderSueldos();
-
   const franqTotal = Math.max(0, Math.round((Number(PLAN.franquero.horas)||0) * (Number(PLAN.franquero.tarifa)||0)));
   document.getElementById('franqTotal')?.replaceChildren(document.createTextNode($fmt(franqTotal)));
 }
-function pct(x, goal){ return goal>0 ? Math.min(100, Math.round((x/goal)*100)) : 0; }
 
+/* ========= Buckets visibles (metas + barras) ========= */
 function renderBucketsUI(asig, metas, costoDiario){
   const $ = (id)=>document.getElementById(id);
   const fmt = (n)=> new Intl.NumberFormat('es-AR',{style:'currency',currency:'ARS',maximumFractionDigits:0}).format(Number(n||0));
 
-  // metas
-  $('#bkAlqMonto').text(`· Meta ${fmt(metas.alquiler)}`);
-  $('#bkLuzMonto').text(`· Meta ${fmt(metas.luz)}`);
-  $('#bkSuelMonto').text(`· Meta ${fmt(metas.sueldos)}`);
-  $('#bkEvtMonto').text(`· Meta ${fmt(metas.eventos)}`);
+  // metas (labels)
+  $('#bkAlqMonto').textContent = `· Meta ${fmt(metas.alquiler)}`;
+  $('#bkLuzMonto').textContent = `· Meta ${fmt(metas.luz)}`;
+  $('#bkSuelMonto').textContent = `· Meta ${fmt(metas.sueldos)}`;
+  $('#bkEvtMonto').textContent  = `· Meta ${fmt(metas.eventos)}`;
 
   // barras + faltantes
   const setBar = (pref, asignado, meta)=>{
@@ -431,48 +398,42 @@ function renderBucketsUI(asig, metas, costoDiario){
   $('#bkColchon').textContent     = fmt(costoDiario * 5);
 }
 
+function aggMes(){
+  const [yy, mm] = mesSelKey.split('-').map(Number);
+  const rows = ROWS.filter(r => sameYMonth(r.date, yy, mm));
+  const ingresos = rows.reduce((a,r)=>a+(Number(r.total)||0),0);
+  const costo    = rows.reduce((a,r)=>a+(Number(r.totalCosto)||0),0);
+  const diasSet = new Set(rows.map(r => r.date.toISOString().slice(0,10)));
+  const costoDiario = diasSet.size ? (costo / diasSet.size) : 0;
+  return { rows, ingresos, costo, bruta: Math.max(0, ingresos - costo), ventas: rows.length, costoDiario };
+}
+
 function renderBuckets(){
   const { bruta, costoDiario } = aggMes();
-
-  // metas (tomadas de inputs para que sean editables)
   const metas = {
     alquiler: Number(document.getElementById('metaAlquiler')?.value || 990000),
     luz:      Number(document.getElementById('metaLuz')?.value      || 200000),
     sueldos:  Number(document.getElementById('metaSueldos')?.value  || 1200000),
     eventos:  Number(document.getElementById('metaEventos')?.value  || 100000),
   };
-
-  // asignación 39/47/10/4 sobre la GANANCIA BRUTA del mes
   const asig = {
     alquiler: Math.round(bruta * BUCKET_PCTS.alquiler),
     sueldos:  Math.round(bruta * BUCKET_PCTS.sueldos),
     luz:      Math.round(bruta * BUCKET_PCTS.luz),
     eventos:  Math.round(bruta * BUCKET_PCTS.eventos),
   };
-
   renderBucketsUI(asig, metas, costoDiario);
 }
 
-function bindPlanEvents(){
-  $('#alqObjetivo').on('input', function(){ PLAN.alquilerObjetivo = Number(this.value||0); savePlan(); renderPlan(); });
-  $('#alqPct').on('input',       function(){ PLAN.pctAlquiler     = capPct(this.value); savePlan(); renderPlan(); });
-  $('#repPct').on('input',       function(){ PLAN.pctReposicion   = capPct(this.value); savePlan(); renderPlan(); });
-  $('#arrPct').on('input',       function(){ PLAN.pctArreglos     = capPct(this.value); savePlan(); renderPlan(); });
-  $('#btnAddSueldo').on('click', function(){ PLAN.sueldos.push({nombre:'',monto:0}); savePlan(); renderSueldos(); });
-  $('#franqHoras').on('input',   function(){ PLAN.franquero.horas = Number(this.value||0); savePlan(); renderPlan(); });
-  $('#franqTarifa').on('input',  function(){ PLAN.franquero.tarifa= Number(this.value||0); savePlan(); renderPlan(); });
-}
-const capPct = v => Math.min(100, Math.max(0, Number(v||0)));
-
-/* ================== Render general ================== */
+/* ========= Render general ========= */
 function renderAll(){
   renderKPIsMes();
   renderKPIsDia();
   renderCharts();
   renderPlan();
-  renderBuckets(); // ✅ calcula y dibuja los buckets
+  renderBuckets();
 
-  // tabla de ventas (simple)
+  // tabla simple de ventas
   const $tb = $('#tbodyVentas'); if($tb.length){
     const rows = monthRows().slice().sort((a,b)=> b.date-a.date);
     $tb.empty();
@@ -489,7 +450,7 @@ function renderAll(){
   }
 }
 
-/* ================== Eventos UI ================== */
+/* ========= Eventos UI ========= */
 $('#btnReload').on('click', async ()=>{ await loadCSV(); renderAll(); });
 $('#mesFiltro').on('change', function(){ mesSelKey=$(this).val(); renderAll(); });
 $('#diaFiltro, #horaDesde, #horaHasta, #cierrePersonas, #cierreGastos').on('input change', ()=>{ renderKPIsDia(); renderCharts(); });
@@ -499,16 +460,12 @@ $('#diaFiltro, #horaDesde, #horaHasta, #cierrePersonas, #cierreGastos').on('inpu
   document.getElementById(id)?.addEventListener('input', renderBuckets);
 });
 
-document.getElementById('btnGuardarGasto')?.addEventListener('click', guardarGasto);
-document.getElementById('btnRecargarGastos')?.addEventListener('click', cargarGastosRecientes);
-
-/* ================== Init ================== */
+/* ========= Init ========= */
 (function init(){
-  // defaults UI
   const hoy = new Date().toISOString().slice(0,10);
-  if(!document.getElementById('gFecha').value) document.getElementById('gFecha').value = hoy;
+  if(document.getElementById('gFecha') && !document.getElementById('gFecha').value) document.getElementById('gFecha').value = hoy;
 
-  loadPlan(); bindPlanEvents();
+  loadPlan();
 
   (async()=>{
     try{
@@ -522,4 +479,3 @@ document.getElementById('btnRecargarGastos')?.addEventListener('click', cargarGa
     }
   })();
 })();
-
