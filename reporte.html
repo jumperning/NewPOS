@@ -279,6 +279,21 @@
               </div>
             </div>
           </details>
+<hr class="my-3">
+
+<div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+  <div>
+    <label class="block text-xs text-slate-600 mb-1">Umbral de alerta (ARS)</label>
+    <input id="concUmbralInput" type="number" class="rounded-xl border-gray-300 w-full" placeholder="Ej: 10000" />
+  </div>
+  <div class="self-end text-sm">
+    <div class="mt-1">Estado MP: <b id="concMpEstado" class="px-2 py-0.5 rounded">OK</b></div>
+    <div>Estado Efectivo: <b id="concEfEstado" class="px-2 py-0.5 rounded">OK</b></div>
+  </div>
+  <div class="self-end text-sm">
+    <div class="mt-1">Alerta total: <b id="concAlert" class="px-2 py-0.5 rounded bg-gray-100">Dentro de umbral</b></div>
+  </div>
+</div>
 
           <!-- Buckets fijos -->
           <details class="card" open data-collapsible>
