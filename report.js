@@ -1,3 +1,104 @@
+// ---------- Utils para números ----------
+const parseARS = (s) => {
+  if (s == null) return 0;
+  return Number(String(s).replace(/[^\d,.-]/g,'').replace(/\./g,'').replace(',', '.')) || 0;
+};
+
+// Devuelve array de gastos {fecha, subtotal} desde memoria o desde la tabla
+function getGastosRows() {
+  // 1) Si tenés arrays en memoria, usalos
+  if (Array.isArray(window.GASTOS) && window.GASTOS.length) {
+    return window.GASTOS.map(g => ({
+      fecha: (g.fecha||'').toString().slice(0,10),
+      monto: Number(g.subtotal || g.costo_unit || 0)
+    }));
+  }
+  if (Array.isArray(window.GASTOS_API) && window.GASTOS_API.length) {
+    return window.GASTOS_API.map(g => ({
+      fecha: (g.fecha||'').toString().slice(0,10),
+      monto: Number(g.subtotal || g.costo_unit || 0)
+    }));
+  }
+  if (Array.isArray(window.GASTOS_CSV) && window.GASTOS_CSV.length) {
+    return window.GASTOS_CSV.map(g => ({
+      fecha: (g.fecha||'').toString().slice(0,10),
+      monto: Number(g.subtotal || g.costo_unit || 0)
+    }));
+  }
+
+  // 2) Fallback: leer lo que está pintado en la tabla #tbodyGastos
+  const out = [];
+  const $rows = document.querySelectorAll('#tbodyGastos tr');
+  $rows.forEach(tr => {
+    const tds = tr.querySelectorAll('td');
+    const fecha = tds?.[0]?.textContent?.trim() || '';
+    const montoTxt = tds?.[3]?.textContent || '0';
+    out.push({ fecha, monto: parseARS(montoTxt) });
+  });
+  return out;
+}
+
+// Pinta totales de MES / DÍA (usa mes seleccionado en tu selector "mesFiltro" y el input "diaFiltro")
+function updateGastosTotals() {
+  const gastos = getGastosRows();
+  if (!gastos.length) {
+    document.getElementById('gastosTotalMes')?.innerText = '$0';
+    document.getElementById('gastosTotalDia')?.innerText = '$0';
+    document.getElementById('gastosTotalTabla')?.innerText = '$0';
+    return;
+  }
+
+  // Mes seleccionado (YYYY-MM)
+  const sel = document.getElementById('mesFiltro')?.value || '';
+  const [yy, mm] = sel ? sel.split('-').map(Number) : [null, null];
+
+  const totalMes = gastos.reduce((acc,g)=>{
+    if(!g.fecha) return acc;
+    const d = new Date(g.fecha);
+    const ok = yy && mm && d.getFullYear()===yy && (d.getMonth()+1)===mm;
+    return ok ? acc + Number(g.monto||0) : acc;
+  }, 0);
+
+  // Día seleccionado (YYYY-MM-DD)
+  const diaSel = document.getElementById('diaFiltro')?.value || '';
+  const totalDia = gastos.reduce((acc,g)=> (g.fecha===diaSel ? acc + Number(g.monto||0) : acc), 0);
+
+  // Pintar
+  const fmt = (n)=> new Intl.NumberFormat('es-AR', { style:'currency', currency:'ARS', maximumFractionDigits:0 }).format(n||0);
+  document.getElementById('gastosTotalMes')?.innerText = fmt(totalMes);
+  document.getElementById('gastosTotalDia')?.innerText = fmt(totalDia);
+  document.getElementById('gastosTotalTabla')?.innerText = fmt(totalMes); // opcional: mismo total mes en el tfoot
+
+  // Además, si tenés un KPI de "Gastos (mes)" arriba, lo actualizamos acá también:
+  document.getElementById('kpiGastosMes')?.innerText = fmt(totalMes);
+}
+
+// Llamar updateGastosTotals() cada vez que:
+// - cambian mes/día
+// - se recargan gastos
+// - se renderiza el informe
+document.getElementById('btnRecargarGastos')?.addEventListener('click', ()=> {
+  // Si tu flujo ya recarga y repinta la tabla, al final ejecutá:
+  setTimeout(updateGastosTotals, 100);
+});
+document.getElementById('mesFiltro')?.addEventListener('change', updateGastosTotals);
+document.getElementById('diaFiltro')?.addEventListener('change', updateGastosTotals);
+
+// Si tenés funciones renderAll / cargarGastosRecientes, invocalo al final:
+const _renderAll = window.renderAll;
+window.renderAll = function(...args){
+  try { _renderAll?.apply(this, args); } finally { updateGastosTotals(); }
+};
+
+const _cargarGastosRecientes = window.cargarGastosRecientes;
+window.cargarGastosRecientes = async function(...args){
+  try { return await _cargarGastosRecientes?.apply(this, args); }
+  finally { updateGastosTotals(); }
+};
+
+// Primera ejecución
+document.addEventListener('DOMContentLoaded', ()=> setTimeout(updateGastosTotals, 200));
+
 /* ================= Helpers ================= */
 const $fmt = (n) => new Intl.NumberFormat('es-AR', { style:'currency', currency:'ARS', maximumFractionDigits:0 }).format(Number(n||0));
 const toDate = (s) => {
