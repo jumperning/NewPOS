@@ -522,25 +522,35 @@ function refreshReporteKPIs(){
   qs('#kpi-costo-mes')   && (qs('#kpi-costo-mes').textContent   = fmtARS(costoMes));    // Costo del mes (COGS)
   qs('#kpi-gastos-mes')  && (qs('#kpi-gastos-mes').textContent  = fmtARS(gastosTotal)); // GASTOS del mes
 
-  // Costo vs. Gasto
-  const ratio = gastosTotal>0 ? (costoMes/gastosTotal) : 0;
-  const pct   = Math.min(100, Math.round((ratio||0)*100));
-  qs('#kpi-ratio-bar')   && (qs('#kpi-ratio-bar').style.width = pct+'%',
-                             qs('#kpi-ratio-bar').style.background = ratio<=0.8 ? '#16a34a' : (ratio<=1 ? '#f59e0b' : '#ef4444'));
-  qs('#kpi-ratio-label') && (qs('#kpi-ratio-label').textContent = `${fmtARS(costoMes)} de ${fmtARS(gastosTotal)} (${pct}%)`);
+ // ----- Costo vs. Gasto (mes)
+{
+  const bar = qs('#kpi-ratio-bar');
+  if (bar) {
+    bar.style.width = pct + '%';
+    bar.style.background = (ratio <= 0.8)
+      ? '#16a34a'
+      : (ratio <= 1 ? '#f59e0b' : '#ef4444');
+  }
+  const lbl = qs('#kpi-ratio-label');
+  if (lbl) lbl.textContent = `${fmtARS(costoMes)} de ${fmtARS(gastosTotal)} (${pct}%)`;
+}
 
-  // Presupuesto
-  let presu = 0;
-  if (presuComponentes){
-    const {alquiler=0,servicios=0,sueldos:ps=0,otros=0} = presuComponentes;
-    presu = [alquiler,servicios,ps,otros].map(Number).reduce((a,b)=>a+b,0);
-  } else presu = presupuesto;
-  const ppct = presu>0 ? Math.min(100, Math.round((gastosTotal/presu)*100)) : 0;
-  qs('#kpi-presu-monto')    && (qs('#kpi-presu-monto').textContent    = `${fmtARS(gastosTotal)} / ${fmtARS(presu)}`);
-  qs('#kpi-presu-bar')      && (qs('#kpi-presu-bar').style.width      = ppct+'%';
-                                qs('#kpi-presu-bar').style.background = presu===0 ? '#9ca3af' : (gastosTotal/presu<=0.8 ? '#16a34a' : (gastosTotal/presu<=1 ? '#f59e0b' : '#ef4444'));
-  qs('#kpi-presu-label')    && (qs('#kpi-presu-label').textContent    = presu>0 ? `Avance: ${ppct}%` : 'Definí un presupuesto');
-  qs('#kpi-presu-restante') && (qs('#kpi-presu-restante').textContent = presu>0 ? `Restante: ${fmtARS(Math.max(0,presu-gastosTotal))}` : '—');
+// ----- Presupuesto del mes
+{
+  const bar = qs('#kpi-presu-bar');
+  if (bar) {
+    bar.style.width = ppct + '%';
+    bar.style.background = presu === 0
+      ? '#9ca3af'
+      : ((gastosTotal / presu) <= 0.8 ? '#16a34a' : ((gastosTotal / presu) <= 1 ? '#f59e0b' : '#ef4444'));
+  }
+  const monto = qs('#kpi-presu-monto');
+  if (monto) monto.textContent = `${fmtARS(gastosTotal)} / ${fmtARS(presu)}`;
+  const lbl = qs('#kpi-presu-label');
+  if (lbl) lbl.textContent = presu > 0 ? `Avance: ${ppct}%` : 'Definí un presupuesto';
+  const rest = qs('#kpi-presu-restante');
+  if (rest) rest.textContent = presu > 0 ? `Restante: ${fmtARS(Math.max(0, presu - gastosTotal))}` : '—';
+}
 
   // Sueldos & Franquero → separar por día (lun-sáb)
   const diasAbiertos = (()=>{ const rr=rangoMes(); let c=0, d=new Date(rr.from); while(d<=rr.to){ const dow=d.getDay(); if (dow>=1 && dow<=6) c++; d.setDate(d.getDate()+1);} return c||1; })();
