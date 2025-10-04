@@ -1,3 +1,20 @@
+// ===== Buckets: metas y porcentajes (pueden editarse desde la UI) =====
+const BUCKET_PCTS = { alquiler: 0.39, sueldos: 0.47, luz: 0.10, eventos: 0.04 };
+
+// Obtiene métricas del mes seleccionado (usa tus ROWS existentes)
+function aggMes() {
+  const [yy, mm] = mesSelKey.split('-').map(Number);
+  const rows = ROWS.filter(r => sameYMonth(r.date, yy, mm));
+  const ingresos = rows.reduce((a,r)=>a+(Number(r.total)||0),0);
+  const costo    = rows.reduce((a,r)=>a+(Number(r.totalCosto)||0),0);
+  const ventas   = rows.length;
+  // costo promedio diario (sobre días con movimiento)
+  const diasSet = new Set(rows.map(r => r.date.toISOString().slice(0,10)));
+  const costoDiario = diasSet.size ? (costo / diasSet.size) : 0;
+  return { rows, ingresos, costo, bruta: Math.max(0, ingresos - costo), ventas, costoDiario };
+}
+
+
 /* ================== Utiles ================== */
 const $fmt = n => new Intl.NumberFormat('es-AR',{style:'currency',currency:'ARS',maximumFractionDigits:0}).format(Number(n||0));
 const toDate = (s)=>{
