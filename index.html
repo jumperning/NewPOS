@@ -575,10 +575,81 @@
     `;
   }
 
-  function openPrintWindow(innerHTML, title='Impresión POS'){
-    const w = window.open('', '_blank', 'width=420,height=800,noopener,noreferrer');
-    if(!w){ alert('El navegador bloqueó la ventana de impresión. Permití popups para este sitio.'); return; }
+  
+function openPrintWindow(innerHTML, title='Impresión POS'){
+  // Abrimos una nueva ventana SIN 'noreferrer' para poder escribirle el HTML
+  const w = window.open('', '_blank', 'popup=yes,width=420,height=800,noopener');
+  if(!w){ alert('El navegador bloqueó la ventana de impresión. Permití popups para este sitio.'); return; }
 
+  const css = `
+    <style>
+      :root{ color-scheme: light only; }
+      html,body{ margin:0; padding:0; background:#fff; }
+      body{
+        width:58mm; box-sizing:border-box;
+        padding:8px 6px; color:#000;
+        font-family: ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono",monospace;
+        font-size:14px; line-height:1.25;
+      }
+      .title{ text-align:center; font-weight:700; font-size:16px; }
+      .muted{ font-size:13px; text-align:center; }
+      hr{ border:0; border-top:1px dashed #000; margin:8px 0; }
+      .row{ display:flex; justify-content:space-between; gap:8px; }
+      .tot{ font-weight:700; }
+      @media print{
+        @page{ size: 58mm auto; margin:0; }
+        body{ margin:0; }
+        .no-print{ display:none !important; }
+      }
+    </style>
+  `;
+
+  const html = `<!DOCTYPE html>
+  <html>
+    <head>
+      <meta charset="utf-8"/>
+      <meta name="viewport" content="width=device-width, initial-scale=1"/>
+      <title>${title}</title>
+      ${css}
+    </head>
+    <body>
+      ${innerHTML}
+      <script>
+        // Robusto: imprime al cargar y cierra al terminar (o luego de un timeout)
+        (function(){
+          function tryClose(){ try{ window.close(); }catch(e){} }
+          function doPrint(){
+            window.focus();
+            window.print();
+            if ('onafterprint' in window){
+              window.addEventListener('afterprint', tryClose, { once:true });
+            } else {
+              setTimeout(tryClose, 600);
+            }
+          }
+          if (document.readyState === 'complete' || document.readyState === 'interactive'){
+            setTimeout(doPrint, 0);
+          } else {
+            document.addEventListener('DOMContentLoaded', doPrint, { once:true });
+          }
+        })();
+      <\/script>
+    </body>
+  </html>`;
+
+  try{
+    w.document.open();
+    w.document.write(html);
+    w.document.close();
+    w.focus();
+  }catch(err){
+    // Fallback con data URL si el navegador bloquea la escritura
+    const blob = new Blob([html], {type:'text/html'});
+    const url = URL.createObjectURL(blob);
+    w.location.href = url;
+    // No podemos cerrar automáticamente en este flujo, el usuario cierra manualmente
+  }
+}
     const css = `
       <style>
         :root{ color-scheme: light only; }
