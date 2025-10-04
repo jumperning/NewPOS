@@ -37,12 +37,22 @@
     .navlink:hover{ background:#f3f4f6 }
     .navlink.active{ background:var(--accent-50); color:var(--accent-600) }
     .badge{ display:inline-flex; align-items:center; gap:.375rem; padding:.25rem .5rem; border-radius:999px; font-size:.75rem; color:#475569; background:#f3f4f6; }
-    /* Todo en negro */
+
+    /* todo en negro para mejor lectura */
     body { color:#000; }
     .text-slate-800,.text-slate-700,.text-slate-600,.text-slate-500,.text-slate-400,
     .text-gray-800,.text-gray-700,.text-gray-600,.text-gray-500,.text-gray-400 { color:#000 !important; }
     .badge { color:#000; }
+
     .chip{display:inline-flex;align-items:center;gap:.375rem;padding:.25rem .5rem;border-radius:999px;font-size:.75rem;background:#f3f4f6}
+
+    /* colapsables */
+    details.card > summary {
+      list-style:none; cursor:pointer; padding:1rem 1.25rem; border-bottom:1px solid rgba(15,23,42,.06);
+      display:flex; align-items:center; justify-content:space-between; gap:.75rem
+    }
+    details.card[open] > summary .twist { transform:rotate(90deg) }
+    .twist { transition:transform .15s ease; }
   </style>
 </head>
 <body class="bg-slate-50 text-black">
@@ -95,6 +105,7 @@
         </div>
         <div class="flex items-center gap-3">
           <button id="btnToggleMoneda" class="px-3 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-50" title="Mostrar/ocultar montos">👁️</button>
+          <button id="btnCollapseAll" class="px-3 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-50" title="Colapsar/Expandir todo">↕︎</button>
           <div id="statusBadge" class="text-xs px-3 py-1 rounded-full bg-gray-100">Sincronizando…</div>
         </div>
       </header>
@@ -163,814 +174,222 @@
 
         <!-- Contenido -->
         <main class="lg:col-span-9 col-span-12 space-y-4">
+
           <!-- KPIs (mes) -->
-          <div class="grid grid-cols-2 sm:grid-cols-5 gap-4">
-            <div class="bg-white rounded-2xl shadow p-4"><div class="text-xs text-slate-500">Ventas (mes)</div><div id="kpiVentas" class="text-2xl font-bold">0</div></div>
-            <div class="bg-white rounded-2xl shadow p-4"><div class="text-xs text-slate-500"></div><div id="kpiGastosMes" class="text-2xl font-bold">$0</div></div>
-            <div class="bg-white rounded-2xl shadow p-4"><div class="text-xs text-slate-500">Ingresos (mes)</div><div id="kpiIngresos" class="text-2xl font-bold">$0</div></div>
-            <!-- NUEVO: Ganancia (mes) -->
-            <div class="bg-white rounded-2xl shadow p-4"><div class="text-xs text-slate-500">Ganancia (mes)</div><div id="kpiGananciaMes" class="text-2xl font-bold">$0</div></div>
-            <!-- NUEVOS: breakdown medios de pago -->
-            <div class="bg-white rounded-2xl shadow p-4">
-              <div class="text-xs text-slate-500">Ingresos por método (mes)</div>
-              <div class="mt-1 text-sm">Efectivo: <b id="kpiEfectivoMes">$0</b></div>
-              <div class="text-sm">Mercado Pago: <b id="kpiMpMes">$0</b></div>
+          <details class="card" open data-collapsible>
+            <summary>
+              <div class="font-semibold">KPIs del mes</div>
+              <span class="twist">▶</span>
+            </summary>
+            <div class="p-4 grid grid-cols-2 sm:grid-cols-5 gap-4">
+              <div class="rounded-2xl border p-4"><div class="text-xs text-slate-500">Ventas (mes)</div><div id="kpiVentas" class="text-2xl font-bold">0</div></div>
+              <div class="rounded-2xl border p-4"><div class="text-xs text-slate-500">Costo (mes)</div><div id="kpi-costo-mes" class="text-2xl font-bold">$0</div></div>
+              <div class="rounded-2xl border p-4"><div class="text-xs text-slate-500">Ingresos (mes)</div><div id="kpiIngresos" class="text-2xl font-bold">$0</div></div>
+              <div class="rounded-2xl border p-4"><div class="text-xs text-slate-500">Ganancia (mes)</div><div id="kpiGananciaMes" class="text-2xl font-bold">$0</div></div>
+              <div class="rounded-2xl border p-4">
+                <div class="text-xs text-slate-500">Ingresos por método (mes)</div>
+                <div class="mt-1 text-sm">Efectivo: <b id="kpiEfectivoMes">$0</b></div>
+                <div class="text-sm">Mercado Pago: <b id="kpiMpMes">$0</b></div>
+              </div>
             </div>
-          </div>
+          </details>
 
           <!-- KPIs del día -->
-          <div class="grid grid-cols-2 sm:grid-cols-5 gap-4">
-            <div class="bg-white rounded-2xl shadow p-4"><div class="text-xs text-slate-500">Ganancia (día)</div><div id="kpiGanDia" class="text-2xl font-bold">$0</div></div>
-            <div class="bg-white rounded-2xl shadow p-4"><div class="text-xs text-slate-500">Ingresos (día)</div><div id="kpiIngDia" class="text-2xl font-bold">$0</div></div>
-            <div class="bg-white rounded-2xl shadow p-4"><div class="text-xs text-slate-500">Unidades (día)</div><div id="kpiUniDia" class="text-2xl font-bold">0</div></div>
-            <div class="bg-white rounded-2xl shadow p-4"><div class="text-xs text-slate-500">Ventas (día)</div><div id="kpiVentasDia" class="text-2xl font-bold">0</div></div>
-            <div class="bg-white rounded-2xl shadow p-4"><div class="text-xs text-slate-500">Costo (día)</div><div id="kpiCostoDia" class="text-2xl font-bold">$0</div></div>
-          </div>
+          <details class="card" open data-collapsible>
+            <summary>
+              <div class="font-semibold">KPIs del día</div>
+              <span class="twist">▶</span>
+            </summary>
+            <div class="p-4 grid grid-cols-2 sm:grid-cols-5 gap-4">
+              <div class="rounded-2xl border p-3"><div class="text-xs text-slate-500">Ganancia (día)</div><div id="kpiGanDia" class="text-2xl font-bold">$0</div></div>
+              <div class="rounded-2xl border p-3"><div class="text-xs text-slate-500">Ingresos (día)</div><div id="kpiIngDia" class="text-2xl font-bold">$0</div></div>
+              <div class="rounded-2xl border p-3"><div class="text-xs text-slate-500">Unidades (día)</div><div id="kpiUniDia" class="text-2xl font-bold">0</div></div>
+              <div class="rounded-2xl border p-3"><div class="text-xs text-slate-500">Ventas (día)</div><div id="kpiVentasDia" class="text-2xl font-bold">0</div></div>
+              <div class="rounded-2xl border p-3"><div class="text-xs text-slate-500">Costo (día)</div><div id="kpiCostoDia" class="text-2xl font-bold">$0</div></div>
+            </div>
+          </details>
 
-          <!-- Análisis por categoría (placeholder intacto) -->
-          <div class="bg-white rounded-2xl shadow p-4 space-y-4">
-            <div class="flex flex-wrap items-center gap-3">
-              <h2 class="text-lg font-semibold mr-auto">Análisis por Categoría</h2>
-              <div class="flex gap-2">
-                <span class="chip">Café</span><span class="chip">Comida</span><span class="chip">Cerveza</span>
-                <span class="chip">Gaseosa</span><span class="chip">Agua</span><span class="chip">Vino</span>
-                <span class="chip">Whisky</span><span class="chip">Tragos</span>
+          <!-- Análisis por categoría -->
+          <details class="card" open data-collapsible>
+            <summary>
+              <div class="font-semibold">Análisis por Categoría</div>
+              <span class="twist">▶</span>
+            </summary>
+            <div class="p-4 space-y-4">
+              <div class="flex flex-wrap items-center gap-3">
+                <div class="flex gap-2">
+                  <span class="chip">Café</span><span class="chip">Comida</span><span class="chip">Cerveza</span>
+                  <span class="chip">Gaseosa</span><span class="chip">Agua</span><span class="chip">Vino</span>
+                  <span class="chip">Whisky</span><span class="chip">Tragos</span>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-6" id="aggWrap">
+                <div class="rounded-xl border p-3"><div class="text-sm text-slate-500 mb-2">Participación por Unidades (%)</div><canvas id="chartPie"></canvas></div>
+                <div class="rounded-xl border p-3"><div class="text-sm text-slate-500 mb-2">Unidades por Categoría</div><canvas id="chartBarQty"></canvas></div>
+                <div class="rounded-xl border p-3"><div class="text-sm text-slate-500 mb-2">Ganancia por Categoría (ARS)</div><canvas id="chartBarProfit"></canvas></div>
+              </div>
+
+              <div class="overflow-x-auto">
+                <table class="w-full text-sm mt-2">
+                  <thead class="bg-gray-50 text-slate-600">
+                    <tr><th class="text-left p-2">Categoría</th><th class="text-right p-2">Unidades</th><th class="text-right p-2">Veces</th><th class="text-right p-2">Ganancia</th></tr>
+                  </thead>
+                  <tbody id="tbodyResumenCat" class="divide-y"></tbody>
+                </table>
               </div>
             </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6" id="aggWrap">
-              <div class="rounded-xl border p-3"><div class="text-sm text-slate-500 mb-2">Participación por Unidades (%)</div><canvas id="chartPie"></canvas></div>
-              <div class="rounded-xl border p-3"><div class="text-sm text-slate-500 mb-2">Unidades por Categoría</div><canvas id="chartBarQty"></canvas></div>
-              <div class="rounded-xl border p-3"><div class="text-sm text-slate-500 mb-2">Ganancia por Categoría (ARS)</div><canvas id="chartBarProfit"></canvas></div>
-            </div>
-
-            <div id="dailyWrap" class="rounded-xl border p-3 hidden">
-              <div class="text-sm text-slate-500 mb-2">Unidades — Día a día</div>
-              <canvas id="chartDailyQty"></canvas>
-            </div>
-
-            <div class="overflow-x-auto">
-              <table class="w-full text-sm mt-2">
-                <thead class="bg-gray-50 text-slate-600">
-                  <tr><th class="text-left p-2">Categoría</th><th class="text-right p-2">Unidades</th><th class="text-right p-2">Veces</th><th class="text-right p-2">Ganancia</th></tr>
-                </thead>
-                <tbody id="tbodyResumenCat" class="divide-y"></tbody>
-              </table>
-            </div>
-          </div>
+          </details>
 
           <!-- Horarios -->
-          <div class="bg-white rounded-2xl shadow p-4 space-y-2">
-            <div class="flex items-center justify-between">
-              <h2 class="text-lg font-semibold">Horarios con más ventas</h2>
-              <div class="text-xs text-slate-500" id="lblPeakHour"></div>
+          <details class="card" data-collapsible>
+            <summary>
+              <div class="font-semibold">Horarios con más ventas</div>
+              <div class="flex items-center gap-3">
+                <div class="text-xs text-slate-500" id="lblPeakHour"></div>
+                <span class="twist">▶</span>
+              </div>
+            </summary>
+            <div class="p-4">
+              <div class="rounded-xl border p-3">
+                <div class="text-sm text-slate-500 mb-2">Ingresos por hora (según alcance)</div>
+                <canvas id="chartHoras"></canvas>
+              </div>
             </div>
-            <div class="rounded-xl border p-3">
-              <div class="text-sm text-slate-500 mb-2">Ingresos por hora (según alcance)</div>
-              <canvas id="chartHoras"></canvas>
+          </details>
+
+          <!-- Cierre y reparto -->
+          <details class="card" open data-collapsible>
+            <summary>
+              <div class="font-semibold">Cierre y reparto</div>
+              <span class="twist">▶</span>
+            </summary>
+            <div class="p-4">
+              <div class="flex items-center justify-between mb-3">
+                <span class="text-xs text-slate-500" id="cierreRangoLbl"></span>
+              </div>
+
+              <div class="grid grid-cols-2 sm:grid-cols-6 gap-4">
+                <div class="rounded-2xl border p-3"><div class="text-xs text-slate-500">Ingresos (día)</div><div id="cierreIng" class="text-xl font-bold">$0</div></div>
+                <div class="rounded-2xl border p-3"><div class="text-xs text-slate-500">Costo (día)</div><div id="cierreCosto" class="text-xl font-bold">$0</div></div>
+                <div class="rounded-2xl border p-3"><div class="text-xs text-slate-500">Ganancia bruta</div><div id="cierreBruta" class="text-xl font-bold">$0</div></div>
+                <div class="rounded-2xl border p-3"><div class="text-xs text-slate-500">Gastos del local</div><div id="cierreGastosLbl" class="text-xl font-bold"><span id="kpiGastosDia">$ 0</span></div></div>
+                <div class="rounded-2xl border p-3"><div class="text-xs text-slate-500">Ganancia neta</div><div id="cierreNeta" class="text-xl font-bold">$0</div></div>
+                <div class="rounded-2xl border p-3"><div class="text-xs text-slate-500">Por persona</div><div id="cierrePorPersona" class="text-xl font-bold">$0</div></div>
+              </div>
             </div>
-          </div>
+          </details>
 
-       
+          <!-- Buckets fijos -->
+          <details class="card" open data-collapsible>
+            <summary>
+              <div class="font-semibold">Buckets fijos</div>
+              <span class="text-xs text-slate-500">Distribución 39/47/10/4 sobre Ganancia bruta</span>
+              <span class="twist">▶</span>
+            </summary>
+            <div class="p-4 space-y-4">
+              <!-- Metas -->
+              <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+                <div><label class="block text-xs text-slate-600 mb-1">Meta Alquiler</label><input id="metaAlquiler" type="number" min="0" step="1000" class="rounded-xl border-gray-300 w-full" value="990000"></div>
+                <div><label class="block text-xs text-slate-600 mb-1">Meta Luz</label><input id="metaLuz" type="number" min="0" step="1000" class="rounded-xl border-gray-300 w-full" value="200000"></div>
+                <div><label class="block text-xs text-slate-600 mb-1">Meta Sueldos</label><input id="metaSueldos" type="number" min="0" step="1000" class="rounded-xl border-gray-300 w-full" value="1200000"></div>
+                <div><label class="block text-xs text-slate-600 mb-1">Meta Eventos</label><input id="metaEventos" type="number" min="0" step="1000" class="rounded-xl border-gray-300 w-full" value="100000"></div>
+              </div>
 
-          <div class="bg-white rounded-2xl shadow p-4">
-            <div class="flex items-center justify-between mb-3">
-              <h2 class="text-lg font-semibold">Cierre y reparto</h2>
-              <span class="text-xs text-slate-500" id="cierreRangoLbl"></span>
-            </div>
+              <!-- Progreso -->
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="rounded-xl border p-4">
+                  <div class="text-sm font-medium mb-1">Alquiler <span id="bkAlqMonto" class="text-slate-500 font-normal"></span></div>
+                  <div class="w-full h-3 bg-slate-100 rounded-full overflow-hidden"><div id="bkAlqBar" class="h-3 bg-rose-500" style="width:0%"></div></div>
+                  <div class="text-xs mt-1">Falta: <b id="bkAlqFalta">$0</b> — Asignado: <b id="bkAlqAsig">$0</b></div>
+                </div>
 
-            <div class="grid grid-cols-2 sm:grid-cols-6 gap-4">
-              <div class="rounded-xl border p-3"><div class="text-xs text-slate-500">Ingresos (día)</div><div id="cierreIng" class="text-xl font-bold">$0</div></div>
-              <div class="rounded-xl border p-3"><div class="text-xs text-slate-500">Costo (día)</div><div id="cierreCosto" class="text-xl font-bold">$0</div></div>
-              <div class="rounded-xl border p-3"><div class="text-xs text-slate-500">Ganancia bruta</div><div id="cierreBruta" class="text-xl font-bold">$0</div></div>
-              <div class="rounded-xl border p-3"><div class="text-xs text-slate-500">Gastos del local</div><div id="cierreGastosLbl" class="text-xl font-bold"><span id="kpiGastosDia">$ 0</span>
-</div></div>
-              <div class="rounded-xl border p-3"><div class="text-xs text-slate-500">Ganancia neta</div><div id="cierreNeta" class="text-xl font-bold">$0</div></div>
-              <div class="rounded-xl border p-3"><div class="text-xs text-slate-500">Por persona</div><div id="cierrePorPersona" class="text-xl font-bold">$0</div></div>
-            </div>
-          </div>
+                <div class="rounded-xl border p-4">
+                  <div class="text-sm font-medium mb-1">Luz <span id="bkLuzMonto" class="text-slate-500 font-normal"></span></div>
+                  <div class="w-full h-3 bg-slate-100 rounded-full overflow-hidden"><div id="bkLuzBar" class="h-3 bg-rose-500" style="width:0%"></div></div>
+                  <div class="text-xs mt-1">Falta: <b id="bkLuzFalta">$0</b> — Asignado: <b id="bkLuzAsig">$0</b></div>
+                </div>
 
-          <!-- ====== Gastos (alta + últimos) ====== -->
-          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <!-- Alta de gasto -->
-            <div class="bg-white rounded-2xl shadow p-4 space-y-3">
-              <h2 class="text-lg font-semibold">Registrar gasto</h2>
-              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label class="block text-sm text-slate-600 mb-1">Fecha</label>
-                  <input id="gFecha" type="date" class="w-full rounded-xl border-gray-300" />
+                <div class="rounded-xl border p-4">
+                  <div class="text-sm font-medium mb-1">Sueldos <span id="bkSuelMonto" class="text-slate-500 font-normal"></span></div>
+                  <div class="w-full h-3 bg-slate-100 rounded-full overflow-hidden"><div id="bkSuelBar" class="h-3 bg-rose-500" style="width:0%"></div></div>
+                  <div class="text-xs mt-1">Falta: <b id="bkSuelFalta">$0</b> — Asignado: <b id="bkSuelAsig">$0</b></div>
                 </div>
-                <div>
-                  <label class="block text-sm text-slate-600 mb-1">Categoría</label>
-                  <select id="gCategoria" class="w-full rounded-xl border-gray-300">
-                    <option value="Mantenimiento de local">Mantenimiento de local</option>
-                    <option value="Compra de comida">Compra de comida</option>
-                    <option value="Compra de bebida">Compra de bebida</option>
-                    <option value="Servicios">Servicios</option>
-                    <option value="Impuestos">Impuestos</option>
-                    <option value="Otros">Otros</option>
-                  </select>
-                </div>
-                <div class="sm:col-span-2">
-                  <label class="block text-sm text-slate-600 mb-1">Concepto / nombre del gasto</label>
-                  <input id="gConcepto" type="text" placeholder="Ej: 2 kilos de papa" class="w-full rounded-xl border-gray-300" />
-                </div>
-                <div>
-                  <label class="block text-sm text-slate-600 mb-1">Proveedor (opcional)</label>
-                  <input id="gProveedor" type="text" class="w-full rounded-xl border-gray-300" />
-                </div>
-                <div>
-                  <label class="block text-sm text-slate-600 mb-1">Monto (ARS)</label>
-                  <input id="gMonto" type="number" min="0" step="1" class="w-full rounded-xl border-gray-300" />
-                </div>
-                <div class="sm:col-span-2">
-                  <label class="block text-sm text-slate-600 mb-1">Nota (opcional)</label>
-                  <input id="gNota" type="text" class="w-full rounded-xl border-gray-300" />
+
+                <div class="rounded-xl border p-4">
+                  <div class="text-sm font-medium mb-1">Eventos <span id="bkEvtMonto" class="text-slate-500 font-normal"></span></div>
+                  <div class="w-full h-3 bg-slate-100 rounded-full overflow-hidden"><div id="bkEvtBar" class="h-3 bg-rose-500" style="width:0%"></div></div>
+                  <div class="text-xs mt-1">Falta: <b id="bkEvtFalta">$0</b> — Asignado: <b id="bkEvtAsig">$0</b></div>
                 </div>
               </div>
-              <div class="flex justify-end">
-                <button id="btnGuardarGasto" class="btn-primary px-4 py-2 rounded-xl">Guardar gasto</button>
-              </div>
-              <div id="gMsg" class="text-xs text-slate-500"></div>
-            </div>
 
-            <!-- Últimos gastos -->
-            <div class="bg-white rounded-2xl shadow p-4">
-              <div class="flex items-center justify-between mb-2">
-                <h2 class="text-lg font-semibold">Últimos gastos</h2>
-                <button id="btnRecargarGastos" class="btn text-xs">Recargar</button>
+              <!-- Reposición -->
+              <div class="rounded-xl border p-4">
+                <div class="text-sm font-medium mb-1">Colchón de Reposición (5 días)</div>
+                <div class="text-sm">Costo promedio diario: <b id="bkCostoDiario">$0</b> · Colchón recomendado: <b id="bkColchon">$0</b></div>
+              </div>
+            </div>
+          </details>
+
+          <!-- Plan del Mes (alquiler/sueldos/franquero) -->
+          <details class="card" data-collapsible>
+            <summary>
+              <div class="font-semibold">Plan del mes</div>
+              <span class="twist">▶</span>
+            </summary>
+            <div class="p-4">
+              <!-- (contenido de tu plan del mes se completa desde JS) -->
+              <div id="planMesMount"></div>
+            </div>
+          </details>
+
+          <!-- Tabla de ventas -->
+          <details class="card" data-collapsible>
+            <summary>
+              <div class="font-semibold">Ventas</div>
+              <span class="twist">▶</span>
+            </summary>
+            <div class="p-4">
+              <div class="flex items-center justify-between mb-3">
+                <div class="flex gap-2">
+                  <button id="btnExcel" class="text-sm px-3 py-1.5 rounded-xl bg-gray-100 hover:bg-gray-200">Descargar Excel</button>
+                  <button id="btnExcelFact" class="text-sm px-3 py-1.5 rounded-xl bg-gray-100 hover:bg-gray-200">Exportar Facturación</button>
+                  <button id="btnExpandir" class="text-sm px-3 py-1.5 rounded-xl bg-gray-100 hover:bg-gray-200">Expandir items</button>
+                </div>
               </div>
               <div class="overflow-x-auto">
                 <table class="w-full text-sm">
                   <thead class="bg-gray-50 text-slate-600">
-                    <tr><th class="text-left p-2">Fecha</th><th class="text-left p-2">Categoría</th><th class="text-left p-2">Concepto</th><th class="text-right p-2">Monto</th></tr>
+                    <tr>
+                      <th class="text-left p-2">Fecha</th>
+                      <th class="text-left p-2">Cliente</th>
+                      <th class="text-left p-2">Mesa</th>
+                      <th class="text-left p-2">Método</th>
+                      <th class="text-left p-2">Items</th>
+                      <th class="text-right p-2">Total</th>
+                      <th class="text-right p-2">Ganancia</th>
+                    </tr>
                   </thead>
-                  <tbody id="tbodyGastos" class="divide-y"></tbody>
+                  <tbody id="tbodyVentas" class="divide-y"></tbody>
                 </table>
               </div>
+              <div id="paginador" class="flex flex-wrap items-center gap-2 justify-between mt-3 text-sm"></div>
             </div>
-          </div>
-
-
-<!-- Buckets fijos (Alquiler, Luz, Sueldos, Eventos) -->
-<section class="bg-white rounded-2xl shadow p-4 space-y-4">
-  <div class="flex items-center justify-between">
-    <h2 class="text-lg font-semibold">Buckets fijos</h2>
-    <span class="text-xs text-slate-500">Distribución 39/47/10/4 sobre Ganancia bruta del mes</span>
-  </div>
-
-  <!-- Metas -->
-  <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
-    <div>
-      <label class="block text-xs text-slate-600 mb-1">Meta Alquiler</label>
-      <input id="metaAlquiler" type="number" min="0" step="1000" class="rounded-xl border-gray-300 w-full" value="990000">
-    </div>
-    <div>
-      <label class="block text-xs text-slate-600 mb-1">Meta Luz</label>
-      <input id="metaLuz" type="number" min="0" step="1000" class="rounded-xl border-gray-300 w-full" value="200000">
-    </div>
-    <div>
-      <label class="block text-xs text-slate-600 mb-1">Meta Sueldos</label>
-      <input id="metaSueldos" type="number" min="0" step="1000" class="rounded-xl border-gray-300 w-full" value="1200000">
-    </div>
-    <div>
-      <label class="block text-xs text-slate-600 mb-1">Meta Eventos</label>
-      <input id="metaEventos" type="number" min="0" step="1000" class="rounded-xl border-gray-300 w-full" value="100000">
-    </div>
-  </div>
-
-  <!-- Progreso -->
-  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-    <div class="rounded-xl border p-4">
-      <div class="text-sm font-medium mb-1">Alquiler <span id="bkAlqMonto" class="text-slate-500 font-normal"></span></div>
-      <div class="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
-        <div id="bkAlqBar" class="h-3 bg-rose-500" style="width:0%"></div>
-      </div>
-      <div class="text-xs mt-1">Falta: <b id="bkAlqFalta">$0</b> — Asignado: <b id="bkAlqAsig">$0</b></div>
-    </div>
-
-    <div class="rounded-xl border p-4">
-      <div class="text-sm font-medium mb-1">Luz <span id="bkLuzMonto" class="text-slate-500 font-normal"></span></div>
-      <div class="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
-        <div id="bkLuzBar" class="h-3 bg-rose-500" style="width:0%"></div>
-      </div>
-      <div class="text-xs mt-1">Falta: <b id="bkLuzFalta">$0</b> — Asignado: <b id="bkLuzAsig">$0</b></div>
-    </div>
-
-    <div class="rounded-xl border p-4">
-      <div class="text-sm font-medium mb-1">Sueldos <span id="bkSuelMonto" class="text-slate-500 font-normal"></span></div>
-      <div class="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
-        <div id="bkSuelBar" class="h-3 bg-rose-500" style="width:0%"></div>
-      </div>
-      <div class="text-xs mt-1">Falta: <b id="bkSuelFalta">$0</b> — Asignado: <b id="bkSuelAsig">$0</b></div>
-    </div>
-
-    <div class="rounded-xl border p-4">
-      <div class="text-sm font-medium mb-1">Eventos <span id="bkEvtMonto" class="text-slate-500 font-normal"></span></div>
-      <div class="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
-        <div id="bkEvtBar" class="h-3 bg-rose-500" style="width:0%"></div>
-      </div>
-      <div class="text-xs mt-1">Falta: <b id="bkEvtFalta">$0</b> — Asignado: <b id="bkEvtAsig">$0</b></div>
-    </div>
-  </div>
-
-  <!-- Reposición -->
-  <div class="rounded-xl border p-4">
-    <div class="text-sm font-medium mb-1">Colchón de Reposición (5 días)</div>
-    <div class="text-sm">Costo promedio diario: <b id="bkCostoDiario">$0</b> · Colchón recomendado: <b id="bkColchon">$0</b></div>
-  </div>
-</section>
-
-
-          
-<!-- Plan del Mes -->
-<section class="bg-white rounded-2xl shadow p-4 space-y-4">
-  <div class="flex items-center justify-between">
-    <h2 class="text-lg font-semibold">Plan del mes</h2>
-    <span class="text-xs text-slate-500">Mes: <span id="planMesLabel">-</span></span>
-  </div>
-
-  <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-    <!-- WIDGET Alquiler -->
-    <div class="rounded-xl border p-4 space-y-3">
-      <div class="flex items-center justify-between">
-        <h3 class="font-medium">Alquiler</h3>
-        <span class="text-xs text-slate-500">del costo del mes</span>
-      </div>
-
-      <div class="grid grid-cols-2 gap-3">
-        <div>
-          <label class="block text-xs text-slate-600 mb-1">Objetivo (ARS)</label>
-          <input id="alqObjetivo" type="number" min="0" step="1000" class="rounded-xl border-gray-300 w-full" value="990000">
-        </div>
-        <div>
-          <label class="block text-xs text-slate-600 mb-1">% destinado</label>
-          <input id="alqPct" type="number" min="0" max="100" step="1" class="rounded-xl border-gray-300 w-full" value="40">
-        </div>
-      </div>
-
-      <div class="text-sm">
-        <div>Costo del mes: <b id="alqCostoMes">$0</b></div>
-        <div>Destinado (mes): <b id="alqDestinado">$0</b></div>
-      </div>
-
-      <!-- barra progreso -->
-      <div class="mt-1">
-        <div class="flex justify-between text-xs mb-1">
-          <span>Progreso hacia alquiler</span>
-          <span id="alqPctProgreso">0%</span>
-        </div>
-        <div class="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
-          <div id="alqBar" class="h-3 bg-rose-500" style="width:0%"></div>
-        </div>
-        <div class="text-xs text-slate-600 mt-1">Falta: <b id="alqFalta">$0</b></div>
-      </div>
-
-      <!-- Restos de porcentaje -->
-      <div class="grid grid-cols-3 gap-3 pt-2 border-t">
-        <div>
-          <label class="block text-xs text-slate-600 mb-1">% Reposición</label>
-          <input id="repPct" type="number" min="0" max="100" step="1" class="rounded-xl border-gray-300 w-full" value="40">
-        </div>
-        <div>
-          <label class="block text-xs text-slate-600 mb-1">% Arreglos/Otros</label>
-          <input id="arrPct" type="number" min="0" max="100" step="1" class="rounded-xl border-gray-300 w-full" value="20">
-        </div>
-        <div class="self-end">
-          <div class="text-xs text-slate-600">No asignado: <b id="pctLibre">0%</b></div>
-        </div>
-      </div>
-
-      <div class="grid grid-cols-3 gap-3 text-sm">
-        <div>Reposición: <b id="repMonto">$0</b></div>
-        <div>Arreglos/Otros: <b id="arrMonto">$0</b></div>
-        <div>Libre (no asignado): <b id="libreMonto">$0</b></div>
-      </div>
-      <div id="pctWarn" class="text-xs text-rose-700 hidden">⚠️ La suma de porcentajes supera 100%</div>
-    </div>
-
-    <!-- WIDGET Sueldos + Franquero -->
-    <div class="rounded-xl border p-4 space-y-3">
-      <h3 class="font-medium">Sueldos & Franquero</h3>
-
-      <div class="space-y-2">
-        <div class="flex items-center justify-between">
-          <span class="text-sm text-slate-600">Sueldos</span>
-          <button id="btnAddSueldo" class="px-2 py-1 rounded-lg bg-gray-100 hover:bg-gray-200 text-xs">+ Agregar</button>
-        </div>
-        <div id="sueldosList" class="space-y-2"></div>
-        <div class="text-sm">Total sueldos: <b id="sueldosTotal">$0</b></div>
-      </div>
-
-      <hr>
-
-      <div class="grid grid-cols-3 gap-3">
-        <div>
-          <label class="block text-xs text-slate-600 mb-1">Horas franquero</label>
-          <input id="franqHoras" type="number" min="0" step="1" class="rounded-xl border-gray-300 w-full" value="0">
-        </div>
-        <div>
-          <label class="block text-xs text-slate-600 mb-1">Tarifa x hora</label>
-          <input id="franqTarifa" type="number" min="0" step="100" class="rounded-xl border-gray-300 w-full" value="0">
-        </div>
-        <div class="self-end">
-          <div class="text-sm">Total franquero: <b id="franqTotal">$0</b></div>
-        </div>
-      </div>
-
-      <div class="pt-2 border-t text-sm">
-        Ganancia del mes: <b id="ganMesLbl">$0</b>
-      </div>
-    </div>
-  </div>
-</section>
-
-          <!-- Tabla de ventas -->
-          <div class="bg-white rounded-2xl shadow p-4">
-            <div class="flex items-center justify-between mb-3">
-              <h2 class="text-lg font-semibold">Ventas</h2>
-              <div class="flex gap-2">
-                <button id="btnExcel" class="text-sm px-3 py-1.5 rounded-xl bg-gray-100 hover:bg-gray-200">Descargar Excel</button>
-                <button id="btnExcelFact" class="text-sm px-3 py-1.5 rounded-xl bg-gray-100 hover:bg-gray-200">Exportar Facturación</button>
-                <button id="btnExpandir" class="text-sm px-3 py-1.5 rounded-xl bg-gray-100 hover:bg-gray-200">Expandir items</button>
-              </div>
-            </div>
-            <div class="overflow-x-auto">
-              <table class="w-full text-sm">
-                <thead class="bg-gray-50 text-slate-600">
-                  <tr>
-                    <th class="text-left p-2">Fecha</th>
-                    <th class="text-left p-2">Cliente</th>
-                    <th class="text-left p-2">Mesa</th>
-                    <th class="text-left p-2">Método</th>
-                    <th class="text-left p-2">Items</th>
-                    <th class="text-right p-2">Total</th>
-                    <th class="text-right p-2">Ganancia</th>
-                  </tr>
-                </thead>
-                <tbody id="tbodyVentas" class="divide-y"></tbody>
-              </table>
-            </div>
-            <div id="paginador" class="flex flex-wrap items-center gap-2 justify-between mt-3 text-sm"></div>
-          </div>
+          </details>
         </main>
       </div>
     </div>
   </main>
 
-  <!-- Panel filtros (modal) -->
-  <div id="panelFiltros" class="hidden fixed inset-0 z-50 flex items-center justify-center">
-    <div class="absolute inset-0 bg-black/30"></div>
-    <div class="relative bg-white rounded-2xl shadow-xl p-4 w-[min(92vw,420px)]">
-      <h4 class="font-semibold mb-3">Mostrar filtros</h4>
-      <div class="space-y-2 text-sm">
-        <label class="flex items-center gap-2"><input type="checkbox" class="chkFilt" value="filtMes"> Mes</label>
-        <label class="flex items-center gap-2"><input type="checkbox" class="chkFilt" value="filtDia"> Día</label>
-        <label class="flex items-center gap-2"><input type="checkbox" class="chkFilt" value="filtHorario"> Horario</label>
-        <label class="flex items-center gap-2"><input type="checkbox" class="chkFilt" value="filtBuscar"> Buscar</label>
-        <label class="flex items-center gap-2"><input type="checkbox" class="chkFilt" value="filtCategoria"> Categoría</label>
-      </div>
-      <div class="flex justify-end gap-2 mt-4">
-        <button id="btnFiltCancelar" class="btn">Cancelar</button>
-        <button id="btnFiltGuardar" class="btn">Guardar</button>
-      </div>
-    </div>
-  </div>
-
   <!-- ============= LÓGICA ============= -->
-
-<script>
-// ====== Utils (vanilla) ======
-const qs  = (s, r=document) => r.querySelector(s);
-const qsa = (s, r=document) => Array.from(r.querySelectorAll(s));
-const fmtARS = n => (isFinite(n)?n:0).toLocaleString('es-AR',{style:'currency',currency:'ARS',maximumFractionDigits:0});
-const rangoMes = (d=new Date()) => { const y=d.getFullYear(), m=d.getMonth(); return {from:new Date(y,m,1,0,0,0), to:new Date(y,m+1,0,23,59,59)} };
-const enRango = (d,r)=> d>=r.from && d<=r.to;
-const fechaDe = o => new Date(o?.fecha || o?.date || o?.created_at || Date.now());
-
-// ====== Adapters (NO cambies tus nombres: el script los busca) ======
-function getData(){
-  const D = window.ReporteData || {};
-  const ventas = D.ventas || window.VENTAS || window.ventas || [];
-  const gastos = D.gastos || window.GASTOS || window.gastos || [];
-  const sueldos = D.sueldos || window.SUELDOS || [];
-  const presupuesto = Number(D.presupuesto ?? window.PRESUPUESTO_MENSUAL ?? 0);
-  const presuComponentes = D.presuComponentes || window.PRESU_COMPONENTES || null;
-  const horasFranquero = Number(D.horasFranquero ?? window.HORAS_FRANQUERO ?? 0);
-  const tarifaFranquero = Number(D.tarifaFranquero ?? window.TARIFA_FRANQUERO ?? 0);
-  return {ventas,gastos,sueldos,presupuesto,presuComponentes,horasFranquero,tarifaFranquero};
-}
-
-// ====== Cálculos de ventas ======
-const costoDeVenta = v => {
-  if (typeof v?.costoTotal === 'number') return v.costoTotal;
-  if (Array.isArray(v?.items)) {
-    return v.items.reduce((a,it)=>{
-      const cu=Number(it.costoUnidad ?? it.costo ?? 0);
-      const q =Number(it.qty ?? it.cantidad ?? 1);
-      return a + cu*q;
-    },0);
-  }
-  return Number(v?.costo ?? 0);
-};
-const ingresoDeVenta = v => Number(v?.total ?? v?.monto ?? v?.ingreso ?? 0);
-
-// ====== KPIs globales (mes) ======
-function refreshReporteKPIs(){
-  const {ventas,gastos,sueldos,presupuesto,presuComponentes,horasFranquero,tarifaFranquero} = getData();
-  const r = rangoMes();
-  const ventasMes = ventas.filter(v=>enRango(fechaDe(v),r));
-  const gastosMes = gastos.filter(g=>enRango(fechaDe(g),r));
-
-  const ingresosMes = ventasMes.reduce((a,v)=>a+ingresoDeVenta(v),0);
-  const costoMes    = ventasMes.reduce((a,v)=>a+costoDeVenta(v),0);
-  const gastosTotal = gastosMes.reduce((a,g)=>a+Number(g.monto ?? g.amount ?? g.total ?? 0),0);
-  const gananciaMes = ingresosMes - costoMes;
-
-  // KPIs de cabecera que existan
-  qs('#kpiVentas')       && (qs('#kpiVentas').textContent       = ventasMes.length);
-  qs('#kpiIngresos')     && (qs('#kpiIngresos').textContent     = fmtARS(ingresosMes));
-  qs('#kpiGananciaMes')  && (qs('#kpiGananciaMes').textContent  = fmtARS(gananciaMes));
-  // NUEVOS
-  qs('#kpi-costo-mes')   && (qs('#kpi-costo-mes').textContent   = fmtARS(costoMes));    // Costo del mes (COGS)
-  qs('#kpi-gastos-mes')  && (qs('#kpi-gastos-mes').textContent  = fmtARS(gastosTotal)); // GASTOS del mes
-
- // ----- Costo vs. Gasto (mes)
-{
-  const bar = qs('#kpi-ratio-bar');
-  if (bar) {
-    bar.style.width = pct + '%';
-    bar.style.background = (ratio <= 0.8)
-      ? '#16a34a'
-      : (ratio <= 1 ? '#f59e0b' : '#ef4444');
-  }
-  const lbl = qs('#kpi-ratio-label');
-  if (lbl) lbl.textContent = `${fmtARS(costoMes)} de ${fmtARS(gastosTotal)} (${pct}%)`;
-}
-
-// ----- Presupuesto del mes
-{
-  const bar = qs('#kpi-presu-bar');
-  if (bar) {
-    bar.style.width = ppct + '%';
-    bar.style.background = presu === 0
-      ? '#9ca3af'
-      : ((gastosTotal / presu) <= 0.8 ? '#16a34a' : ((gastosTotal / presu) <= 1 ? '#f59e0b' : '#ef4444'));
-  }
-  const monto = qs('#kpi-presu-monto');
-  if (monto) monto.textContent = `${fmtARS(gastosTotal)} / ${fmtARS(presu)}`;
-  const lbl = qs('#kpi-presu-label');
-  if (lbl) lbl.textContent = presu > 0 ? `Avance: ${ppct}%` : 'Definí un presupuesto';
-  const rest = qs('#kpi-presu-restante');
-  if (rest) rest.textContent = presu > 0 ? `Restante: ${fmtARS(Math.max(0, presu - gastosTotal))}` : '—';
-}
-
-  // Sueldos & Franquero → separar por día (lun-sáb)
-  const diasAbiertos = (()=>{ const rr=rangoMes(); let c=0, d=new Date(rr.from); while(d<=rr.to){ const dow=d.getDay(); if (dow>=1 && dow<=6) c++; d.setDate(d.getDate()+1);} return c||1; })();
-  const totalSueldos = (sueldos||[]).reduce((a,s)=>a+Number(s.monto||0),0);
-  if (qs('#lista-sueldos')) {
-    qs('#lista-sueldos').innerHTML = (sueldos||[]).map(s=>{
-      return `<div class="flex items-center justify-between"><span>${s.nombre||'—'}</span><strong>${fmtARS(Number(s.monto||0))}</strong></div>`;
-    }).join('');
-  }
-  qs('#total-sueldos') && (qs('#total-sueldos').textContent = fmtARS(totalSueldos));
-  qs('#detalle-dias')  && (qs('#detalle-dias').textContent  = `Objetivo distribuido en ${diasAbiertos} días abiertos (lun a sáb)`);
-  if (qs('#separar-por-dia')){
-    const li=[];
-    li.push(`<li>Total por día: <strong>${fmtARS(totalSueldos/diasAbiertos)}</strong></li>`);
-    (sueldos||[]).forEach(s=>li.push(`<li>${s.nombre||'—'}: ${fmtARS((Number(s.monto||0))/diasAbiertos)}</li>`));
-    const totalFranquero = (horasFranquero||0)*(tarifaFranquero||0);
-    if (totalFranquero>0) li.push(`<li>Franquero: ${fmtARS(totalFranquero)} — por día: ${fmtARS(totalFranquero/diasAbiertos)}</li>`);
-    qs('#separar-por-dia').innerHTML = li.join('');
-  }
-
-  // Categorías (armadas desde items)
-  const catMap = new Map();
-  ventasMes.forEach(v=>{
-    const items = Array.isArray(v.items)? v.items : [];
-    items.forEach(it=>{
-      const cat = it.categoria || it.category || it.cat || 'Sin categoría';
-      const q   = Number(it.qty ?? it.cantidad ?? 1);
-      const p   = Number(it.precio ?? it.price ?? 0);
-      const c   = Number(it.costoUnidad ?? it.costo ?? 0);
-      const g   = (p-c)*q;
-      if(!catMap.has(cat)) catMap.set(cat,{unidades:0,veces:0,ganancia:0});
-      const o=catMap.get(cat);
-      o.unidades += q; o.veces += 1; o.ganancia += isFinite(g)?g:0;
+  <script src="./report.js"></script>
+  <script>
+    // botón colapsar/expandir todo
+    document.getElementById('btnCollapseAll')?.addEventListener('click', ()=>{
+      const cards = document.querySelectorAll('details[data-collapsible]');
+      const someOpen = Array.from(cards).some(c=>c.open);
+      cards.forEach(c=> c.open = !someOpen);
     });
-  });
-  const totalUnid = Array.from(catMap.values()).reduce((a,o)=>a+o.unidades,0) || 1;
-  const maxU = Math.max(1,...Array.from(catMap.values()).map(o=>o.unidades));
-  const maxG = Math.max(1,...Array.from(catMap.values()).map(o=>o.ganancia));
-  qs('#tbodyResumenCat') && (qs('#tbodyResumenCat').innerHTML =
-    Array.from(catMap.entries()).map(([cat,o])=>`
-      <tr class="border-t">
-        <td class="p-2">${cat}</td>
-        <td class="p-2 text-right">${o.unidades}</td>
-        <td class="p-2 text-right">${o.veces}</td>
-        <td class="p-2 text-right">${fmtARS(o.ganancia)}</td>
-      </tr>`).join('')
-  );
-  qs('#cat-participacion') && (qs('#cat-participacion').textContent =
-    Array.from(catMap.entries()).map(([cat,o])=>`${cat}: ${Math.round((o.unidades/totalUnid)*100)}%`).join(' · ') || '—'
-  );
-  qs('#cat-unidades') && (qs('#cat-unidades').textContent =
-    Array.from(catMap.entries()).map(([cat,o])=>`${cat}: ${o.unidades}`).join(' · ') || '—'
-  );
-  qs('#cat-ganancia') && (qs('#cat-ganancia').textContent =
-    Array.from(catMap.entries()).map(([cat,o])=>`${cat}: ${fmtARS(o.ganancia)}`).join(' · ') || '—'
-  );
-
-  // Horas con más ventas
-  const horas = Array.from({length:24},(_,h)=>({h,ing:0}));
-  ventasMes.forEach(v=>{ horas[fechaDe(v).getHours()].ing += ingresoDeVenta(v); });
-  const maxIng = Math.max(1, ...horas.map(x=>x.ing));
-  if (qs('#chartHoras')){
-    // Si luego querés pasarlo a Chart.js, acá solo dejamos los datos calculados
-    // Por ahora lo maneja tu otro código de charts si existe.
-  }
-
-  // Gastos del local — lista del mes (si existe contenedor alternativo)
-  if (qs('#gastos-lista')){
-    qs('#gastos-lista').innerHTML = gastosMes.length ? `<ul class="list-disc pl-5">
-      ${gastosMes.map(g=>`<li><span class="text-gray-500 text-xs">${fechaDe(g).toLocaleDateString('es-AR')}</span> — ${g.descripcion||g.detalle||g.categoria||'Gasto'}: <strong>${fmtARS(Number(g.monto ?? g.amount ?? g.total ?? 0))}</strong></li>`).join('')}
-    </ul>` : '—';
-  }
-}
-window.refreshReporteKPIs = refreshReporteKPIs;
-
-// ============= LÓGICA CSV, KPIs del día y Gastos (todo vanilla) =============
-const API = '/.netlify/functions/gs-order';
-const $fmt = (n) => new Intl.NumberFormat('es-AR',{style:'currency',currency:'ARS',maximumFractionDigits:0}).format(Number(n||0));
-const toDate = (s)=>{ if(!s) return null; const t=String(s).trim();
-  if(/^\d{4}-\d{2}-\d{2}/.test(t)) return new Date(t);
-  if(/^\d{2}\/\d{2}\/\d{4}/.test(t)){ const [d,m,y]=t.split('/'); return new Date(`${y}-${m}-${d}`); }
-  const d=new Date(t); return isNaN(d)?null:d; };
-const sameYMonth=(d,y,m)=> d && d.getFullYear()===y && (d.getMonth()+1)===m;
-
-let ROWS=[], MES_OPTS=[], mesSelKey='';
-
-async function loadCSV(){
-  const urlEl = qs('#csvUrl'); if(!urlEl) return;
-  const url = urlEl.value.trim();
-  const badge = qs('#statusBadge'); if (badge) badge.textContent='Cargando CSV…';
-  return new Promise((resolve,reject)=>{
-    Papa.parse(url,{
-      download:true, header:true, skipEmptyLines:true,
-      complete:(res)=>{
-        try{
-          const rows=(res.data||[]).map(r=>{
-            const ts=r.timestamp||r.fecha||r.Timestamp||'';
-            const d=toDate(ts);
-            return{
-              ts, date:d, y:d?d.getFullYear():null, m:d?d.getMonth()+1:null, d:d?d.getDate():null,
-              cliente:r.cliente||r.Cliente||'', mesa:r.mesa||r.Mesa||'',
-              metodo:(r.metodoPago||r.metodo||r.Metodo||'').toString().trim(),
-              total:Number(r.total||r.Total||0),
-              totalCosto:Number(r.totalCosto||r.TotalCosto||0),
-              ganancia:Number(r.ganancia||r.Ganancia|| (Number(r.total||0)-Number(r.totalCosto||0))),
-              pago:Number(r.pago||r.Pago||0),
-              items:r['items(json)']||r.items||'[]',
-              categoria:r.categoria||''
-            };
-          });
-          ROWS=rows.filter(r=>r.date);
-          buildMesOptions();
-          if (badge) badge.textContent='Menú sincronizado';
-          resolve();
-        }catch(e){ reject(e); }
-      },
-      error:(err)=>reject(err)
-    });
-  });
-}
-
-function buildMesOptions(){
-  const set=new Set(ROWS.map(r=>`${r.y}-${String(r.m).padStart(2,'0')}`));
-  MES_OPTS=[...set].sort().reverse().map(key=>{
-    const [yy,mm]=key.split('-'); const d=new Date(Number(yy),Number(mm)-1,1);
-    const label=d.toLocaleDateString('es-AR',{month:'long',year:'numeric'});
-    return {key, label:label.charAt(0).toUpperCase()+label.slice(1)};
-  });
-  const sel=qs('#mesFiltro'); if(!sel) return;
-  sel.innerHTML='';
-  MES_OPTS.forEach(o=>{
-    const opt=document.createElement('option');
-    opt.value=o.key; opt.textContent=o.label; sel.appendChild(opt);
-  });
-  const now=new Date(); const nowKey=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
-  mesSelKey = MES_OPTS.find(o=>o.key===nowKey)?.key || MES_OPTS[0]?.key || '';
-  if (mesSelKey) sel.value=mesSelKey;
-  renderAll();
-}
-
-function mediosMap(met){
-  const s=(met||'').toLowerCase();
-  if (s.includes('efect')) return 'efectivo';
-  if (s.includes('mp') || s.includes('mercado') || s.includes('qr')) return 'mp';
-  return 'otros';
-}
-
-function renderAll(){
-  if (!mesSelKey) return;
-  const [yy,mm]=mesSelKey.split('-').map(Number);
-  const monthRows = ROWS.filter(r=>sameYMonth(r.date,yy,mm));
-
-  const ventas = monthRows.length;
-  const ingresos = monthRows.reduce((a,r)=>a+r.total,0);
-  const costo = monthRows.reduce((a,r)=>a+r.totalCosto,0);
-  const ganMes = monthRows.reduce((a,r)=>a+r.ganancia,0);
-
-  const byMethod={efectivo:0, mp:0, otros:0};
-  monthRows.forEach(r=>{ byMethod[mediosMap(r.metodo)] += Number(r.total||0); });
-
-  qs('#kpiVentas')      && (qs('#kpiVentas').textContent      = ventas);
-  qs('#kpiIngresos')    && (qs('#kpiIngresos').textContent    = fmtARS(ingresos));
-  qs('#kpiGananciaMes') && (qs('#kpiGananciaMes').textContent = fmtARS(ganMes));
-  qs('#kpiEfectivoMes') && (qs('#kpiEfectivoMes').textContent = fmtARS(byMethod.efectivo));
-  qs('#kpiMpMes')       && (qs('#kpiMpMes').textContent       = fmtARS(byMethod.mp));
-
-  // KPIs del resto (Costo del mes / Gastos del mes y comparativas)
-  window.ReporteData = Object.assign({}, window.ReporteData||{}, {
-    ventas: monthRows.map(r=>({ total:r.total, costoTotal:r.totalCosto, items: safeJson(r.items), fecha:r.date }))
-  });
-  refreshReporteKPIs();
-
-  // Tabla ventas
-  const tb = qs('#tbodyVentas'); if (tb){
-    tb.innerHTML = monthRows.slice().sort((a,b)=>b.date-a.date).map(r=>`
-      <tr>
-        <td class="p-2">${String(r.ts).slice(0,19).replace('T',' ')}</td>
-        <td class="p-2">${r.cliente||''}</td>
-        <td class="p-2">${r.mesa||''}</td>
-        <td class="p-2">${r.metodo||''}</td>
-        <td class="p-2">${(function(){ const arr=safeJson(r.items); return Array.isArray(arr)?arr.map(x=>`${x.nombre||''} x${x.qty||1}`).join(', '):''; })()}</td>
-        <td class="p-2 text-right">${fmtARS(r.total)}</td>
-        <td class="p-2 text-right">${fmtARS(r.ganancia)}</td>
-      </tr>`).join('');
-  }
-
-  renderKPIsDia(); // inicial
-}
-
-function safeJson(txt){ try{ return JSON.parse(txt||'[]'); }catch{ return []; } }
-
-function renderKPIsDia(){
-  const sel = qs('#diaFiltro');
-  const [yy,mm] = mesSelKey.split('-').map(Number);
-  if (!sel) return;
-
-  // por defecto: hoy si pertenece al mes
-  if (!sel.value){
-    const today=new Date();
-    const key=`${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}`;
-    if (key===mesSelKey) sel.value=today.toISOString().slice(0,10);
-  }
-  if (!sel.value) return;
-
-  const d = toDate(sel.value);
-  const hFrom = qs('#horaDesde')?.value || '';
-  const hTo   = qs('#horaHasta')?.value || '';
-
-  const rowsDia = ROWS.filter(r => sameYMonth(r.date, yy, mm) && r.date.toISOString().slice(0,10)===sel.value);
-  const inTime = (dt)=>{
-    if(!hFrom && !hTo) return true;
-    const hhmm = dt.toTimeString().slice(0,5);
-    if (hFrom && hhmm < hFrom) return false;
-    if (hTo   && hhmm > hTo)   return false;
-    return true;
-  };
-  const rowsDiaTime = rowsDia.filter(r=>inTime(r.date));
-
-  const ing = rowsDiaTime.reduce((a,r)=>a+r.total,0);
-  const cos = rowsDiaTime.reduce((a,r)=>a+r.totalCosto,0);
-  const gan = rowsDiaTime.reduce((a,r)=>a+r.ganancia,0);
-  const uni = rowsDiaTime.reduce((a,r)=>{ const arr=safeJson(r.items); return a + (Array.isArray(arr)?arr.reduce((s,x)=>s+(Number(x.qty)||0),0):0); },0);
-
-  qs('#kpiIngDia')     && (qs('#kpiIngDia').textContent     = fmtARS(ing));
-  qs('#kpiCostoDia')   && (qs('#kpiCostoDia').textContent   = fmtARS(cos));
-  qs('#kpiGanDia')     && (qs('#kpiGanDia').textContent     = fmtARS(gan));
-  qs('#kpiVentasDia')  && (qs('#kpiVentasDia').textContent  = rowsDiaTime.length);
-  qs('#kpiUniDia')     && (qs('#kpiUniDia').textContent     = uni);
-  qs('#cierreIng')     && (qs('#cierreIng').textContent     = fmtARS(ing));
-  qs('#cierreCosto')   && (qs('#cierreCosto').textContent   = fmtARS(cos));
-  qs('#cierreBruta')   && (qs('#cierreBruta').textContent   = fmtARS(ing-cos));
-  const gastosInp = qs('#cierreGastos'); const gastos = gastosInp ? Number(gastosInp.value||0) : 0;
-  qs('#cierreGastosLbl') && (qs('#cierreGastosLbl').textContent = fmtARS(gastos));
-  const neta = (ing-cos) - gastos;
-  qs('#cierreNeta')    && (qs('#cierreNeta').textContent    = fmtARS(neta));
-  const perInp = qs('#cierrePersonas'); const personas = perInp ? Math.max(1, Number(perInp.value||1)) : 1;
-  qs('#cierrePorPersona') && (qs('#cierrePorPersona').textContent = fmtARS(neta/personas));
-  qs('#cierreRangoLbl')   && (qs('#cierreRangoLbl').textContent   = `${sel.value}${(hFrom||hTo)? ` · ${hFrom||'00:00'}–${hTo||'23:59'}`:''}`);
-}
-
-// ===== Gastos (API POS) =====
-const API_G = API;
-
-(function initGastosUI(){
-  const hoy = new Date().toISOString().slice(0,10);
-  const f = qs('#gFecha'); if (f && !f.value) f.value = hoy;
-})();
-
-async function guardarGasto(){
-  const fecha      = (qs('#gFecha')?.value || '').trim();
-  const categoria  = (qs('#gCategoria')?.value || 'Otros').trim();
-  const concepto   = (qs('#gConcepto')?.value || '').trim();
-  const proveedor  = (qs('#gProveedor')?.value || '').trim();
-  const montoNum   = Number(qs('#gMonto')?.value || 0);
-  const nota       = (qs('#gNota')?.value || '').trim();
-  const btn        = qs('#btnGuardarGasto');
-  const msg        = qs('#gMsg');
-
-  if (!fecha || !concepto || !Number.isFinite(montoNum) || montoNum <= 0){
-    alert('Completá Fecha, Concepto y un Monto válido.'); return;
-  }
-
-  const payload = { type:'expense', fecha, categoria_gasto:categoria, concepto, proveedor, qty:1, costo_unit:montoNum, nota };
-
-  try{
-    if(btn){ btn.disabled=true; btn.textContent='Guardando…'; }
-    if(msg) msg.textContent='';
-    const res = await fetch(API_G, {
-      method:'POST',
-      headers:{ 'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8' },
-      body: 'payload='+encodeURIComponent(JSON.stringify(payload))
-    });
-    const data = await res.json().catch(()=> ({}));
-    if (!res.ok || data.ok !== true) throw new Error(data.error || `HTTP ${res.status}`);
-
-    ['#gConcepto','#gProveedor','#gMonto','#gNota'].forEach(id=>{ const el=qs(id); if(el) el.value=''; });
-    if(msg) msg.textContent = '✅ Gasto guardado';
-    await cargarGastosRecientes();
-  }catch(err){
-    console.error(err); alert('No se pudo guardar el gasto: ' + err.message);
-  }finally{
-    if(btn){ btn.disabled=false; btn.textContent='Guardar gasto'; }
-  }
-}
-
-async function cargarGastosRecientes(){
-  try{
-    const res = await fetch(`${API_G}?action=items&limit=50`);
-    const json = await res.json();
-    if (json?.ok !== true) throw new Error(json?.error || 'Error al leer ITEMS');
-    const rows = (json.items || []).filter(it => String(it.tipo).toLowerCase() === 'compra');
-    const tb = qs('#tbodyGastos'); if (!tb) return;
-    tb.innerHTML = rows.map(r=>`
-      <tr>
-        <td class="p-2">${(r.fecha||'').toString().slice(0,10)}</td>
-        <td class="p-2">${r.categoria_gasto||'-'}</td>
-        <td class="p-2">${r.concepto||'-'}</td>
-        <td class="p-2 text-right">${fmtARS(r.subtotal || r.costo_unit || 0)}</td>
-      </tr>`).join('');
-  }catch(err){
-    console.error('cargarGastosRecientes', err);
-  }
-}
-
-// ===== Eventos (vanilla) =====
-qs('#btnReload')?.addEventListener('click', loadCSV);
-qs('#mesFiltro')?.addEventListener('change', e=>{ mesSelKey = e.target.value; renderAll(); });
-['#diaFiltro','#horaDesde','#horaHasta','#cierrePersonas','#cierreGastos'].forEach(sel=>{
-  const el = qs(sel); el && el.addEventListener('input', renderKPIsDia);
-  el && el.addEventListener('change', renderKPIsDia);
-});
-qs('#btnHoy')?.addEventListener('click', ()=>{
-  const t=new Date().toISOString().slice(0,10);
-  const el=qs('#diaFiltro'); if(el){ el.value=t; renderKPIsDia(); }
-});
-qs('#btnAyer')?.addEventListener('click', ()=>{
-  const d=new Date(); d.setDate(d.getDate()-1);
-  const el=qs('#diaFiltro'); if(el){ el.value=d.toISOString().slice(0,10); renderKPIsDia(); }
-});
-qs('#btnMenos2')?.addEventListener('click', ()=>{
-  const d=new Date(); d.setDate(d.getDate()-2);
-  const el=qs('#diaFiltro'); if(el){ el.value=d.toISOString().slice(0,10); renderKPIsDia(); }
-});
-qs('#btnGuardarGasto')?.addEventListener('click', guardarGasto);
-qs('#btnRecargarGastos')?.addEventListener('click', cargarGastosRecientes);
-
-// ===== Init =====
-document.addEventListener('DOMContentLoaded', async ()=>{
-  try{
-    const badge = qs('#statusBadge');
-    badge && (badge.textContent='Sincronizando…');
-    await loadCSV();
-    await cargarGastosRecientes();
-    refreshReporteKPIs();
-  }catch(e){
-    console.error(e);
-    qs('#statusBadge') && (qs('#statusBadge').textContent='Error');
-    qs('#diag') && (qs('#diag').textContent=String(e));
-  }
-});
-</script>
-
-
-
-     <script src="./fixes/planfix.js"></script>
-     <script src="./fixes/gastosfix.js"></script>
-  <script src="./fixes/kpisfix.js"></script>
-
+  </script>
 </body>
 </html>
