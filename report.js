@@ -17,6 +17,12 @@ let GASTOS = []; // compras del API (carne/almacén/bebidas/etc.)
 let mesSelKey = '';
 let CHARTS = { pie:null, barQty:null, barProf:null, horas:null };
 
+/* ===== Conciliación (MP/Efectivo) ===== */
+const CONC_KEY = 'reporte-concil-1112';
+let CONC = { mp: 0, efectivo: 0 };
+function loadConcil(){ try{ const raw=localStorage.getItem(CONC_KEY); if(raw){ CONC = { mp:0, efectivo:0, ...JSON.parse(raw) }; } }catch{} }
+function saveConcil(){ try{ localStorage.setItem(CONC_KEY, JSON.stringify(CONC)); }catch{} }
+
 /* ================= CSV ================= */
 async function loadCSV(){
   const url = $('#csvUrl').val().trim();
@@ -242,6 +248,9 @@ function renderAll(){
 
   // Charts (si existen)
   renderCharts(monthRows);
+
+  // Conciliación (si hay UI)
+  renderConciliacion(byMethod, ingresos, costo, gMes);
 }
 
 function renderKPIsDia(){
@@ -299,6 +308,65 @@ function renderKPIsDia(){
   $('#cierreRangoLbl').text(`${selDia}${(hFrom||hTo)? ` · ${hFrom||'00:00'}–${hTo||'23:59'}` : ''}`);
 
   $('#kpiGanDiaLbl').text(`${r2.length} ventas · ${uni} unid.`);
+}
+
+/* ============== Conciliación (MP/Efectivo) ============== */
+/* UI opcional:
+  <div class="bg-white rounded-2xl shadow p-4">
+    <h2 class="text-lg font-semibold mb-2">Conciliación</h2>
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div>
+        <label class="block text-xs text-slate-600 mb-1">Saldo Mercado Pago (actual)</label>
+        <input id="concMpInput" type="number" class="rounded-xl border-gray-300 w-full" placeholder="Ej: 321287" />
+      </div>
+      <div>
+        <label class="block text-xs text-slate-600 mb-1">Efectivo en caja (actual)</label>
+        <input id="concEfInput" type="number" class="rounded-xl border-gray-300 w-full" placeholder="Ej: 150000" />
+      </div>
+      <div class="self-end text-sm">
+        <div>MP reportado (mes): <b id="concMpRep">$0</b></div>
+        <div>Efectivo reportado (mes): <b id="concEfRep">$0</b></div>
+        <div class="mt-1">Dif. MP: <b id="concMpDiff">$0</b></div>
+        <div>Dif. Efectivo: <b id="concEfDiff">$0</b></div>
+        <div class="mt-1">Diferencia total: <b id="concTotalDiff">$0</b></div>
+      </div>
+    </div>
+  </div>
+*/
+function renderConciliacion(byMethod, ingresosMes, costoMes, gastosMes){
+  // si no existen los elementos, no hago nada (add-only, no rompe)
+  const $mpIn = document.getElementById('concMpInput');
+  const $efIn = document.getElementById('concEfInput');
+  if(!$mpIn && !$efIn) return;
+
+  // cargar valores guardados
+  if($mpIn && !$mpIn.dataset.bound){
+    $mpIn.value = Number(CONC.mp||0);
+    $mpIn.addEventListener('input', ()=>{ CONC.mp = Number($mpIn.value||0); saveConcil(); renderConciliacion(byMethod, ingresosMes, costoMes, gastosMes); });
+    $mpIn.dataset.bound = '1';
+  }
+  if($efIn && !$efIn.dataset.bound){
+    $efIn.value = Number(CONC.efectivo||0);
+    $efIn.addEventListener('input', ()=>{ CONC.efectivo = Number($efIn.value||0); saveConcil(); renderConciliacion(byMethod, ingresosMes, costoMes, gastosMes); });
+    $efIn.dataset.bound = '1';
+  }
+
+  const mpRep = Number(byMethod.mp||0);
+  const efRep = Number(byMethod.efectivo||0);
+  const mpAct = Number(CONC.mp||0);
+  const efAct = Number(CONC.efectivo||0);
+
+  const mpDiff = mpAct - mpRep;
+  const efDiff = efAct - efRep;
+  const totalDiff = mpDiff + efDiff;
+
+  // pintar si existen labels
+  const setTxt = (id, val)=>{ const el=document.getElementById(id); if(el) el.textContent = $fmt(val); };
+  setTxt('concMpRep', mpRep);
+  setTxt('concEfRep', efRep);
+  setTxt('concMpDiff', mpDiff);
+  setTxt('concEfDiff', efDiff);
+  setTxt('concTotalDiff', totalDiff);
 }
 
 /* ================= Charts (opcional, no rompe si falta) ================= */
@@ -391,6 +459,7 @@ document.getElementById('btnRecargarGastos')?.addEventListener('click', cargarGa
 /* ================= Init ================= */
 (async function(){
   try{
+    loadConcil();
     await loadCSV();
     await cargarGastosRecientes(); // llena GASTOS y refresca KPIs
   }catch(e){
