@@ -659,7 +659,9 @@ Object.entries(prodPorCat).forEach(([cat, prods]) => {
     }
 
     function renderAll(){
-      if (!mesSelKey) return;
+   
+      renderKPIsDia();
+   if (!mesSelKey) return;
       const [yy, mm] = mesSelKey.split('-').map(Number);
 
       // Mes seleccionado
@@ -687,8 +689,6 @@ Object.entries(prodPorCat).forEach(([cat, prods]) => {
       $('#kpiMpMes').text($fmt(byMethod.mp));
 
       // KPIs día (usa el selector de día + horario)
-      renderKPIsDia();
-
       // Tabla simple (puedes adaptarla a paginador si ya lo tenías)
       const $tb = $('#tbodyVentas'); $tb.empty();
      monthRows.slice().sort((a,b)=> b.date - a.date).forEach(r=>{
