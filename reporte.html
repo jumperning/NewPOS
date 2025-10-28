@@ -624,7 +624,9 @@ const formatARDateTime = (d) => {
     <td class="p-2 text-right">${$fmt(r.total)}</td>
     <td class="p-2 text-right">${$fmt(r.ganancia)}</td>
   </tr>`);
-});
+}); // ← cierra el forEach
+
+} 
 
     function renderKPIsDia(){
       const dia = $('#diaFiltro').val();
