@@ -565,6 +565,70 @@ const formatARDateTime = (d) => {
       mesSelKey = MES_OPTS.find(o=>o.key===nowKey)?.key || MES_OPTS[0]?.key || '';
       if (mesSelKey) sel.val(mesSelKey);
       renderAll();
+      // === Productos por Categoría (resumen mensual) ===
+const prodPorCat = {};
+
+// recorrer todas las ventas del mes
+monthRows.forEach(r => {
+  try {
+    const items = JSON.parse(r.items || '[]');
+    items.forEach(it => {
+      const cat = it.categoria || r.categoria || 'Sin categoría';
+      if (!prodPorCat[cat]) prodPorCat[cat] = {};
+      const nombre = it.nombre || 'Sin nombre';
+      const qty = Number(it.qty) || 0;
+      const costo = Number(it.costo) || 0;
+      const total = Number(it.total) || 0;
+      const ganancia = total - costo;
+
+      if (!prodPorCat[cat][nombre]) {
+        prodPorCat[cat][nombre] = { qty: 0, ganancia: 0 };
+      }
+      prodPorCat[cat][nombre].qty += qty;
+      prodPorCat[cat][nombre].ganancia += ganancia;
+    });
+  } catch (e) {
+    console.warn('Error parseando items', e);
+  }
+});
+
+// renderizar
+const $wrapProd = $('#productosPorCategoria');
+$wrapProd.empty();
+
+Object.entries(prodPorCat).forEach(([cat, prods]) => {
+  let totalCat = 0;
+  let html = `<div class="rounded-xl border p-3 bg-gray-50">
+    <h4 class="font-semibold text-sm mb-2">${cat}</h4>
+    <table class="w-full text-sm">
+      <thead class="bg-white"><tr>
+        <th class="text-left p-1">Producto</th>
+        <th class="text-right p-1">Unidades vendidas</th>
+        <th class="text-right p-1">Ganancia</th>
+      </tr></thead>
+      <tbody>`;
+
+  Object.entries(prods)
+    .sort((a,b)=>b[1].qty - a[1].qty) // ordenar por unidades vendidas
+    .forEach(([nombre, d]) => {
+      totalCat += d.qty;
+      html += `<tr>
+        <td class="p-1">${nombre}</td>
+        <td class="p-1 text-right">${d.qty}</td>
+        <td class="p-1 text-right">${$fmt(d.ganancia)}</td>
+      </tr>`;
+    });
+
+  html += `<tr class="font-semibold border-t">
+    <td class="p-1">Total ${cat}</td>
+    <td class="p-1 text-right">${totalCat}</td>
+    <td></td>
+  </tr>`;
+  html += `</tbody></table></div>`;
+
+  $wrapProd.append(html);
+});
+
     }
 
     function mediosMap(met){
