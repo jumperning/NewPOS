@@ -188,36 +188,22 @@
           </div>
 
           <!-- Análisis por categoría (placeholder intacto) -->
-          <div class="bg-white rounded-2xl shadow p-4 space-y-4">
-            <div class="flex flex-wrap items-center gap-3">
-              <h2 class="text-lg font-semibold mr-auto">Análisis por Categoría</h2>
-              <div class="flex gap-2">
-                <span class="chip">Café</span><span class="chip">Comida</span><span class="chip">Cerveza</span>
-                <span class="chip">Gaseosa</span><span class="chip">Agua</span><span class="chip">Vino</span>
-                <span class="chip">Whisky</span><span class="chip">Tragos</span>
-              </div>
-            </div>
+        <!-- Productos vendidos en el mes -->
+<div class="bg-white rounded-2xl shadow p-4 mt-6">
+  <h2 class="text-lg font-semibold mb-2">Productos vendidos en el mes</h2>
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead class="bg-gray-50 text-slate-600">
+        <tr>
+          <th class="text-left p-2">Producto</th>
+          <th class="text-right p-2">Unidades vendidas</th>
+        </tr>
+      </thead>
+      <tbody id="tbodyProductosMes" class="divide-y"></tbody>
+    </table>
+  </div>
+</div>
 
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6" id="aggWrap">
-              <div class="rounded-xl border p-3"><div class="text-sm text-slate-500 mb-2">Participación por Unidades (%)</div><canvas id="chartPie"></canvas></div>
-              <div class="rounded-xl border p-3"><div class="text-sm text-slate-500 mb-2">Unidades por Categoría</div><canvas id="chartBarQty"></canvas></div>
-              <div class="rounded-xl border p-3"><div class="text-sm text-slate-500 mb-2">Ganancia por Categoría (ARS)</div><canvas id="chartBarProfit"></canvas></div>
-            </div>
-
-            <div id="dailyWrap" class="rounded-xl border p-3 hidden">
-              <div class="text-sm text-slate-500 mb-2">Unidades — Día a día</div>
-              <canvas id="chartDailyQty"></canvas>
-            </div>
-
-            <div class="overflow-x-auto">
-              <table class="w-full text-sm mt-2">
-                <thead class="bg-gray-50 text-slate-600">
-                  <tr><th class="text-left p-2">Categoría</th><th class="text-right p-2">Unidades</th><th class="text-right p-2">Veces</th><th class="text-right p-2">Ganancia</th></tr>
-                </thead>
-                <tbody id="tbodyResumenCat" class="divide-y"></tbody>
-              </table>
-            </div>
-          </div>
 
           <!-- Horarios -->
           <div class="bg-white rounded-2xl shadow p-4 space-y-2">
@@ -565,6 +551,40 @@ const formatARDateTime = (d) => {
       mesSelKey = MES_OPTS.find(o=>o.key===nowKey)?.key || MES_OPTS[0]?.key || '';
       if (mesSelKey) sel.val(mesSelKey);
       renderAll();
+
+// === Productos vendidos en el mes ===
+const productosMes = {};
+
+monthRows.forEach(r => {
+  try {
+    const items = JSON.parse(r.items || '[]');
+    items.forEach(it => {
+      const nombre = it.nombre || 'Sin nombre';
+      const qty = Number(it.qty) || 0;
+      if (!productosMes[nombre]) productosMes[nombre] = 0;
+      productosMes[nombre] += qty;
+    });
+  } catch (e) {
+    console.warn('Error parseando items', e);
+  }
+});
+
+const $tbProd = $('#tbodyProductosMes');
+$tbProd.empty();
+
+// ordenar por unidades vendidas (de mayor a menor)
+Object.entries(productosMes)
+  .sort((a, b) => b[1] - a[1])
+  .forEach(([nombre, qty]) => {
+    $tbProd.append(`<tr>
+      <td class="p-2">${nombre}</td>
+      <td class="p-2 text-right">${qty}</td>
+    </tr>`);
+  });
+
+
+
+      
       // === Productos por Categoría (resumen mensual) ===
 const prodPorCat = {};
 
