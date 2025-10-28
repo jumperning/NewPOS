@@ -485,6 +485,23 @@
     };
     const sameYMonth = (d, y, m) => d && d.getFullYear()===y && (d.getMonth()+1)===m;
 
+
+// === Fecha/hora en Argentina ===
+const TZ_AR = 'America/Argentina/Cordoba';
+const formatARDateTime = (d) => {
+  if (!(d instanceof Date) || isNaN(d)) return '';
+  return new Intl.DateTimeFormat('es-AR', {
+    timeZone: TZ_AR,
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit',
+    hour12: false
+  }).format(d);
+};
+
+
+
+
+    
     // Estado
     let ROWS = [];         // ventas parseadas
     let MES_OPTS = [];     // {key:'2025-03', label:'Marzo 2025'}
@@ -590,18 +607,24 @@
 
       // Tabla simple (puedes adaptarla a paginador si ya lo tenías)
       const $tb = $('#tbodyVentas'); $tb.empty();
-      monthRows.slice().sort((a,b)=> b.date - a.date).forEach(r=>{
-        $tb.append(`<tr>
-          <td class="p-2">${r.ts.toString().slice(0,19).replace('T',' ')}</td>
-          <td class="p-2">${r.cliente||''}</td>
-          <td class="p-2">${r.mesa||''}</td>
-          <td class="p-2">${r.metodo||''}</td>
-          <td class="p-2">${(function(){ try{const arr=JSON.parse(r.items||'[]'); return arr.map(x=>`${x.nombre||''} x${x.qty||1}`).join(', ')}catch{return ''}})()}</td>
-          <td class="p-2 text-right">${$fmt(r.total)}</td>
-          <td class="p-2 text-right">${$fmt(r.ganancia)}</td>
-        </tr>`);
-      });
-    }
+     monthRows.slice().sort((a,b)=> b.date - a.date).forEach(r=>{
+  $tb.append(`<tr>
+    <td class="p-2">${formatARDateTime(r.date)}</td>
+    <td class="p-2">${r.cliente||''}</td>
+    <td class="p-2">${r.mesa||''}</td>
+    <td class="p-2">${r.metodo||''}</td>
+    <td class="p-2">${
+      (function(){
+        try{
+          const arr = JSON.parse(r.items||'[]');
+          return arr.map(x=>`${x.nombre||''} x${x.qty||1}`).join(', ')
+        }catch{return ''}
+      })()
+    }</td>
+    <td class="p-2 text-right">${$fmt(r.total)}</td>
+    <td class="p-2 text-right">${$fmt(r.ganancia)}</td>
+  </tr>`);
+});
 
     function renderKPIsDia(){
       const dia = $('#diaFiltro').val();
