@@ -1,3 +1,83 @@
+
+
+// Utilidad: clave de día "YYYY-MM-DD"
+const dayKey = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+
+// Devuelve las ventas del día seleccionado, respetando filtro horario
+function getRowsDiaTime() {
+  const selDia = $('#diaFiltro').val();
+  if (!selDia || !mesSelKey) return [];
+
+  const [yy, mm] = mesSelKey.split('-').map(Number);
+  const rowsDia = ROWS.filter(r => sameYMonth(r.date, yy, mm) && r.date.toISOString().slice(0,10) === selDia);
+
+  const hFrom = $('#horaDesde').val();
+  const hTo   = $('#horaHasta').val();
+  const inTime = (dt) => {
+    if (!hFrom && !hTo) return true;
+    const hhmm = dt.toTimeString().slice(0,5);
+    if (hFrom && hhmm < hFrom) return false;
+    if (hTo   && hhmm > hTo)   return false;
+    return true;
+  };
+
+  return rowsDia.filter(r => inTime(r.date));
+}
+
+// Render de la tabla "Movimientos del día"
+function renderMovimientosDia() {
+  const rows = getRowsDiaTime().slice().sort((a,b)=> a.date - b.date); // ascendente por hora
+
+  const $tb = $('#tbodyMovDia');
+  $tb.empty();
+
+  let totIng = 0, totCos = 0, totGan = 0, totUni = 0;
+
+  rows.forEach(r => {
+    const hora = formatARDateTime(r.date).slice(11,16); // HH:MM en AR
+    // unidades del ticket
+    let u = 0;
+    try {
+      const arr = JSON.parse(r.items||'[]');
+      if (Array.isArray(arr)) u = arr.reduce((s,x)=> s + (Number(x.qty)||0), 0);
+    } catch {}
+
+    totIng += Number(r.total||0);
+    totCos += Number(r.totalCosto||0);
+    totGan += Number(r.ganancia||0);
+    totUni += u;
+
+    $tb.append(`<tr>
+      <td class="p-2">${hora}</td>
+      <td class="p-2">${r.cliente||''}</td>
+      <td class="p-2">${r.mesa||''}</td>
+      <td class="p-2">${r.metodo||''}</td>
+      <td class="p-2 text-right">${$fmt(r.total)}</td>
+      <td class="p-2 text-right">${$fmt(r.totalCosto)}</td>
+      <td class="p-2 text-right">${$fmt(r.ganancia)}</td>
+    </tr>`);
+  });
+
+  // Totales
+  $('#movTotIng').text($fmt(totIng));
+  $('#movTotCos').text($fmt(totCos));
+  $('#movTotGan').text($fmt(totGan));
+
+  // Encabezado (fecha + conteos)
+  const selDia = $('#diaFiltro').val() || '–';
+  const hFrom = $('#horaDesde').val(), hTo = $('#horaHasta').val();
+  $('#movDiaLbl').text(`${selDia}${(hFrom||hTo)? ` · ${hFrom||'00:00'}–${hTo||'23:59'}`:''}`);
+  $('#movCountLbl').text(`${rows.length} ventas`);
+  $('#movUniLbl').text(totUni);
+}
+
+
+
+
+
+
+
+
 // ===== Buckets: metas y porcentajes (pueden editarse desde la UI) =====
 const BUCKET_PCTS = { alquiler: 0.39, sueldos: 0.47, luz: 0.10, eventos: 0.04 };
 
@@ -315,6 +395,7 @@ async function cargarGastosRecientes(){
         </tr>`).join('');
     }
     renderKPIsDia(); // para reflejar “Gastos del local”
+    renderMovimientosDia();
   }catch(e){ console.error('cargarGastosRecientes',e); }
 }
 
