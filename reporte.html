@@ -98,7 +98,46 @@
           <div id="statusBadge" class="text-xs px-3 py-1 rounded-full bg-gray-100">Sincronizando…</div>
         </div>
       </header>
+<!-- Movimientos del día -->
+<section class="rounded-2xl bg-white shadow p-4 mb-4">
+  <div class="flex items-center justify-between mb-2">
+    <h2 class="text-lg font-semibold">Movimientos del día</h2>
+    <div class="text-xs text-slate-500">
+      <span id="movDiaLbl">–</span>
+      <span class="mx-2">•</span>
+      <span id="movCountLbl">0 ventas</span>
+      <span class="mx-2">•</span>
+      <span>Unid: <b id="movUniLbl">0</b></span>
+    </div>
+  </div>
 
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead class="bg-gray-50 text-slate-600">
+        <tr>
+          <th class="text-left p-2">Hora</th>
+          <th class="text-left p-2">Cliente</th>
+          <th class="text-left p-2">Mesa</th>
+          <th class="text-left p-2">Método</th>
+          <th class="text-right p-2">Total</th>
+          <th class="text-right p-2">Costo</th>
+          <th class="text-right p-2">Ganancia</th>
+        </tr>
+      </thead>
+      <tbody id="tbodyMovDia" class="divide-y"></tbody>
+      <tfoot>
+        <tr class="bg-gray-50 font-semibold">
+          <td class="p-2" colspan="4">Totales</td>
+          <td class="p-2 text-right" id="movTotIng">$0</td>
+          <td class="p-2 text-right" id="movTotCos">$0</td>
+          <td class="p-2 text-right" id="movTotGan">$0</td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+</section>
+
+      
       <!-- Config -->
       <section class="rounded-2xl bg-white shadow p-4">
         <label class="block text-sm font-medium mb-1">URL CSV publicada (hoja POSOnceyDoce)</label>
