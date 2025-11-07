@@ -90,8 +90,8 @@ function buildMesOptions(){
 }
 
 /* ================== Accesores de datos ================== */
-// Ventas del mes seleccionado
-function monthRows(){
+// Ventas del mes seleccionado (SIN usar el nombre conflictivo)
+function getMonthRows(){
   if(!mesSelKey) return [];
   const [yy,mm] = mesSelKey.split('-').map(Number);
   return ROWS.filter(r => sameYMonth(r.date,yy,mm));
@@ -118,7 +118,7 @@ function getRowsDiaTime() {
 
 /* ================== KPIs ================== */
 function monthAgg(){
-  const rows = monthRows();
+  const rows = getMonthRows();
   return {
     ingresos: rows.reduce((a,r)=>a+r.total,0),
     costo:    rows.reduce((a,r)=>a+r.totalCosto,0),
@@ -264,7 +264,7 @@ function renderCharts(){
   Object.values(CHARTS).forEach(c=>{try{c?.destroy()}catch{}});
   CHARTS = { pie:null, barQty:null, barProf:null, horas:null };
 
-  const rows = monthRows();
+  const rows = getMonthRows();
 
   // Agregado por categoría
   const agg = CAT_LABELS.reduce((m,c)=>{m[c]={unidades:0,gan:0}; return m;},{});
@@ -407,7 +407,7 @@ function renderSueldos(){
 }
 
 function monthAggForPlan(){
-  const rows = monthRows();
+  const rows = getMonthRows();
   const ingresos = rows.reduce((a,r)=>a+r.total,0);
   const costo    = rows.reduce((a,r)=>a+r.totalCosto,0);
   const diasSet  = new Set(rows.map(r => r.date.toISOString().slice(0,10)));
@@ -523,7 +523,7 @@ function renderAll(){
 
   // Tabla de ventas (mes)
   const $tb = $('#tbodyVentas'); if($tb.length){
-    const rows = monthRows().slice().sort((a,b)=> b.date-a.date);
+    const rows = getMonthRows().slice().sort((a,b)=> b.date-a.date);
     $tb.empty();
     rows.forEach(r=>{
       $tb.append(`<tr>
