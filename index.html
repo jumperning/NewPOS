@@ -231,21 +231,89 @@
   // ===== Utils =====
   const $fmt = (n) => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(Number(n||0));
   const uid = () => 'm' + Math.random().toString(36).slice(2,9);
+  function mesaActual(){ return MESAS.find(m=>m.id===MESA_ACTUAL); }
 
-  // --- Storage ---
-  function loadState(){
+  // ====== Estado remoto compartido (reemplaza localStorage) ======
+  const STATE_KEY = "POS_MESAS_V1";   // Identificador/room del estado compartido
+  const SYNC_MS   = 2000;              // Polling liviano ~tiempo real
+  let   LAST_REMOTE_TS = 0;            // Marca del último update aplicado
+  let   SAVE_TIMER = null;
+  const nowIso = () => new Date().toISOString();
+  function debounceSave(){ clearTimeout(SAVE_TIMER); SAVE_TIMER = setTimeout(saveState, 400); }
+
+  async function fetchRemoteState(){
     try{
-      const raw = localStorage.getItem('pos-1112-mesas');
-      if(raw){ const data = JSON.parse(raw); MESAS = data.mesas||[]; MESA_ACTUAL = data.actual||null; }
-    }catch{}
-    if(MESAS.length===0){
+      const url = `${ORDERS_WEBAPP_URL}?action=get_state&key=${encodeURIComponent(STATE_KEY)}`;
+      const r = await fetch(url, { method:'GET' });
+      if(!r.ok) throw new Error('HTTP '+r.status);
+      const data = await r.json(); // { ok:true, state:{mesas,actual,updatedAt} }
+      return (data && data.ok && data.state) ? data.state : null;
+    }catch(e){ console.warn('No pude leer estado remoto:', e.message); return null; }
+  }
+
+  async function pushRemoteState(payload){
+    try{
+      const body = new URLSearchParams();
+      body.set('action','save_state');
+      body.set('key', STATE_KEY);
+      body.set('payload', JSON.stringify(payload));
+      const r = await fetch(ORDERS_WEBAPP_URL, {
+        method:'POST',
+        headers:{ 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
+        body
+      });
+      const txt = await r.text(); let data; try{ data=JSON.parse(txt) }catch{ data={ok:true} }
+      if(!r.ok || data.ok===false) throw new Error((data && data.error)||'Error al guardar estado remoto');
+      return true;
+    }catch(e){ console.error('pushRemoteState:', e.message); return false; }
+  }
+
+  function applyRemoteState(state){
+    if(!state) return;
+    if(Array.isArray(state.mesas) && state.mesas.length){
+      MESAS = state.mesas;
+      MESA_ACTUAL = state.actual || (MESAS[0] && MESAS[0].id) || null;
+    }else{
+      if(MESAS.length===0){
+        const id = uid();
+        MESAS=[{id, nombre:'Mesa 1', color:'#e11d48', items:[], cliente:'', pago:0, metodo:'Efectivo'}];
+        MESA_ACTUAL=id;
+      }
+    }
+    LAST_REMOTE_TS = Date.parse(state.updatedAt || nowIso()) || Date.now();
+    renderMesas();
+  }
+
+  async function loadState(){
+    let remote = await fetchRemoteState();
+    if(!remote){
       const id = uid();
       MESAS=[{id, nombre:'Mesa 1', color:'#e11d48', items:[], cliente:'', pago:0, metodo:'Efectivo'}];
       MESA_ACTUAL=id;
+      await pushRemoteState({ mesas:MESAS, actual:MESA_ACTUAL, updatedAt: nowIso() });
+      remote = { mesas:MESAS, actual:MESA_ACTUAL, updatedAt: nowIso() };
     }
+    applyRemoteState(remote);
   }
-  function saveState(){ localStorage.setItem('pos-1112-mesas', JSON.stringify({mesas:MESAS, actual:MESA_ACTUAL})); }
-  function mesaActual(){ return MESAS.find(m=>m.id===MESA_ACTUAL); }
+
+  async function saveState(){
+    const payload = { mesas: MESAS, actual: MESA_ACTUAL, updatedAt: nowIso() };
+    const ok = await pushRemoteState(payload);
+    if(ok) LAST_REMOTE_TS = Date.parse(payload.updatedAt) || Date.now();
+  }
+
+  function startSync(){
+    setInterval(async ()=>{
+      try{
+        const st = await fetchRemoteState();
+        if(!st) return;
+        const serverTs = Date.parse(st.updatedAt||0) || 0;
+        if(serverTs > LAST_REMOTE_TS){
+          applyRemoteState(st);
+        }
+      }catch(e){ /* silencioso */ }
+    }, SYNC_MS);
+  }
 
   // ====== STOCK ======
   function reservedQtyAllMesas(rowId){
@@ -300,6 +368,7 @@
         </div>`);
     });
     const m = mesaActual();
+    if(!m) return;
     $('#mesaTitulo').text(m.nombre);
     $('#cliente').val(m.cliente);
     $('#pago').val(m.pago);
@@ -307,25 +376,25 @@
     $('#colorMesa').val(m.color);
     $('#cartWrapper').css('border-color', m.color);
     renderCart();
-    saveState();
+    // (sin saveState automático; lo controlamos en acciones y debounce)
   }
 
   function nuevaMesa(nombre='Mesa '+(MESAS.length+1)){
     const m = { id:uid(), nombre, color:'#e11d48', items:[], cliente:'', pago:0, metodo:'Efectivo' };
-    MESAS.push(m); MESA_ACTUAL=m.id; renderMesas();
+    MESAS.push(m); MESA_ACTUAL=m.id; renderMesas(); saveState();
   }
   function duplicarMesa(id){
     const src = MESAS.find(m=>m.id===id); if(!src) return;
     const copy = { ...src, id:uid(), nombre: src.nombre+" (copia)", items: JSON.parse(JSON.stringify(src.items)) };
-    MESAS.push(copy); MESA_ACTUAL=copy.id; renderMesas();
+    MESAS.push(copy); MESA_ACTUAL=copy.id; renderMesas(); saveState();
   }
   function eliminarMesa(id){
     if(MESAS.length===1){ alert('Debe quedar al menos una mesa.'); return; }
     MESAS = MESAS.filter(m=>m.id!==id);
     if(MESA_ACTUAL===id){ MESA_ACTUAL = MESAS[0].id; }
-    renderMesas();
+    renderMesas(); saveState();
   }
-  function cambiarColorActual(color){ const m=mesaActual(); if(!m) return; m.color=color; $('#cartWrapper').css('border-color', color); saveState(); renderMesas(); }
+  function cambiarColorActual(color){ const m=mesaActual(); if(!m) return; m.color=color; $('#cartWrapper').css('border-color', color); debounceSave(); renderMesas(); }
 
   // ===== Productos y filtros =====
   function groupUnique(arr, key){ return [...new Set(arr.map(x => (x[key]||"").toString().trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b)); }
@@ -576,11 +645,10 @@
   }
 
   function openPrintWindow(innerHTML, title='Impresión POS'){
-  // Ventana nueva sin 'noopener' para asegurar acceso al documento en todos los navegadores
-  const w = window.open('', '_blank', 'width=420,height=800'); 
-  if(!w){ alert('El navegador bloqueó la ventana de impresión. Permití popups para este sitio.'); return; }
+    const w = window.open('', '_blank', 'width=420,height=800');
+    if(!w){ alert('El navegador bloqueó la ventana de impresión. Permití popups para este sitio.'); return; }
 
-  const css = `
+    const css = `
     <style>
       :root{ color-scheme: light only; }
       html,body{ margin:0; padding:0; background:#fff; }
@@ -600,10 +668,9 @@
         body{ margin:0; }
         .no-print{ display:none !important; }
       }
-    </style>
-  `;
+    </style>`;
 
-  const htmlDoc = `<!DOCTYPE html>
+    const htmlDoc = `<!DOCTYPE html>
   <html>
     <head>
       <meta charset="utf-8"/>
@@ -616,26 +683,24 @@
     </body>
   </html>`;
 
-  try{
-    w.document.open();
-    w.document.write(htmlDoc);
-    w.document.close();
-    // Disparo adicional desde el padre para navegadores que no ejecutan el onload del hijo en about:blank
-    setTimeout(()=>{ try{ w.focus(); w.print(); }catch(e){} }, 50);
-  }catch(err){
-    // Fallback con data URL
-    const blob = new Blob([htmlDoc], {type:'text/html'});
-    const url = URL.createObjectURL(blob);
-    w.location.href = url;
+    try{
+      w.document.open();
+      w.document.write(htmlDoc);
+      w.document.close();
+      setTimeout(()=>{ try{ w.focus(); w.print(); }catch(e){} }, 50);
+    }catch(err){
+      const blob = new Blob([htmlDoc], {type:'text/html'});
+      const url = URL.createObjectURL(blob);
+      w.location.href = url;
+    }
   }
-}
-  /* ======== FIN IMPRESIÓN EN VENTANA NUEVA ======== */
+  /* ======== FIN IMPRESIÓN ======== */
 
   // ===== Eventos UI =====
   function bindEvents(){
     $('#btnNuevaMesa').on('click', ()=> nuevaMesa());
-    $('#listaMesas').on('click','[data-action="switch"]', function(){ MESA_ACTUAL=$(this).data('id'); renderMesas(); });
-    $('#listaMesas').on('click','[data-action="rename"]', function(){ const id=$(this).data('id'); const m=MESAS.find(x=>x.id===id); if(!m) return; const nv = prompt('Nuevo nombre', m.nombre); if(nv){ m.nombre=nv; if(MESA_ACTUAL===id) $('#mesaTitulo').text(nv); renderMesas(); } });
+    $('#listaMesas').on('click','[data-action="switch"]', function(){ MESA_ACTUAL=$(this).data('id'); renderMesas(); saveState(); });
+    $('#listaMesas').on('click','[data-action="rename"]', function(){ const id=$(this).data('id'); const m=MESAS.find(x=>x.id===id); if(!m) return; const nv = prompt('Nuevo nombre', m.nombre); if(nv){ m.nombre=nv; if(MESA_ACTUAL===id) $('#mesaTitulo').text(nv); renderMesas(); saveState(); } });
     $('#listaMesas').on('click','[data-action="dup"]', function(){ duplicarMesa($(this).data('id')); });
     $('#listaMesas').on('click','[data-action="del"]', function(){ eliminarMesa($(this).data('id')); });
     $('#colorMesa').on('input', function(){ cambiarColorActual($(this).val()); });
@@ -650,23 +715,16 @@
     $('#cartTable').on('click','button[data-action="del"]', function(){ removeFromCart($(this).data('id')); });
     $('#cartTable').on('input','input[data-action="qty"]', function(){ setQty($(this).data('id'), $(this).val()); });
 
-    $('#cliente').on('input', function(){ const m=mesaActual(); if(!m) return; m.cliente=$(this).val(); saveState(); });
-    $('#pago').on('input', function(){ const m=mesaActual(); if(!m) return; m.pago=Number($(this).val()||0); renderCart(); saveState(); });
-    $('#metodoPago').on('change', function(){ const m=mesaActual(); if(!m) return; m.metodo = $(this).val(); saveState(); });
+    $('#cliente').on('input', function(){ const m=mesaActual(); if(!m) return; m.cliente=$(this).val(); debounceSave(); });
+    $('#pago').on('input', function(){ const m=mesaActual(); if(!m) return; m.pago=Number($(this).val()||0); renderCart(); debounceSave(); });
+    $('#metodoPago').on('change', function(){ const m=mesaActual(); if(!m) return; m.metodo = $(this).val(); debounceSave(); });
 
     $('#btnVaciar').on('click', function(){ const m=mesaActual(); if(!m) return; m.items=[]; renderCart(); saveState(); renderProducts(); });
     $('#btnDuplicarMesa').on('click', function(){ duplicarMesa(MESA_ACTUAL); });
     $('#btnGuardar').on('click', saveOrder);
 
-    // Impresión -> ventana nueva
-    $('#btnTicket').on('click', ()=>{
-      const m=mesaActual(); if(!m || (m.items||[]).length===0){ alert('No hay items.'); return; }
-      openPrintWindow( buildTicketHTML(m), 'Ticket — OnceyDoce' );
-    });
-    $('#btnComanda').on('click', ()=>{
-      const m=mesaActual(); if(!m || (m.items||[]).length===0){ alert('No hay items.'); return; }
-      openPrintWindow( buildComandaHTML(m), 'Comanda — OnceyDoce' );
-    });
+    $('#btnTicket').on('click', ()=>{ const m=mesaActual(); if(!m || (m.items||[]).length===0){ alert('No hay items.'); return; } openPrintWindow( buildTicketHTML(m), 'Ticket — OnceyDoce' ); });
+    $('#btnComanda').on('click', ()=>{ const m=mesaActual(); if(!m || (m.items||[]).length===0){ alert('No hay items.'); return; } openPrintWindow( buildComandaHTML(m), 'Comanda — OnceyDoce' ); });
   }
 
   // ===== Carga de menú (CSV publicado) =====
@@ -716,10 +774,11 @@
 
   // ===== Init =====
   $(async function(){
-    loadState();
+    await loadState();
     bindEvents();
     renderMesas();
     await loadMenu();
+    startSync();
   });
 </script>
 
