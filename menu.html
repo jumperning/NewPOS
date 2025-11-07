@@ -7,18 +7,47 @@
 
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  <style>
+    .inp{ border:1px solid rgb(226,232,240); border-radius:.5rem; padding:.5rem .625rem; background:#f8fafc }
+    .inp:focus{ outline:none; border-color:#94a3b8; background:#fff }
+  </style>
 </head>
-<body class="bg-slate-100 min-h-screen p-6">
-  <div class="max-w-6xl mx-auto">
-    <h1 class="text-2xl font-bold mb-4">Gestor de Menú OnceyDoce 🍔</h1>
+<body class="bg-slate-100 min-h-screen">
+
+  <!-- ===== Login Overlay ===== -->
+  <div id="loginOverlay" class="fixed inset-0 bg-white/90 backdrop-blur-sm grid place-items-center z-50">
+    <div class="w-[min(420px,92vw)] bg-white rounded-2xl shadow p-6 border">
+      <h2 class="text-xl font-bold mb-4">Ingresar al Editor de Menú</h2>
+      <div class="space-y-3">
+        <div>
+          <label class="block text-sm mb-1">Usuario</label>
+          <input id="loginUser" class="inp w-full" placeholder="Admin / Maximiliano / Matias / Javier / invitado"/>
+        </div>
+        <div>
+          <label class="block text-sm mb-1">Clave</label>
+          <input id="loginPass" type="password" class="inp w-full" placeholder="••••••"/>
+        </div>
+        <button id="btnLogin" class="w-full py-2 rounded-xl font-semibold text-white" style="background:#e11d48">Entrar</button>
+        <div id="loginMsg" class="text-sm text-red-600 hidden"></div>
+        <p class="text-xs text-slate-500">Solo <b>Admin</b> puede crear/editar/borrar productos.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="max-w-6xl mx-auto p-6">
+    <div class="flex items-center justify-between mb-4">
+      <h1 class="text-2xl font-bold">Gestor de Menú OnceyDoce 🍔</h1>
+      <div class="text-sm text-slate-500" id="userBadge"></div>
+    </div>
 
     <!-- Filtros -->
     <div class="flex flex-wrap gap-3 mb-6 bg-white p-4 rounded-xl shadow">
-      <input id="q" class="border rounded px-3 py-2 flex-1" placeholder="Buscar por nombre, SKU o categoría...">
-      <select id="cat" class="border rounded px-3 py-2">
+      <input id="q" class="inp flex-1 min-w-[220px]" placeholder="Buscar por nombre, SKU o categoría...">
+      <select id="cat" class="inp min-w-[220px]">
         <option value="">Todas las categorías</option>
       </select>
-      <button id="refresh" class="bg-slate-800 text-white px-4 py-2 rounded">Refrescar</button>
+      <button id="newItem" class="px-4 py-2 rounded text-white" style="background:#0ea5e9">Nuevo producto</button>
+      <button id="refresh" class="px-4 py-2 rounded text-white" style="background:#334155">Refrescar</button>
     </div>
 
     <!-- Contenedor de tarjetas -->
@@ -26,41 +55,72 @@
   </div>
 
 <script>
+/* ========= CONFIG ========= */
 const ORDERS_WEBAPP_URL = '/.netlify/functions/gs-order';
 
-// =============== API HELPERS ===============
+/* ========= AUTH ========= */
+let CURRENT_USER = null; // {username, role, token}
+
+function setAuthUI(){
+  $('#userBadge').text(CURRENT_USER ? `${CURRENT_USER.username} · ${CURRENT_USER.role}` : '');
+}
+
 async function apiGet(qs){
   const url = new URL(ORDERS_WEBAPP_URL, location.origin);
   Object.entries(qs).forEach(([k,v])=> url.searchParams.set(k,v));
+  if (CURRENT_USER?.token) url.searchParams.set('token', CURRENT_USER.token);
   const r = await fetch(url);
   return r.json();
 }
 async function apiPost(body){
   const params = new URLSearchParams(body);
+  if (CURRENT_USER?.token) params.set('token', CURRENT_USER.token);
   const r = await fetch(ORDERS_WEBAPP_URL, {
     method:'POST',
     headers:{'Content-Type':'application/x-www-form-urlencoded'},
     body: params
   });
-  return r.json();
+  const t = await r.text(); try{ return JSON.parse(t); }catch{ return {ok:r.ok}; }
 }
 
-// =============== RENDER ===============
+async function login(u,p){
+  const res = await apiPost({ action:'login', payload: JSON.stringify({ username:u, password:p }) });
+  if(!res.ok) throw new Error(res.error||'Login inválido');
+  CURRENT_USER = { username:res.username, role:res.role, token:res.token };
+  $('#loginOverlay').addClass('hidden');
+  setAuthUI();
+}
+
+/* Soporte token por URL (?token=...&username=...&role=...) */
+function tryTokenFromURL(){
+  const u = new URL(location.href);
+  const token = u.searchParams.get('token');
+  const username = u.searchParams.get('username') || 'Usuario';
+  const role = u.searchParams.get('role') || 'user';
+  if (token){
+    CURRENT_USER = { username, role, token };
+    $('#loginOverlay').addClass('hidden');
+    setAuthUI();
+    return true;
+  }
+  return false;
+}
+
+/* ========= UI CARDS ========= */
 function productCard(p){
   const desact = String(p.stock).toLowerCase()==='no';
   const checked = String(p.masvendido).toLowerCase()==='si' ? 'checked' : '';
   const stockVal = desact ? 'no' : (p.stock==='' ? '' : Number(p.stock));
 
   return `
-  <div data-row="${p._row}" class="bg-white rounded-xl shadow p-4 flex flex-col gap-3 ${desact?'opacity-60':''}">
+  <div data-row="${p._row||''}" class="bg-white rounded-xl shadow p-4 flex flex-col gap-3 ${desact?'opacity-60':''}">
     <div class="flex items-start gap-3">
       <img src="${p.img || 'https://via.placeholder.com/80x80?text=Sin+imagen'}"
            onerror="this.src='https://via.placeholder.com/80x80?text=Error'"
            class="h-20 w-20 object-cover rounded border"/>
-
       <div class="flex-1">
-        <input data-k="nombre" class="w-full font-semibold text-lg outline-none" value="${p.nombre||''}">
-        <div class="text-sm text-slate-500">${p.sku || ''}</div>
+        <input data-k="nombre" class="w-full font-semibold text-lg inp bg-white" value="${p.nombre||''}">
+        <div class="text-xs text-slate-500">SKU: <input data-k="sku" class="inp inline-block w-36" value="${p.sku||''}"></div>
       </div>
     </div>
 
@@ -96,8 +156,8 @@ function productCard(p){
     </div>
 
     <div class="flex gap-2 justify-end mt-2">
-      <button class="bg-rose-600 text-white px-3 py-1 rounded" data-action="del">Borrar</button>
-      <button class="bg-slate-700 text-white px-3 py-1 rounded" data-action="save">Guardar</button>
+      <button class="px-3 py-1 rounded text-white" style="background:#e11d48" data-action="del">Borrar</button>
+      <button class="px-3 py-1 rounded text-white" style="background:#334155" data-action="save">Guardar</button>
     </div>
   </div>`;
 }
@@ -113,12 +173,12 @@ function renderMenu(list){
     .forEach(p => $list.append(productCard(p)));
 }
 
-// =============== CRUD ===============
+/* ========= CRUD helpers ========= */
 function readCard($card){
   const get = k => $card.find(`[data-k="${k}"]`);
   return {
     _row: Number($card.data('row')||0),
-    sku: '',
+    sku: get('sku').val(),
     nombre: get('nombre').val(),
     categoria: get('categoria').val(),
     subcategoria: get('subcategoria').val(),
@@ -136,6 +196,7 @@ function readCard($card){
   };
 }
 
+/* ========= Events ========= */
 $('#menuList').on('click','[data-action="save"]', async function(){
   const $c = $(this).closest('[data-row]');
   const payload = readCard($c);
@@ -153,26 +214,53 @@ $('#menuList').on('click','[data-action="del"]', async function(){
   else $c.remove();
 });
 
-// =============== LOAD ===============
-async function refreshMenu(){
-  const res = await apiGet({action:'menu_list'});
-  if(!res.ok){ alert(res.error||'Error al cargar'); return; }
-  window.__MENU = res.items || [];
-  const cats = [...new Set(window.__MENU.map(x=>x.categoria).filter(Boolean))];
-  $('#cat').empty().append('<option value="">Todas</option>');
-  cats.forEach(c=> $('#cat').append(`<option>${c}</option>`));
-  renderMenu(window.__MENU);
-}
-
 $('#refresh').on('click', refreshMenu);
 $('#q').on('input', ()=> renderMenu(window.__MENU||[]));
 $('#cat').on('change', ()=> renderMenu(window.__MENU||[]));
 
-$(refreshMenu);
-</script>
+$('#newItem').on('click', async ()=>{
+  // crea card en blanco (fila nueva)
+  const blank = { _row:'', sku:'', nombre:'', categoria:'', subcategoria:'', TIPO:'', SUBTIPO:'', img:'', precio:0, Costo:0, stock:'', masvendido:'no' };
+  $('#menuList').prepend(productCard(blank));
+});
 
-<style>
-  .inp{ @apply border rounded px-2 py-1 bg-slate-50 focus:bg-white focus:border-slate-400; }
-</style>
+/* ========= Load ========= */
+async function refreshMenu(){
+  const res = await apiGet({action:'menu_list'});
+  if(!res.ok){ 
+    if(res.error && /No autenticado/i.test(res.error)) {
+      $('#loginOverlay').removeClass('hidden');
+      return;
+    }
+    alert(res.error||'Error al cargar'); 
+    return; 
+  }
+  window.__MENU = res.items || [];
+  const cats = [...new Set(window.__MENU.map(x=>x.categoria).filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+  $('#cat').empty().append('<option value="">Todas las categorías</option>');
+  cats.forEach(c=> $('#cat').append(`<option>${c}</option>`));
+  renderMenu(window.__MENU);
+}
+
+/* ========= Boot ========= */
+$(async function(){
+  // Intento auto-auth por token en URL
+  if(!tryTokenFromURL()){
+    // si no hay token en URL, mostramos overlay hasta que haga login
+    $('#loginOverlay').removeClass('hidden');
+  }
+  // botón login
+  $('#btnLogin').on('click', async ()=>{
+    const u=$('#loginUser').val().trim(); 
+    const p=$('#loginPass').val();
+    $('#loginMsg').addClass('hidden').text('');
+    try{ await login(u,p); await refreshMenu(); }
+    catch(e){ $('#loginMsg').removeClass('hidden').text(e.message||'Error'); }
+  });
+
+  // si ya hay token (por URL), cargar menú
+  if(CURRENT_USER?.token) await refreshMenu();
+});
+</script>
 </body>
 </html>
