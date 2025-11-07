@@ -3,36 +3,45 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>Editor de Productos — OnceyDoce</title>
+  <title>Editor de Menú — OnceyDoce</title>
 
+  <!-- Tailwind (modo claro) -->
   <script> window.tailwind = { config: { darkMode: 'class' } } </script>
   <script src="https://cdn.tailwindcss.com"></script>
 
   <style>
-    :root{ --surface:#ffffff; --accent-600:#e11d48; }
-    .card{ background:#fff; border:1px solid #e5e7eb; border-radius:1rem; }
-    .btn{ padding:.5rem .875rem; border-radius:.75rem; border:1px solid #e5e7eb; background:#fff; }
-    .btn:hover{ background:#f9fafb }
+    :root{
+      --surface:#ffffff; --surface-weak:#f6f7f9;
+      --accent-50:#fff1f2; --accent-100:#ffe4e6;
+      --accent-500:#f43f5e; --accent-600:#e11d48;
+    }
+    body { background:#f8fafc; color:#0f172a }
+    .card{ background:var(--surface); border:1px solid rgba(15,23,42,.08); border-radius:1rem; }
+    .btn{ padding:.5rem .875rem; border-radius:.75rem; border:1px solid rgba(15,23,42,.10); background:#fff; }
+    .btn:hover{ background:#f1f5f9 }
     .btn-primary{ border:none; background:var(--accent-600); color:#fff }
-    .btn-primary:hover{ filter:brightness(1.05) }
-    .inp{ border-radius:.6rem; border:1px solid #e5e7eb; padding:.45rem .6rem; }
-    .inp:focus{ outline:none; box-shadow:0 0 0 3px rgba(225,29,72,.15); border-color:var(--accent-600) }
-    .pill{font-size:.7rem;padding:.15rem .5rem;border-radius:999px;border:1px solid #e5e7eb}
-    td,th{ padding:.5rem .6rem; border-bottom:1px solid #eef2f7; vertical-align:middle; }
-    table{ width:100%; border-collapse:separate; border-spacing:0; }
+    .btn-primary:hover{ background:var(--accent-500) }
+    .inp{ border-radius:.75rem; border:1px solid #e5e7eb; padding:.5rem .75rem }
+    .inp:focus{ outline:none; box-shadow:0 0 0 3px rgba(244,63,94,.15),0 0 0 1px var(--accent-500); border-color:var(--accent-500) }
+    .table-wrap{ overflow:auto; }
+    .thumb{ height:40px; width:40px; object-fit:cover; border:1px solid #e5e7eb; border-radius:.5rem }
+    .row-disabled{ opacity:.6 }
+    .pill{ font-size:11px; padding:.125rem .5rem; border-radius:999px; border:1px solid #e5e7eb; background:#fff }
   </style>
 
   <script>
-    // Reusamos las mismas claves que tu POS:
-    window.ODPOS = window.ODPOS || {};
-    window.ODPOS.ORDERS_WEBAPP_URL = window.ODPOS.ORDERS_WEBAPP_URL || "/.netlify/functions/gs-order";
+    /* ====== CONFIG ======
+       Ajustá si tu endpoint está en otro lado */
+    const ORDERS_WEBAPP_URL = "/.netlify/functions/gs-order";
   </script>
 </head>
-<body class="bg-slate-50 text-black">
-  <!-- LOGIN OVERLAY -->
+<body>
+
+  <!-- LOGIN (admin) -->
   <div id="loginOverlay" class="fixed inset-0 bg-white/90 backdrop-blur-sm grid place-items-center z-[100]">
-    <div class="w-[min(420px,92vw)] card p-6">
-      <h2 class="text-xl font-bold mb-4">Ingresar (solo Admin)</h2>
+    <div class="w-[min(440px,92vw)] card p-6">
+      <h2 class="text-xl font-bold mb-1">Ingresar — Editor de Menú</h2>
+      <p class="text-sm text-slate-500 mb-4">Solo <b>Admin</b> puede editar el menú.</p>
       <div class="space-y-3">
         <div>
           <label class="block text-sm mb-1">Usuario</label>
@@ -45,256 +54,264 @@
         <button id="btnLogin" class="btn-primary w-full rounded-xl py-2 font-semibold">Entrar</button>
         <div id="loginMsg" class="text-sm text-red-600 hidden"></div>
       </div>
-      <p class="text-xs text-gray-500 mt-4">Solo <b>Admin</b> puede editar el menú.</p>
     </div>
   </div>
 
+  <!-- Header -->
   <header class="sticky top-0 z-40 bg-white border-b border-slate-200">
-    <div class="px-4 py-3 flex items-center justify-between">
+    <div class="px-4 py-3 max-w-7xl mx-auto flex items-center justify-between">
       <div class="flex items-center gap-3">
-        <div class="h-8 w-8 grid place-items-center rounded-lg bg-[var(--accent-600)] text-white font-black">OD</div>
-        <div class="font-bold">Editor de Productos</div>
-        <span id="status" class="pill ml-2">Listo</span>
+        <div class="h-9 w-9 grid place-items-center rounded-xl bg-[var(--accent-600)] text-white font-black">OD</div>
+        <div>
+          <div class="text-lg font-extrabold">OnceyDoce</div>
+          <div class="text-xs text-slate-500">Editor de Menú</div>
+        </div>
       </div>
-      <div id="userBadge" class="text-xs text-gray-500"></div>
+      <div class="flex items-center gap-3">
+        <span id="roleBadge" class="pill">—</span>
+        <a href="./index.html" class="btn">Volver al POS</a>
+      </div>
     </div>
   </header>
 
-  <main class="p-4 sm:p-6 max-w-7xl mx-auto space-y-6">
-    <div class="card p-4">
-      <div class="grid sm:grid-cols-3 gap-3">
-        <div>
-          <label class="block text-sm mb-1">Buscar</label>
-          <input id="buscar" class="inp w-full" placeholder="nombre, sku, categoría…"/>
-        </div>
-        <div>
-          <label class="block text-sm mb-1">Categoría</label>
-          <input id="filCat" class="inp w-full" placeholder="Filtrar por categoría"/>
-        </div>
-        <div class="flex items-end">
-          <button id="btnRefrescar" class="btn rounded-xl">Refrescar</button>
-        </div>
-      </div>
-    </div>
+  <!-- Contenido -->
+  <main class="p-4 sm:p-6">
+    <div class="max-w-7xl mx-auto space-y-4">
 
-    <div class="card p-0 overflow-auto">
-      <table id="tbl">
-        <thead class="bg-slate-50 text-slate-700 text-sm">
-          <tr>
-            <th>SKU</th>
-            <th>Nombre</th>
-            <th>Categoría</th>
-            <th>Subcat</th>
-            <th class="text-right">Precio</th>
-            <th class="text-right">Costo</th>
-            <th class="text-right">Stock</th>
-            <th class="text-right">Min</th>
-            <th style="width:160px"></th>
-          </tr>
-        </thead>
-        <tbody id="tbody" class="text-sm"></tbody>
-      </table>
-    </div>
+      <div class="card p-4">
+        <div class="grid md:grid-cols-12 gap-3 items-end">
+          <div class="md:col-span-6">
+            <label class="block text-sm font-medium mb-1">Buscar</label>
+            <input id="q" class="inp w-full" placeholder="nombre, sku, categoría..."/>
+          </div>
+          <div class="md:col-span-4">
+            <label class="block text-sm font-medium mb-1">Categoría</label>
+            <select id="cat" class="inp w-full">
+              <option value="">Filtrar por categoría</option>
+            </select>
+          </div>
+          <div class="md:col-span-2 flex gap-2">
+            <button id="btnRefresh" class="btn w-full">Refrescar</button>
+          </div>
+        </div>
+      </div>
 
-    <div class="card p-4">
-      <h3 class="font-semibold mb-3">Nuevo producto</h3>
-      <div class="grid md:grid-cols-8 gap-2">
-        <input id="n_sku"  class="inp" placeholder="SKU">
-        <input id="n_nombre" class="inp md:col-span-2" placeholder="Nombre">
-        <input id="n_cat" class="inp" placeholder="Categoría">
-        <input id="n_sub" class="inp" placeholder="Subcat">
-        <input id="n_precio" class="inp" placeholder="Precio" type="number" step="1" min="0">
-        <input id="n_costo" class="inp" placeholder="Costo" type="number" step="1" min="0">
-        <input id="n_stock" class="inp" placeholder="Stock" type="number" step="1" min="0">
-        <input id="n_min" class="inp" placeholder="Min" type="number" step="1" min="0">
+      <div class="flex items-center justify-between">
+        <div class="text-sm text-slate-600">
+          Total: <b id="countItems">0</b> productos
+        </div>
+        <div class="flex gap-2">
+          <button id="btnNew" class="btn-primary rounded-xl px-3 py-2 text-sm">+ Nuevo producto</button>
+        </div>
       </div>
-      <div class="mt-3 flex gap-2">
-        <button id="btnCrear" class="btn-primary rounded-xl px-4 py-2">Crear</button>
-        <span class="text-xs text-gray-500">* Valores numéricos sin puntos ni comas.</span>
+
+      <div class="card table-wrap">
+        <table class="min-w-full">
+          <thead class="bg-slate-50">
+            <tr>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600">SKU</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600">Nombre</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600">Categoría</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600">Subcat</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600">TIPO</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600">SUBTIPO</th>
+              <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600">Imagen</th>
+              <th class="px-4 py-3 text-right text-xs font-semibold text-slate-600">Precio</th>
+              <th class="px-4 py-3 text-right text-xs font-semibold text-slate-600">Costo</th>
+              <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600">Stock</th>
+              <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600">Más vendido</th>
+              <th class="px-4 py-3"></th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
       </div>
+
     </div>
   </main>
 
+  <!-- Libs -->
   <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+
   <script>
-  (() => {
-    'use strict';
-
-    const ORDERS_WEBAPP_URL = window.ODPOS.ORDERS_WEBAPP_URL;
+    // ======== AUTH =========
     let CURRENT_USER = null; // {username, role, token}
-    let DATA = []; // menú completo
-    let FILTER = { q:'', cat:'' };
 
-    // ===== API =====
-    async function apiPost(params){
-      const body = new URLSearchParams(params);
-      if(CURRENT_USER?.token) body.set('token', CURRENT_USER.token);
+    function setBadges(){
+      $('#roleBadge').text(CURRENT_USER ? `${CURRENT_USER.username} · ${CURRENT_USER.role}` : '—');
+    }
+    async function apiPost(body){
+      const params = new URLSearchParams(body);
+      if(CURRENT_USER?.token) params.set('token', CURRENT_USER.token);
       const r = await fetch(ORDERS_WEBAPP_URL, {
         method:'POST',
         headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},
-        body
+        body: params
       });
       const t = await r.text();
-      try{ return JSON.parse(t); }catch{ return {ok:r.ok} }
+      try{ return JSON.parse(t); }catch{ return { ok:r.ok }; }
     }
-    async function apiGet(params){
-      const qs = new URLSearchParams(params);
-      if(CURRENT_USER?.token) qs.set('token', CURRENT_USER.token);
-      const r = await fetch(`${ORDERS_WEBAPP_URL}?${qs.toString()}`);
+    async function apiGet(qs){
+      const url = new URL(ORDERS_WEBAPP_URL, location.origin);
+      Object.entries(qs).forEach(([k,v])=> url.searchParams.set(k,v));
+      if(CURRENT_USER?.token) url.searchParams.set('token', CURRENT_USER.token);
+      const r = await fetch(url);
       return r.json();
     }
-
     async function login(u,p){
       const res = await apiPost({ action:'login', payload: JSON.stringify({ username:u, password:p }) });
       if(!res.ok) throw new Error(res.error||'Login inválido');
       CURRENT_USER = { username:res.username, role:res.role, token:res.token };
-      if (CURRENT_USER.role !== 'admin') throw new Error('Solo Admin puede editar el menú');
+      setBadges();
+      if(CURRENT_USER.role!=='admin') throw new Error('Solo Admin puede editar el menú.');
       $('#loginOverlay').addClass('hidden');
-      $('#userBadge').text(`${CURRENT_USER.username} · ${CURRENT_USER.role}`);
     }
 
-    // ===== UI =====
-    function setStatus(msg){ $('#status').text(msg); }
+    // ======== MENU CRUD =========
+    const $fmt = n => new Intl.NumberFormat('es-AR',{style:'currency',currency:'ARS',maximumFractionDigits:0}).format(Number(n||0));
+    const esc = s => String(s||'').replace(/[&<>"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
 
-    function matchesRow(r){
-      const q = FILTER.q.toLowerCase();
-      const inCat = !FILTER.cat || r.categoria.toLowerCase().includes(FILTER.cat.toLowerCase());
-      const inText = !q || (r.nombre+' '+r.sku+' '+r.categoria+' '+r.subcategoria).toLowerCase().includes(q);
-      return inCat && inText;
-    }
-
-    function rowHtml(r){
-      // campos editables
+    function rowHTML(p){
+      const off = String(p.stock).toLowerCase()==='no';
+      const checked = String(p.masvendido).toLowerCase()==='si' ? 'checked' : '';
+      const stockVal = off ? 'no' : (p.stock==='' ? '' : Number(p.stock));
       return `
-        <tr data-row="${r._row}">
-          <td><input class="inp w-32" data-k="sku" value="${escapeHtml(r.sku)}"></td>
-          <td><input class="inp w-56" data-k="nombre" value="${escapeHtml(r.nombre)}"></td>
-          <td><input class="inp w-40" data-k="categoria" value="${escapeHtml(r.categoria)}"></td>
-          <td><input class="inp w-40" data-k="subcategoria" value="${escapeHtml(r.subcategoria)}"></td>
-          <td class="text-right"><input class="inp w-24 text-right" data-k="precio" type="number" step="1" min="0" value="${Number(r.precio)||0}"></td>
-          <td class="text-right"><input class="inp w-24 text-right" data-k="costo"  type="number" step="1" min="0" value="${Number(r.costo)||0}"></td>
-          <td class="text-right"><input class="inp w-20 text-right" data-k="stock"  type="number" step="1" min="0" value="${r.stock===''?'':Number(r.stock)||0}"></td>
-          <td class="text-right"><input class="inp w-20 text-right" data-k="min"    type="number" step="1" min="0" value="${r.min===''?'':Number(r.min)||0}"></td>
-          <td class="text-right">
-            <button class="btn-primary rounded-lg px-3 py-1.5" data-act="save">Guardar</button>
-            <button class="btn rounded-lg px-3 py-1.5" data-act="del">Borrar</button>
-          </td>
-        </tr>`;
+      <tr data-row="${p._row||''}" class="${off?'row-disabled':''}">
+        <td class="px-4 py-2"><input class="inp w-28" data-k="sku" value="${esc(p.sku)}"></td>
+        <td class="px-4 py-2"><input class="inp w-[20rem]" data-k="nombre" value="${esc(p.nombre)}"></td>
+        <td class="px-4 py-2"><input class="inp w-48" data-k="categoria" value="${esc(p.categoria)}"></td>
+        <td class="px-4 py-2"><input class="inp w-48" data-k="subcategoria" value="${esc(p.subcategoria)}"></td>
+        <td class="px-4 py-2"><input class="inp w-36" data-k="TIPO" value="${esc(p.TIPO)}"></td>
+        <td class="px-4 py-2"><input class="inp w-36" data-k="SUBTIPO" value="${esc(p.SUBTIPO)}"></td>
+        <td class="px-4 py-2">
+          <div class="flex items-center gap-2">
+            <img src="${esc(p.img)}" onerror="this.src=''" class="thumb"/>
+            <input class="inp w-[20rem]" data-k="img" placeholder="https://..." value="${esc(p.img)}">
+          </div>
+        </td>
+        <td class="px-4 py-2 text-right"><input class="inp w-28 text-right" data-k="precio" type="number" min="0" value="${Number(p.precio)||0}"></td>
+        <td class="px-4 py-2 text-right"><input class="inp w-28 text-right" data-k="Costo" type="number" min="0" value="${Number(p.Costo)||0}"></td>
+        <td class="px-4 py-2 text-center">
+          <div class="flex items-center justify-center gap-2">
+            <input class="inp w-20 text-center" data-k="stock" placeholder="número o 'no'" value="${esc(stockVal)}">
+            <button class="btn text-xs" data-action="toggle">${off?'Activar':'Desactivar'}</button>
+          </div>
+        </td>
+        <td class="px-4 py-2 text-center"><input type="checkbox" data-k="masvendido" ${checked}></td>
+        <td class="px-4 py-2">
+          <div class="flex flex-col gap-2 items-end">
+            <button class="btn-primary rounded-xl px-3 py-2 text-sm" data-action="save">Guardar</button>
+            <button class="btn rounded-xl px-3 py-2 text-sm" data-action="del">Borrar</button>
+          </div>
+        </td>
+      </tr>`;
     }
 
-    function render(){
-      const tbody = $('#tbody'); tbody.empty();
-      const rows = DATA.filter(matchesRow);
-      if(!rows.length){
-        tbody.html(`<tr><td colspan="9" class="text-center text-sm text-gray-500 py-6">Sin resultados</td></tr>`);
-        return;
-      }
-      rows.forEach(r => tbody.append(rowHtml(r)));
+    function materialize($tr){
+      const get = k => $tr.find(`[data-k="${k}"]`);
+      return {
+        _row: Number($tr.data('row')||0) || undefined,
+        sku: get('sku').val(),
+        nombre: get('nombre').val(),
+        categoria: get('categoria').val(),
+        subcategoria: get('subcategoria').val(),
+        TIPO: get('TIPO').val(),
+        SUBTIPO: get('SUBTIPO').val(),
+        img: get('img').val(),
+        precio: Number(get('precio').val()||0),
+        Costo: Number(get('Costo').val()||0),
+        stock: (()=>{
+          const v = String(get('stock').val()||'').trim();
+          if (v.toLowerCase()==='no') return 'no';
+          const n = Number(v); return isNaN(n)?'':n;
+        })(),
+        masvendido: $tr.find('[data-k="masvendido"]').prop('checked') ? 'si' : 'no'
+        // (items) se deja sin editar; el POS arma los ítems del pedido
+      };
     }
 
-    function escapeHtml(s){
-      return String(s||'').replace(/[<>&"]/g, m => ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[m]));
+    function renderMenu(list){
+      const q = ($('#q').val()||'').toLowerCase();
+      const cat = $('#cat').val()||'';
+      const tbody = $('#tbody').empty();
+      let filtered = list;
+      if (cat) filtered = filtered.filter(x => (x.categoria||'')===cat);
+      if (q) filtered = filtered.filter(x => [x.nombre,x.categoria,x.subcategoria,x.sku].join(' ').toLowerCase().includes(q));
+      $('#countItems').text(filtered.length);
+      filtered.forEach(p => tbody.append(rowHTML(p)));
     }
 
-    // ===== Data =====
-    async function loadMenu(){
-      setStatus('Cargando…');
+    async function refreshMenu(){
       const res = await apiGet({ action:'menu_list' });
-      if(!res.ok) throw new Error(res.error||'No se pudo listar');
-      DATA = res.items || [];
-      setStatus(`Productos: ${DATA.length}`);
-      render();
+      if(!res.ok){ alert(res.error||'No se pudo cargar el menú'); return; }
+      window.__MENU = res.items || [];
+
+      // Popular combo de categorías
+      const cats = [...new Set(window.__MENU.map(x=>x.categoria).filter(Boolean))].sort();
+      const $cat = $('#cat'); const cur = $cat.val()||'';
+      $cat.empty().append(`<option value="">Filtrar por categoría</option>`);
+      cats.forEach(c => $cat.append(`<option>${c}</option>`));
+      if(cur) $cat.val(cur);
+
+      renderMenu(window.__MENU);
     }
 
-    async function upsertRow(domTr){
-      const $_ = $(domTr);
-      const _row = Number($_.data('row')||0);
-      const payload = {
-        _row,
-        sku: $_.find('[data-k="sku"]').val().trim(),
-        nombre: $_.find('[data-k="nombre"]').val().trim(),
-        categoria: $_.find('[data-k="categoria"]').val().trim(),
-        subcategoria: $_.find('[data-k="subcategoria"]').val().trim(),
-        precio: Number($_.find('[data-k="precio"]').val()||0),
-        costo:  Number($_.find('[data-k="costo"]').val()||0),
-        stock:  $_.find('[data-k="stock"]').val()==='' ? '' : Number($_.find('[data-k="stock"]').val()||0),
-        min:    $_.find('[data-k="min"]').val()===''   ? '' : Number($_.find('[data-k="min"]').val()||0),
-      };
+    // ====== Eventos tabla ======
+    $('#tbody').on('click','[data-action="toggle"]', function(){
+      const $tr = $(this).closest('tr');
+      const $st = $tr.find('[data-k="stock"]');
+      const v = String($st.val()||'').trim().toLowerCase();
+      if (v==='no'){ $st.val('0'); $tr.removeClass('row-disabled'); $(this).text('Desactivar'); }
+      else { $st.val('no'); $tr.addClass('row-disabled'); $(this).text('Activar'); }
+    });
 
-      // validaciones mínimas
-      if (!payload.nombre) { alert('Nombre es requerido'); return; }
-      if (payload.precio < 0 || payload.costo < 0) { alert('Precio/Costo inválidos'); return; }
-
-      setStatus('Guardando…');
+    $('#tbody').on('click','[data-action="save"]', async function(){
+      const $tr = $(this).closest('tr');
+      const payload = materialize($tr);
       const res = await apiPost({ action:'menu_upsert', payload: JSON.stringify(payload) });
-      if(!res.ok) { setStatus('Error'); alert(res.error||'No se pudo guardar'); return; }
+      if(!(res.ok || res.created || res.updated)){ alert(res.error||'Error al guardar'); return; }
+      await refreshMenu();
+    });
 
-      // refrescamos en memoria
-      await loadMenu();
-      setStatus('Guardado ✅');
-    }
-
-    async function deleteRow(domTr){
-      const _row = Number($(domTr).data('row')||0);
-      if(!_row) return;
+    $('#tbody').on('click','[data-action="del"]', async function(){
+      const $tr = $(this).closest('tr');
+      const row = Number($tr.data('row')||0);
+      if(!row){ if(confirm('Fila nueva sin guardar. ¿Quitar de la vista?')) $tr.remove(); return; }
       if(!confirm('¿Borrar este producto?')) return;
-      setStatus('Borrando…');
-      const res = await apiPost({ action:'menu_delete', payload: JSON.stringify({_row}) });
-      if(!res.ok){ setStatus('Error'); alert(res.error||'No se pudo borrar'); return; }
-      await loadMenu();
-      setStatus('Borrado ✅');
-    }
+      const res = await apiPost({ action:'menu_delete', payload: JSON.stringify({_row: row}) });
+      if(!(res.ok || res.deleted)){ alert(res.error||'No se pudo borrar'); return; }
+      $tr.remove();
+    });
 
-    async function createNew(){
-      const payload = {
-        sku: $('#n_sku').val().trim(),
-        nombre: $('#n_nombre').val().trim(),
-        categoria: $('#n_cat').val().trim(),
-        subcategoria: $('#n_sub').val().trim(),
-        precio: Number($('#n_precio').val()||0),
-        costo:  Number($('#n_costo').val()||0),
-        stock:  $('#n_stock').val()==='' ? '' : Number($('#n_stock').val()||0),
-        min:    $('#n_min').val()===''   ? '' : Number($('#n_min').val()||0),
+    // Nuevo producto
+    $('#btnNew').on('click', function(){
+      const nuevo = {
+        _row: '', sku:'', nombre:'', categoria:'', subcategoria:'',
+        TIPO:'', SUBTIPO:'', img:'', precio:0, Costo:0, stock:0, masvendido:'no'
       };
-      if(!payload.nombre){ alert('Nombre es requerido'); return; }
-      setStatus('Creando…');
-      const res = await apiPost({ action:'menu_upsert', payload: JSON.stringify(payload) });
-      if(!res.ok){ setStatus('Error'); alert(res.error||'No se pudo crear'); return; }
-      // limpiar form
-      $('#n_sku,#n_nombre,#n_cat,#n_sub,#n_precio,#n_costo,#n_stock,#n_min').val('');
-      await loadMenu();
-      setStatus('Creado ✅');
-    }
+      $('#tbody').prepend( rowHTML(nuevo) );
+    });
 
-    // ===== Eventos =====
-    function bind(){
-      $('#btnLogin').on('click', async()=>{
-        try{
-          const u = $('#loginUser').val().trim();
-          const p = $('#loginPass').val();
-          await login(u,p);
-          await loadMenu();
-        }catch(e){
-          $('#loginMsg').removeClass('hidden').text(e.message||'Error');
-        }
-      });
+    // Filtros / refresco
+    $('#q').on('input', ()=> renderMenu(window.__MENU||[]));
+    $('#cat').on('change', ()=> renderMenu(window.__MENU||[]));
+    $('#btnRefresh').on('click', refreshMenu);
 
-      $('#buscar').on('input', function(){ FILTER.q = $(this).val(); render(); });
-      $('#filCat').on('input', function(){ FILTER.cat = $(this).val(); render(); });
-      $('#btnRefrescar').on('click', loadMenu);
+    // ====== Login flow ======
+    $('#btnLogin').on('click', async()=>{
+      const u=$('#loginUser').val().trim();
+      const p=$('#loginPass').val();
+      $('#loginMsg').addClass('hidden').text('');
+      try{
+        await login(u,p);
+        await refreshMenu();
+      }catch(e){
+        $('#loginMsg').removeClass('hidden').text(e.message||'Error');
+      }
+    });
 
-      $('#tbody').on('click','button[data-act="save"]', function(){
-        upsertRow($(this).closest('tr')[0]);
-      });
-      $('#tbody').on('click','button[data-act="del"]', function(){
-        deleteRow($(this).closest('tr')[0]);
-      });
-
-      $('#btnCrear').on('click', createNew);
-    }
-
-    $(function(){ bind(); });
-  })();
+    // init
+    $(function(){ setBadges(); });
   </script>
 </body>
 </html>
