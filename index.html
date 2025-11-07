@@ -27,11 +27,7 @@
     body { color:#000; }
     .lock-pill{font-size:11px;padding:.125rem .5rem;border-radius:999px;border:1px solid #e5e7eb}
   </style>
-  <script>
-    const MENU_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTOCWWvu8KMMGhuRlTtbvCMEaJIWb9l3DYMi7281gfgncS5tGeO81BRpcCMk-SJIWtNyvWckt2bV4U-/pub?output=csv";
-    const ORDERS_WEBAPP_URL = "/.netlify/functions/gs-order";
-    const STORE_NAME = "OnceyDoce";
-  </script>
+
 </head>
 <body class="bg-slate-50 text-black">
   <!-- LOGIN OVERLAY -->
@@ -207,10 +203,14 @@
   <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
   <script>
-  const MENU_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTOCWWvu8KMMGhuRlTtbvCMEaJIWb9l3DYMi7281gfgncS5tGeO81BRpcCMk-SJIWtNyvWckt2bV4U-/pub?output=csv";
-  const ORDERS_WEBAPP_URL = "/.netlify/functions/gs-order";
-  const STORE_NAME = "OnceyDoce";
+    <script>
 
+
+      (() => {
+  'use strict';
+    const MENU_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTOCWWvu8KMMGhuRlTtbvCMEaJIWb9l3DYMi7281gfgncS5tGeO81BRpcCMk-SJIWtNyvWckt2bV4U-/pub?output=csv";
+    const ORDERS_WEBAPP_URL = "/.netlify/functions/gs-order";
+    const STORE_NAME = "OnceyDoce";
   // ===== AUTH =====
   let CURRENT_USER = null; // {username, role, token}
   function setAuthUI(){
@@ -667,7 +667,9 @@
   }
 
   $(function(){ bindEvents(); setAuthUI(); }); // Login espera al usuario
-</script>
+
+       })();
+       </script>
 
 </body>
 </html>
