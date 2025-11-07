@@ -488,502 +488,427 @@
       </div>
     </div>
   </div>
+<script>
+  // ================= Config / Helpers =================
+  const API = '/.netlify/functions/gs-order';
 
-  <!-- ============= LÓGICA ============= -->
-  <script>
-    // Config API (para gastos)
-    const API = '/.netlify/functions/gs-order';
+  const $fmt = (n) =>
+    new Intl.NumberFormat('es-AR', { style:'currency', currency:'ARS', maximumFractionDigits:0 })
+      .format(Number(n||0));
 
-    // Helpers
-    const $fmt = (n) => new Intl.NumberFormat('es-AR', { style:'currency', currency:'ARS', maximumFractionDigits:0 }).format(Number(n||0));
-    const toDate = (s) => {
-      if (!s) return null;
-      // soportar ISO o dd/mm/yyyy
-      const t = String(s).trim();
-      if (/^\d{4}-\d{2}-\d{2}/.test(t)) return new Date(t);
-      if (/^\d{2}\/\d{2}\/\d{4}/.test(t)){
-        const [d,m,y] = t.split('/');
-        return new Date(`${y}-${m}-${d}`);
-      }
-      const d = new Date(t);
-      return isNaN(d) ? null : d;
-    };
-    const sameYMonth = (d, y, m) => d && d.getFullYear()===y && (d.getMonth()+1)===m;
-
-
-// === Fecha/hora en Argentina ===
-const TZ_AR = 'America/Argentina/Cordoba';
-const formatARDateTime = (d) => {
-  if (!(d instanceof Date) || isNaN(d)) return '';
-  return new Intl.DateTimeFormat('es-AR', {
-    timeZone: TZ_AR,
-    year: 'numeric', month: '2-digit', day: '2-digit',
-    hour: '2-digit', minute: '2-digit', second: '2-digit',
-    hour12: false
-  }).format(d);
-};
-
-
-
-
-    
-    // Estado
-    let ROWS = [];         // ventas parseadas
-    let MES_OPTS = [];     // {key:'2025-03', label:'Marzo 2025'}
-    let mesSelKey = '';    // yyyy-mm
-
-    // Cargar CSV
-    async function loadCSV(){
-      const url = $('#csvUrl').val().trim();
-      $('#statusBadge').text('Cargando CSV…');
-      return new Promise((resolve, reject)=>{
-        Papa.parse(url, {
-          download: true,
-          header: true,
-          skipEmptyLines: true,
-          complete: (res)=>{
-            try{
-              const rows = (res.data||[]).map(r=>{
-                const ts = r.timestamp || r.fecha || r.Timestamp || '';
-                const d = toDate(ts);
-                return {
-                  ts: ts,
-                  date: d,
-                  y: d? d.getFullYear(): null,
-                  m: d? d.getMonth()+1 : null,
-                  d: d? d.getDate() : null,
-                  cliente: r.cliente || r.Cliente || '',
-                  mesa: r.mesa || r.Mesa || '',
-                  metodo: (r.metodoPago || r.metodo || r.Metodo || '').toString().trim(),
-                  total: Number(r.total || r.Total || 0),
-                  totalCosto: Number(r.totalCosto || r.TotalCosto || 0),
-                  ganancia: Number(r.ganancia || r.Ganancia || (Number(r.total||0)-Number(r.totalCosto||0))),
-                  pago: Number(r.pago || r.Pago || 0),
-                  items: r['items(json)'] || r.items || '[]',
-                  categoria: r.categoria || ''
-                };
-              });
-              ROWS = rows.filter(r => r.date);
-              buildMesOptions();
-              $('#statusBadge').text('Menú sincronizado');
-              resolve();
-            }catch(e){ reject(e); }
-          },
-          error: (err)=> reject(err)
-        });
-      });
+  const toDate = (s) => {
+    if (!s) return null;
+    const t = String(s).trim();
+    if (/^\d{4}-\d{2}-\d{2}/.test(t)) return new Date(t);
+    if (/^\d{2}\/\d{2}\/\d{4}/.test(t)) {
+      const [d,m,y] = t.split('/');
+      return new Date(`${y}-${m}-${d}`);
     }
+    const d = new Date(t);
+    return isNaN(d) ? null : d;
+  };
 
+  const sameYMonth = (d, y, m) => d && d.getFullYear()===y && (d.getMonth()+1)===m;
 
+  const TZ_AR = 'America/Argentina/Cordoba';
+  const formatARDateTime = (d) => {
+    if (!(d instanceof Date) || isNaN(d)) return '';
+    return new Intl.DateTimeFormat('es-AR', {
+      timeZone: TZ_AR,
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', second: '2-digit',
+      hour12: false
+    }).format(d);
+  };
 
+  // ================= Estado =================
+  let ROWS = [];       // ventas parseadas
+  let MES_OPTS = [];   // {key:'2025-03', label:'Marzo 2025'}
+  let mesSelKey = '';  // 'yyyy-mm'
 
-
-const $tbProd = $('#tbodyProductosMes');
-$tbProd.empty();
-
-// ordenar por unidades vendidas (de mayor a menor)
-Object.entries(productosMes)
-  .sort((a, b) => b[1] - a[1])
-  .forEach(([nombre, qty]) => {
-    $tbProd.append(`<tr>
-      <td class="p-2">${nombre}</td>
-      <td class="p-2 text-right">${qty}</td>
-    </tr>`);
-  });
-
-
-
-
-// recorrer todas las ventas del mes
-monthRows.forEach(r => {
-  try {
-    const items = JSON.parse(r.items || '[]');
-    items.forEach(it => {
-      const cat = it.categoria || r.categoria || 'Sin categoría';
-      if (!prodPorCat[cat]) prodPorCat[cat] = {};
-      const nombre = it.nombre || 'Sin nombre';
-      const qty = Number(it.qty) || 0;
-      const costo = Number(it.costo) || 0;
-      const total = Number(it.total) || 0;
-      const ganancia = total - costo;
-
-      if (!prodPorCat[cat][nombre]) {
-        prodPorCat[cat][nombre] = { qty: 0, ganancia: 0 };
-      }
-      prodPorCat[cat][nombre].qty += qty;
-      prodPorCat[cat][nombre].ganancia += ganancia;
+  // ================= Carga CSV =================
+  async function loadCSV(){
+    const url = $('#csvUrl').val().trim();
+    $('#statusBadge').text('Cargando CSV…');
+    return new Promise((resolve, reject)=>{
+      Papa.parse(url, {
+        download: true,
+        header: true,
+        skipEmptyLines: true,
+        complete: (res)=>{
+          try{
+            const rows = (res.data||[]).map(r=>{
+              const ts = r.timestamp || r.fecha || r.Timestamp || '';
+              const d  = toDate(ts);
+              return {
+                ts, date:d,
+                y: d? d.getFullYear(): null,
+                m: d? d.getMonth()+1 : null,
+                d: d? d.getDate() : null,
+                cliente: r.cliente || r.Cliente || '',
+                mesa:    r.mesa    || r.Mesa    || '',
+                metodo: (r.metodoPago || r.metodo || r.Metodo || '').toString().trim(),
+                total:      Number(r.total      || r.Total      || 0),
+                totalCosto: Number(r.totalCosto || r.TotalCosto || 0),
+                ganancia:   Number(r.ganancia   || r.Ganancia   || (Number(r.total||0)-Number(r.totalCosto||0))),
+                pago:  Number(r.pago || r.Pago || 0),
+                items: r['items(json)'] || r.items || '[]',
+                categoria: r.categoria || ''
+              };
+            });
+            ROWS = rows.filter(r => r.date);
+            buildMesOptions();
+            $('#statusBadge').text('Menú sincronizado');
+            resolve();
+          }catch(e){ reject(e); }
+        },
+        error: (err)=> reject(err)
+      });
     });
-  } catch (e) {
-    console.warn('Error parseando items', e);
   }
-});
 
-// renderizar
-const $wrapProd = $('#productosPorCategoria');
-$wrapProd.empty();
-
-Object.entries(prodPorCat).forEach(([cat, prods]) => {
-  let totalCat = 0;
-  let html = `<div class="rounded-xl border p-3 bg-gray-50">
-    <h4 class="font-semibold text-sm mb-2">${cat}</h4>
-    <table class="w-full text-sm">
-      <thead class="bg-white"><tr>
-        <th class="text-left p-1">Producto</th>
-        <th class="text-right p-1">Unidades vendidas</th>
-        <th class="text-right p-1">Ganancia</th>
-      </tr></thead>
-      <tbody>`;
-
-  Object.entries(prods)
-    .sort((a,b)=>b[1].qty - a[1].qty) // ordenar por unidades vendidas
-    .forEach(([nombre, d]) => {
-      totalCat += d.qty;
-      html += `<tr>
-        <td class="p-1">${nombre}</td>
-        <td class="p-1 text-right">${d.qty}</td>
-        <td class="p-1 text-right">${$fmt(d.ganancia)}</td>
-      </tr>`;
+  // ================= Mes seleccionado =================
+  function buildMesOptions(){
+    const set = new Set(ROWS.map(r => `${r.y}-${String(r.m).padStart(2,'0')}`));
+    MES_OPTS = [...set].sort().reverse().map(key=>{
+      const [yy, mm] = key.split('-').map(Number);
+      const d = new Date(yy, mm-1, 1);
+      const label = d.toLocaleDateString('es-AR', { month:'long', year:'numeric' });
+      return { key, label: label.charAt(0).toUpperCase()+label.slice(1) };
     });
 
-  html += `<tr class="font-semibold border-t">
-    <td class="p-1">Total ${cat}</td>
-    <td class="p-1 text-right">${totalCat}</td>
-    <td></td>
-  </tr>`;
-  html += `</tbody></table></div>`;
+    const sel = $('#mesFiltro'); sel.empty();
+    MES_OPTS.forEach(o => sel.append(`<option value="${o.key}">${o.label}</option>`));
 
-  $wrapProd.append(html);
-});
+    const now = new Date();
+    const nowKey = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+    mesSelKey = MES_OPTS.find(o=>o.key===nowKey)?.key || MES_OPTS[0]?.key || '';
+    if (mesSelKey) sel.val(mesSelKey);
 
-    }
+    renderAll();
+  }
 
-    function mediosMap(met){
-      const s = (met||'').toLowerCase();
-      if (s.includes('efect')) return 'efectivo';
-      if (s.includes('mp') || s.includes('mercado') || s.includes('qr')) return 'mp';
-      return 'otros';
-    }
+  function getMonthRows(){
+    if (!mesSelKey) return [];
+    const [yy, mm] = mesSelKey.split('-').map(Number);
+    return ROWS.filter(r => sameYMonth(r.date, yy, mm));
+  }
 
-    function renderAll(){
-   
-      renderKPIsDia();
-      function getMonthRows(){
-  if (!mesSelKey) return [];
-  const [yy, mm] = mesSelKey.split('-').map(Number);
-  return ROWS.filter(r => sameYMonth(r.date, yy, mm));
-}
+  function mediosMap(met){
+    const s = (met||'').toLowerCase();
+    if (s.includes('efect')) return 'efectivo';
+    if (s.includes('mp') || s.includes('mercado') || s.includes('qr')) return 'mp';
+    return 'otros';
+  }
 
-// Render: Productos vendidos en el mes (tabla #tbodyProductosMes)
-function renderProductosMes(){
-  const productosMes = {};
-  const rows = getMonthRows();
+  // ================= Productos (tablas) =================
+  function renderProductosMes(){
+    const productosMes = {};
+    const rows = getMonthRows();
 
-  rows.forEach(r => {
-    try {
-      const items = JSON.parse(r.items || '[]');
-      items.forEach(it => {
-        const nombre = it.nombre || 'Sin nombre';
-        const qty = Number(it.qty) || 0;
-        if (!productosMes[nombre]) productosMes[nombre] = 0;
-        productosMes[nombre] += qty;
+    rows.forEach(r=>{
+      try{
+        const items = JSON.parse(r.items||'[]');
+        if (!Array.isArray(items)) return;
+        items.forEach(it=>{
+          const nombre = it.nombre || 'Sin nombre';
+          const qty = Number(it.qty)||0;
+          productosMes[nombre] = (productosMes[nombre]||0) + qty;
+        });
+      }catch{}
+    });
+
+    const $tb = $('#tbodyProductosMes');
+    if (!$tb.length) return;
+    $tb.empty();
+
+    Object.entries(productosMes)
+      .sort((a,b)=> b[1]-a[1])
+      .forEach(([nombre, qty])=>{
+        $tb.append(`<tr>
+          <td class="p-2">${nombre}</td>
+          <td class="p-2 text-right">${qty}</td>
+        </tr>`);
       });
-    } catch(e) {
-      console.warn('Error parseando items', e);
+  }
+
+  function renderProductosPorCategoria(){
+    const prodPorCat = {};
+    const rows = getMonthRows();
+
+    rows.forEach(r=>{
+      try{
+        const items = JSON.parse(r.items||'[]');
+        if (!Array.isArray(items)) return;
+        items.forEach(it=>{
+          const cat = it.categoria || r.categoria || 'Sin categoría';
+          const nombre = it.nombre || 'Sin nombre';
+          const qty = Number(it.qty)||0;
+          const costo = Number(it.costo)||0;
+          const total = Number(it.total)||0;
+          const ganancia = total - costo;
+
+          if (!prodPorCat[cat]) prodPorCat[cat] = {};
+          if (!prodPorCat[cat][nombre]) prodPorCat[cat][nombre] = { qty:0, ganancia:0 };
+
+          prodPorCat[cat][nombre].qty      += qty;
+          prodPorCat[cat][nombre].ganancia += ganancia;
+        });
+      }catch{}
+    });
+
+    const $wrap = $('#productosPorCategoria');
+    if (!$wrap.length) return;
+    $wrap.empty();
+
+    Object.entries(prodPorCat).forEach(([cat, prods])=>{
+      let totalCat = 0;
+      let html = `<div class="rounded-xl border p-3 bg-gray-50">
+        <h4 class="font-semibold text-sm mb-2">${cat}</h4>
+        <table class="w-full text-sm">
+          <thead class="bg-white"><tr>
+            <th class="text-left p-1">Producto</th>
+            <th class="text-right p-1">Unidades vendidas</th>
+            <th class="text-right p-1">Ganancia</th>
+          </tr></thead>
+          <tbody>`;
+
+      Object.entries(prods)
+        .sort((a,b)=> b[1].qty - a[1].qty)
+        .forEach(([nombre, d])=>{
+          totalCat += d.qty;
+          html += `<tr>
+            <td class="p-1">${nombre}</td>
+            <td class="p-1 text-right">${d.qty}</td>
+            <td class="p-1 text-right">${$fmt(d.ganancia)}</td>
+          </tr>`;
+        });
+
+      html += `<tr class="font-semibold border-t">
+        <td class="p-1">Total ${cat}</td>
+        <td class="p-1 text-right">${totalCat}</td>
+        <td></td>
+      </tr>`;
+      html += `</tbody></table></div>`;
+
+      $wrap.append(html);
+    });
+  }
+
+  // ================= KPIs Día =================
+  function renderKPIsDia(){
+    const dia = $('#diaFiltro').val();
+    if (!dia){
+      const today = new Date();
+      const key = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}`;
+      if (key === mesSelKey) $('#diaFiltro').val(today.toISOString().slice(0,10));
     }
-  });
+    const selDia = $('#diaFiltro').val();
+    if (!selDia) return;
 
-  const $tbProd = $('#tbodyProductosMes');
-  if (!$tbProd.length) return;
-  $tbProd.empty();
+    const [yy, mm] = mesSelKey.split('-').map(Number);
+    const hFrom = $('#horaDesde').val();
+    const hTo   = $('#horaHasta').val();
 
-  Object.entries(productosMes)
-    .sort((a, b) => b[1] - a[1])
-    .forEach(([nombre, qty]) => {
-      $tbProd.append(`<tr>
-        <td class="p-2">${nombre}</td>
-        <td class="p-2 text-right">${qty}</td>
+    const rowsDia = ROWS.filter(r => sameYMonth(r.date, yy, mm) && r.date.toISOString().slice(0,10)===selDia);
+
+    const inTime = (dt) => {
+      if (!hFrom && !hTo) return true;
+      const hhmm = dt.toTimeString().slice(0,5);
+      if (hFrom && hhmm < hFrom) return false;
+      if (hTo   && hhmm > hTo)   return false;
+      return true;
+    };
+    const rowsDiaTime = rowsDia.filter(r => inTime(r.date));
+
+    const ing = rowsDiaTime.reduce((a,r)=>a+r.total,0);
+    const cos = rowsDiaTime.reduce((a,r)=>a+r.totalCosto,0);
+    const gan = rowsDiaTime.reduce((a,r)=>a+r.ganancia,0);
+    const uni = rowsDiaTime.reduce((a,r)=>{
+      try{
+        const arr = JSON.parse(r.items||'[]');
+        return a + (Array.isArray(arr)? arr.reduce((s,x)=> s+(Number(x.qty)||0), 0) : 0);
+      }catch{ return a; }
+    }, 0);
+
+    $('#kpiIngDia').text($fmt(ing));
+    $('#kpiCostoDia').text($fmt(cos));
+    $('#kpiGanDia').text($fmt(gan));
+    $('#kpiVentasDia').text(rowsDiaTime.length);
+    $('#kpiUniDia').text(uni);
+
+    $('#cierreIng').text($fmt(ing));
+    $('#cierreCosto').text($fmt(cos));
+    $('#cierreBruta').text($fmt(ing - cos));
+    const gastos = Number($('#cierreGastos').val() || 0);
+    $('#cierreGastosLbl').text($fmt(gastos));
+    const neta = (ing - cos) - gastos;
+    $('#cierreNeta').text($fmt(neta));
+    const personas = Math.max(1, Number($('#cierrePersonas').val() || 1));
+    $('#cierrePorPersona').text($fmt(neta / personas));
+    $('#cierreRangoLbl').text(`${selDia}${(hFrom||hTo)? ` · ${hFrom||'00:00'}–${hTo||'23:59'}` : ''}`);
+    $('#kpiGanDiaLbl').text(`${rowsDiaTime.length} ventas · ${uni} unid.`);
+  }
+
+  // ================= Render General =================
+  function renderAll(){
+    renderKPIsDia();
+
+    if (!mesSelKey) return;
+    const rows = getMonthRows();
+
+    // KPIs mes
+    const ventas   = rows.length;
+    const unidades = rows.reduce((a,r)=>{
+      try{
+        const arr = JSON.parse(r.items||'[]');
+        return a + (Array.isArray(arr)? arr.reduce((s,x)=> s+(Number(x.qty)||0), 0) : 0);
+      }catch{ return a; }
+    }, 0);
+    const ingresos = rows.reduce((a,r)=> a + (Number(r.total)||0), 0);
+    const ganMes   = rows.reduce((a,r)=> a + (Number(r.ganancia)||0), 0);
+
+    const byMethod = { efectivo:0, mp:0, otros:0 };
+    rows.forEach(r => { byMethod[mediosMap(r.metodo)] += Number(r.total||0); });
+
+    $('#kpiVentas').text(ventas);
+    $('#kpiUnidades').text(unidades);
+    $('#kpiIngresos').text($fmt(ingresos));
+    $('#kpiGananciaMes').text($fmt(ganMes));
+    $('#kpiEfectivoMes').text($fmt(byMethod.efectivo));
+    $('#kpiMpMes').text($fmt(byMethod.mp));
+
+    // Tabla de ventas (simple)
+    const $tb = $('#tbodyVentas'); $tb.empty();
+    rows.slice().sort((a,b)=> b.date - a.date).forEach(r=>{
+      $tb.append(`<tr>
+        <td class="p-2">${formatARDateTime(r.date)}</td>
+        <td class="p-2">${r.cliente||''}</td>
+        <td class="p-2">${r.mesa||''}</td>
+        <td class="p-2">${r.metodo||''}</td>
+        <td class="p-2">${
+          (function(){
+            try{
+              const arr = JSON.parse(r.items||'[]');
+              return arr.map(x=>`${x.nombre||''} x${x.qty||1}`).join(', ')
+            }catch{ return '' }
+          })()
+        }</td>
+        <td class="p-2 text-right">${$fmt(r.total)}</td>
+        <td class="p-2 text-right">${$fmt(r.ganancia)}</td>
       </tr>`);
     });
-  renderProductosMes();
-renderProductosPorCategoria();
 
-}
+    // Tablas de productos
+    renderProductosMes();
+    renderProductosPorCategoria();
+  }
 
-// Render: Productos por categoría (contenedor #productosPorCategoria)
-function renderProductosPorCategoria(){
-  const prodPorCat = {};
-  const rows = getMonthRows();
+  // ================= Gastos =================
+  const API_G = API;
+  const $fmtG = $fmt;
 
-  rows.forEach(r => {
-    try {
-      const items = JSON.parse(r.items || '[]');
-      items.forEach(it => {
-        const cat = it.categoria || r.categoria || 'Sin categoría';
-        if (!prodPorCat[cat]) prodPorCat[cat] = {};
-        const nombre = it.nombre || 'Sin nombre';
-        const qty = Number(it.qty) || 0;
-        const costo = Number(it.costo) || 0;
-        const total = Number(it.total) || 0;
-        const ganancia = total - costo;
+  (function initGastosUI(){
+    const hoy = new Date().toISOString().slice(0,10);
+    const $f = document.getElementById('gFecha');
+    if ($f && !$f.value) $f.value = hoy;
+  })();
 
-        if (!prodPorCat[cat][nombre]) {
-          prodPorCat[cat][nombre] = { qty: 0, ganancia: 0 };
-        }
-        prodPorCat[cat][nombre].qty += qty;
-        prodPorCat[cat][nombre].ganancia += ganancia;
+  async function guardarGasto(){
+    const fecha      = (document.getElementById('gFecha').value || '').trim();
+    const categoria  = (document.getElementById('gCategoria').value || 'Otros').trim();
+    const concepto   = (document.getElementById('gConcepto').value || '').trim();
+    const proveedor  = (document.getElementById('gProveedor').value || '').trim();
+    const montoNum   = Number(document.getElementById('gMonto').value || 0);
+    const nota       = (document.getElementById('gNota').value || '').trim();
+    const $btn       = document.getElementById('btnGuardarGasto');
+    const $msg       = document.getElementById('gMsg');
+
+    if (!fecha || !concepto || !Number.isFinite(montoNum) || montoNum <= 0){
+      alert('Completá Fecha, Concepto y un Monto válido.'); return;
+    }
+
+    const payload = {
+      type: 'expense',
+      fecha,
+      categoria_gasto: categoria,
+      concepto,
+      proveedor,
+      qty: 1,
+      costo_unit: montoNum,
+      nota
+    };
+
+    try{
+      $btn.disabled = true; $btn.textContent = 'Guardando…'; $msg.textContent = '';
+      const res = await fetch(API_G, {
+        method:'POST',
+        headers:{ 'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8' },
+        body: 'payload='+encodeURIComponent(JSON.stringify(payload))
       });
-    } catch(e) {
-      console.warn('Error parseando items', e);
+      const data = await res.json().catch(()=> ({}));
+      if (!res.ok || data.ok !== true) throw new Error(data.error || `HTTP ${res.status}`);
+
+      document.getElementById('gConcepto').value = '';
+      document.getElementById('gProveedor').value = '';
+      document.getElementById('gMonto').value = '';
+      document.getElementById('gNota').value = '';
+      $msg.textContent = '✅ Gasto guardado';
+      await cargarGastosRecientes();
+    }catch(err){
+      console.error(err);
+      alert('No se pudo guardar el gasto: ' + err.message);
+    }finally{
+      $btn.disabled = false; $btn.textContent = 'Guardar gasto';
     }
-  });
+  }
 
-  const $wrapProd = $('#productosPorCategoria');
-  if (!$wrapProd.length) return;
-  $wrapProd.empty();
+  async function cargarGastosRecientes(){
+    try{
+      const res = await fetch(`${API_G}?action=items&limit=50`);
+      const json = await res.json();
+      if (json?.ok !== true) throw new Error(json?.error || 'Error al leer ITEMS');
+      const rows = (json.items || []).filter(it => String(it.tipo).toLowerCase() === 'compra');
 
-  Object.entries(prodPorCat).forEach(([cat, prods]) => {
-    let totalCat = 0;
-    let html = `<div class="rounded-xl border p-3 bg-gray-50">
-      <h4 class="font-semibold text-sm mb-2">${cat}</h4>
-      <table class="w-full text-sm">
-        <thead class="bg-white"><tr>
-          <th class="text-left p-1">Producto</th>
-          <th class="text-right p-1">Unidades vendidas</th>
-          <th class="text-right p-1">Ganancia</th>
-        </tr></thead>
-        <tbody>`;
-
-    Object.entries(prods)
-      .sort((a,b)=> b[1].qty - a[1].qty)
-      .forEach(([nombre, d]) => {
-        totalCat += d.qty;
-        html += `<tr>
-          <td class="p-1">${nombre}</td>
-          <td class="p-1 text-right">${d.qty}</td>
-          <td class="p-1 text-right">${$fmt(d.ganancia)}</td>
-        </tr>`;
-      });
-
-    html += `<tr class="font-semibold border-t">
-      <td class="p-1">Total ${cat}</td>
-      <td class="p-1 text-right">${totalCat}</td>
-      <td></td>
-    </tr>`;
-    html += `</tbody></table></div>`;
-
-    $wrapProd.append(html);
-  });
-}
-
-   if (!mesSelKey) return;
-      const [yy, mm] = mesSelKey.split('-').map(Number);
-
-      // Mes seleccionado
-      const monthRows = ROWS.filter(r => sameYMonth(r.date, yy, mm));
-
-      // KPIs mes (ventas, unidades, ingresos, ganancia, breakdown)
-      const ventas = monthRows.length;
-      const unidades = monthRows.reduce((a, r)=>{
-        try { const arr = JSON.parse(r.items||'[]'); return a + (Array.isArray(arr)? arr.reduce((s,x)=>s+(Number(x.qty)||0),0) : 0); }
-        catch { return a; }
-      }, 0);
-      const ingresos = monthRows.reduce((a,r)=>a+r.total,0);
-      const costo = monthRows.reduce((a,r)=>a+r.totalCosto,0);
-      const ganMes = monthRows.reduce((a,r)=>a+r.ganancia,0);  // ← SUMA DE TODA LA GANANCIA DEL MES
-
-      // Breakdown métodos
-      const byMethod = { efectivo:0, mp:0, otros:0 };
-      monthRows.forEach(r => { byMethod[mediosMap(r.metodo)] += Number(r.total||0); });
-
-      $('#kpiVentas').text(ventas);
-      $('#kpiUnidades').text(unidades);
-      $('#kpiIngresos').text($fmt(ingresos));
-      $('#kpiGananciaMes').text($fmt(ganMes));
-      $('#kpiEfectivoMes').text($fmt(byMethod.efectivo));
-      $('#kpiMpMes').text($fmt(byMethod.mp));
-
-      // KPIs día (usa el selector de día + horario)
-      // Tabla simple (puedes adaptarla a paginador si ya lo tenías)
-      const $tb = $('#tbodyVentas'); $tb.empty();
-     monthRows.slice().sort((a,b)=> b.date - a.date).forEach(r=>{
-  $tb.append(`<tr>
-    <td class="p-2">${formatARDateTime(r.date)}</td>
-    <td class="p-2">${r.cliente||''}</td>
-    <td class="p-2">${r.mesa||''}</td>
-    <td class="p-2">${r.metodo||''}</td>
-    <td class="p-2">${
-      (function(){
-        try{
-          const arr = JSON.parse(r.items||'[]');
-          return arr.map(x=>`${x.nombre||''} x${x.qty||1}`).join(', ')
-        }catch{return ''}
-      })()
-    }</td>
-    <td class="p-2 text-right">${$fmt(r.total)}</td>
-    <td class="p-2 text-right">${$fmt(r.ganancia)}</td>
-  </tr>`);
-}); // ← cierra el forEach
-
-} 
-
-    function renderKPIsDia(){
-      const dia = $('#diaFiltro').val();
-      if (!dia){
-        // por defecto hoy si pertenece al mes seleccionado
-        const today = new Date();
-        const key = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}`;
-        if (key === mesSelKey) $('#diaFiltro').val(today.toISOString().slice(0,10));
-      }
-      const selDia = $('#diaFiltro').val();
-      if (!selDia) return;
-
-      const [yy, mm] = mesSelKey.split('-').map(Number);
-      const d = toDate(selDia);
-      const hFrom = $('#horaDesde').val();
-      const hTo   = $('#horaHasta').val();
-
-      const rowsDia = ROWS.filter(r => sameYMonth(r.date, yy, mm) && r.date.toISOString().slice(0,10)===selDia);
-
-      // filtro horario
-      const inTime = (dt) => {
-        if (!hFrom && !hTo) return true;
-        const hhmm = dt.toTimeString().slice(0,5);
-        if (hFrom && hhmm < hFrom) return false;
-        if (hTo   && hhmm > hTo)   return false;
-        return true;
-      };
-      const rowsDiaTime = rowsDia.filter(r => inTime(r.date));
-
-      const ing = rowsDiaTime.reduce((a,r)=>a+r.total,0);
-      const cos = rowsDiaTime.reduce((a,r)=>a+r.totalCosto,0);
-      const gan = rowsDiaTime.reduce((a,r)=>a+r.ganancia,0);
-      const uni = rowsDiaTime.reduce((a, r)=>{
-        try { const arr = JSON.parse(r.items||'[]'); return a + (Array.isArray(arr)? arr.reduce((s,x)=>s+(Number(x.qty)||0),0) : 0); }
-        catch { return a; }
-      }, 0);
-
-      $('#kpiIngDia').text($fmt(ing));
-      $('#kpiCostoDia').text($fmt(cos));
-      $('#kpiGanDia').text($fmt(gan));
-      $('#kpiVentasDia').text(rowsDiaTime.length);
-      $('#kpiUniDia').text(uni);
-      $('#cierreIng').text($fmt(ing));
-      $('#cierreCosto').text($fmt(cos));
-      $('#cierreBruta').text($fmt(ing - cos));
-      const gastos = Number($('#cierreGastos').val() || 0);
-      $('#cierreGastosLbl').text($fmt(gastos));
-      const neta = (ing - cos) - gastos;
-      $('#cierreNeta').text($fmt(neta));
-      const personas = Math.max(1, Number($('#cierrePersonas').val() || 1));
-      $('#cierrePorPersona').text($fmt(neta / personas));
-      $('#cierreRangoLbl').text(`${selDia}${(hFrom||hTo)? ` · ${hFrom||'00:00'}–${hTo||'23:59'}` : ''}`);
-      $('#kpiGanDiaLbl').text(`${rowsDiaTime.length} ventas · ${uni} unid.`);
+      const $tb = document.getElementById('tbodyGastos');
+      if (!$tb) return;
+      $tb.innerHTML = rows.map(r => `
+        <tr>
+          <td class="p-2">${(r.fecha||'').toString().slice(0,10)}</td>
+          <td class="p-2">${r.categoria_gasto||'-'}</td>
+          <td class="p-2">${r.concepto||'-'}</td>
+          <td class="p-2 text-right">${$fmtG(r.subtotal || r.costo_unit || 0)}</td>
+        </tr>
+      `).join('');
+    }catch(err){
+      console.error('cargarGastosRecientes', err);
     }
+  }
 
-    // ===== Gastos (usa la misma API del POS) =====
-    const API_G = API;
-    const $fmtG = $fmt;
+  // ================= Eventos UI =================
+  $('#btnReload').on('click', async ()=>{ await loadCSV(); });
+  $('#mesFiltro').on('change', function(){ mesSelKey = $(this).val(); renderAll(); });
+  $('#diaFiltro, #horaDesde, #horaHasta, #cierrePersonas, #cierreGastos').on('input change', renderKPIsDia);
+  $('#btnHoy').on('click', ()=>{ const t=new Date().toISOString().slice(0,10); $('#diaFiltro').val(t).trigger('change'); });
+  $('#btnAyer').on('click', ()=>{ const d=new Date(); d.setDate(d.getDate()-1); $('#diaFiltro').val(d.toISOString().slice(0,10)).trigger('change'); });
+  $('#btnMenos2').on('click', ()=>{ const d=new Date(); d.setDate(d.getDate()-2); $('#diaFiltro').val(d.toISOString().slice(0,10)).trigger('change'); });
 
-    (function initGastosUI(){
-      const hoy = new Date().toISOString().slice(0,10);
-      const $f = document.getElementById('gFecha');
-      if ($f && !$f.value) $f.value = hoy;
-    })();
+  document.getElementById('btnGuardarGasto')?.addEventListener('click', guardarGasto);
+  document.getElementById('btnRecargarGastos')?.addEventListener('click', cargarGastosRecientes);
 
-    async function guardarGasto(){
-      const fecha      = (document.getElementById('gFecha').value || '').trim();
-      const categoria  = (document.getElementById('gCategoria').value || 'Otros').trim();
-      const concepto   = (document.getElementById('gConcepto').value || '').trim();
-      const proveedor  = (document.getElementById('gProveedor').value || '').trim();
-      const montoNum   = Number(document.getElementById('gMonto').value || 0);
-      const nota       = (document.getElementById('gNota').value || '').trim();
-      const $btn       = document.getElementById('btnGuardarGasto');
-      const $msg       = document.getElementById('gMsg');
-
-      if (!fecha || !concepto || !Number.isFinite(montoNum) || montoNum <= 0){
-        alert('Completá Fecha, Concepto y un Monto válido.'); return;
-      }
-
-      const payload = {
-        type: 'expense',
-        fecha,
-        categoria_gasto: categoria,
-        concepto,
-        proveedor,
-        qty: 1,
-        costo_unit: montoNum,
-        nota
-      };
-
-      try{
-        $btn.disabled = true; $btn.textContent = 'Guardando…'; $msg.textContent = '';
-        const res = await fetch(API_G, {
-          method:'POST',
-          headers:{ 'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8' },
-          body: 'payload='+encodeURIComponent(JSON.stringify(payload))
-        });
-        const data = await res.json().catch(()=> ({}));
-        if (!res.ok || data.ok !== true) throw new Error(data.error || `HTTP ${res.status}`);
-
-        document.getElementById('gConcepto').value = '';
-        document.getElementById('gProveedor').value = '';
-        document.getElementById('gMonto').value = '';
-        document.getElementById('gNota').value = '';
-        $msg.textContent = '✅ Gasto guardado';
-        await cargarGastosRecientes();
-      }catch(err){
-        console.error(err);
-        alert('No se pudo guardar el gasto: ' + err.message);
-      }finally{
-        $btn.disabled = false; $btn.textContent = 'Guardar gasto';
-      }
+  // ================= Init =================
+  (async function(){
+    try{
+      await loadCSV();
+      await cargarGastosRecientes();
+    }catch(e){
+      console.error(e);
+      $('#statusBadge').text('Error');
+      $('#diag').text(String(e));
     }
+  })();
+</script>
 
-    async function cargarGastosRecientes(){
-      try{
-        const res = await fetch(`${API_G}?action=items&limit=50`);
-        const json = await res.json();
-        if (json?.ok !== true) throw new Error(json?.error || 'Error al leer ITEMS');
-        const rows = (json.items || []).filter(it => String(it.tipo).toLowerCase() === 'compra');
-
-        const $tb = document.getElementById('tbodyGastos');
-        if (!$tb) return;
-        $tb.innerHTML = rows.map(r => `
-          <tr>
-            <td class="p-2">${(r.fecha||'').toString().slice(0,10)}</td>
-            <td class="p-2">${r.categoria_gasto||'-'}</td>
-            <td class="p-2">${r.concepto||'-'}</td>
-            <td class="p-2 text-right">${$fmtG(r.subtotal || r.costo_unit || 0)}</td>
-          </tr>
-        `).join('');
-      }catch(err){
-        console.error('cargarGastosRecientes', err);
-      }
-    }
-
-    // Eventos UI
-    $('#btnReload').on('click', async ()=>{ await loadCSV(); });
-    $('#mesFiltro').on('change', function(){ mesSelKey = $(this).val(); renderAll(); });
-    $('#diaFiltro, #horaDesde, #horaHasta, #cierrePersonas, #cierreGastos').on('input change', renderKPIsDia);
-    $('#btnHoy').on('click', ()=>{ const t=new Date().toISOString().slice(0,10); $('#diaFiltro').val(t).trigger('change'); });
-    $('#btnAyer').on('click', ()=>{ const d=new Date(); d.setDate(d.getDate()-1); $('#diaFiltro').val(d.toISOString().slice(0,10)).trigger('change'); });
-    $('#btnMenos2').on('click', ()=>{ const d=new Date(); d.setDate(d.getDate()-2); $('#diaFiltro').val(d.toISOString().slice(0,10)).trigger('change'); });
-
-    document.getElementById('btnGuardarGasto')?.addEventListener('click', guardarGasto);
-    document.getElementById('btnRecargarGastos')?.addEventListener('click', cargarGastosRecientes);
-
-    // Init
-    (async function(){
-      try{
-        await loadCSV();
-        await cargarGastosRecientes();
-      }catch(e){
-        console.error(e);
-        $('#statusBadge').text('Error');
-        $('#diag').text(String(e));
-      }
-    })();
-  </script>
      <script src="./fixes/planfix.js"></script>
      <script src="./fixes/gastosfix.js"></script>
   <script src="./fixes/kpisfix.js"></script>
