@@ -3,315 +3,176 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>Editor de Menú — OnceyDoce</title>
+  <title>Menú — OnceyDoce</title>
 
-  <!-- Tailwind (modo claro) -->
-  <script> window.tailwind = { config: { darkMode: 'class' } } </script>
   <script src="https://cdn.tailwindcss.com"></script>
-
-  <style>
-    :root{
-      --surface:#ffffff; --surface-weak:#f6f7f9;
-      --accent-50:#fff1f2; --accent-100:#ffe4e6;
-      --accent-500:#f43f5e; --accent-600:#e11d48;
-    }
-    body { background:#f8fafc; color:#0f172a }
-    .card{ background:var(--surface); border:1px solid rgba(15,23,42,.08); border-radius:1rem; }
-    .btn{ padding:.5rem .875rem; border-radius:.75rem; border:1px solid rgba(15,23,42,.10); background:#fff; }
-    .btn:hover{ background:#f1f5f9 }
-    .btn-primary{ border:none; background:var(--accent-600); color:#fff }
-    .btn-primary:hover{ background:var(--accent-500) }
-    .inp{ border-radius:.75rem; border:1px solid #e5e7eb; padding:.5rem .75rem }
-    .inp:focus{ outline:none; box-shadow:0 0 0 3px rgba(244,63,94,.15),0 0 0 1px var(--accent-500); border-color:var(--accent-500) }
-    .table-wrap{ overflow:auto; }
-    .thumb{ height:40px; width:40px; object-fit:cover; border:1px solid #e5e7eb; border-radius:.5rem }
-    .row-disabled{ opacity:.6 }
-    .pill{ font-size:11px; padding:.125rem .5rem; border-radius:999px; border:1px solid #e5e7eb; background:#fff }
-  </style>
-
-  <script>
-    /* ====== CONFIG ======
-       Ajustá si tu endpoint está en otro lado */
-    const ORDERS_WEBAPP_URL = "/.netlify/functions/gs-order";
-  </script>
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 </head>
-<body>
+<body class="bg-slate-100 min-h-screen p-6">
+  <div class="max-w-6xl mx-auto">
+    <h1 class="text-2xl font-bold mb-4">Gestor de Menú OnceyDoce 🍔</h1>
 
-  <!-- LOGIN (admin) -->
-  <div id="loginOverlay" class="fixed inset-0 bg-white/90 backdrop-blur-sm grid place-items-center z-[100]">
-    <div class="w-[min(440px,92vw)] card p-6">
-      <h2 class="text-xl font-bold mb-1">Ingresar — Editor de Menú</h2>
-      <p class="text-sm text-slate-500 mb-4">Solo <b>Admin</b> puede editar el menú.</p>
-      <div class="space-y-3">
-        <div>
-          <label class="block text-sm mb-1">Usuario</label>
-          <input id="loginUser" class="inp w-full" placeholder="Admin"/>
-        </div>
-        <div>
-          <label class="block text-sm mb-1">Clave</label>
-          <input id="loginPass" type="password" class="inp w-full" placeholder="••••••"/>
-        </div>
-        <button id="btnLogin" class="btn-primary w-full rounded-xl py-2 font-semibold">Entrar</button>
-        <div id="loginMsg" class="text-sm text-red-600 hidden"></div>
-      </div>
+    <!-- Filtros -->
+    <div class="flex flex-wrap gap-3 mb-6 bg-white p-4 rounded-xl shadow">
+      <input id="q" class="border rounded px-3 py-2 flex-1" placeholder="Buscar por nombre, SKU o categoría...">
+      <select id="cat" class="border rounded px-3 py-2">
+        <option value="">Todas las categorías</option>
+      </select>
+      <button id="refresh" class="bg-slate-800 text-white px-4 py-2 rounded">Refrescar</button>
     </div>
+
+    <!-- Contenedor de tarjetas -->
+    <div id="menuList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
   </div>
 
-  <!-- Header -->
-  <header class="sticky top-0 z-40 bg-white border-b border-slate-200">
-    <div class="px-4 py-3 max-w-7xl mx-auto flex items-center justify-between">
-      <div class="flex items-center gap-3">
-        <div class="h-9 w-9 grid place-items-center rounded-xl bg-[var(--accent-600)] text-white font-black">OD</div>
-        <div>
-          <div class="text-lg font-extrabold">OnceyDoce</div>
-          <div class="text-xs text-slate-500">Editor de Menú</div>
-        </div>
-      </div>
-      <div class="flex items-center gap-3">
-        <span id="roleBadge" class="pill">—</span>
-        <a href="./index.html" class="btn">Volver al POS</a>
+<script>
+const ORDERS_WEBAPP_URL = '/.netlify/functions/gs-order';
+
+// =============== API HELPERS ===============
+async function apiGet(qs){
+  const url = new URL(ORDERS_WEBAPP_URL, location.origin);
+  Object.entries(qs).forEach(([k,v])=> url.searchParams.set(k,v));
+  const r = await fetch(url);
+  return r.json();
+}
+async function apiPost(body){
+  const params = new URLSearchParams(body);
+  const r = await fetch(ORDERS_WEBAPP_URL, {
+    method:'POST',
+    headers:{'Content-Type':'application/x-www-form-urlencoded'},
+    body: params
+  });
+  return r.json();
+}
+
+// =============== RENDER ===============
+function productCard(p){
+  const desact = String(p.stock).toLowerCase()==='no';
+  const checked = String(p.masvendido).toLowerCase()==='si' ? 'checked' : '';
+  const stockVal = desact ? 'no' : (p.stock==='' ? '' : Number(p.stock));
+
+  return `
+  <div data-row="${p._row}" class="bg-white rounded-xl shadow p-4 flex flex-col gap-3 ${desact?'opacity-60':''}">
+    <div class="flex items-start gap-3">
+      <img src="${p.img || 'https://via.placeholder.com/80x80?text=Sin+imagen'}"
+           onerror="this.src='https://via.placeholder.com/80x80?text=Error'"
+           class="h-20 w-20 object-cover rounded border"/>
+
+      <div class="flex-1">
+        <input data-k="nombre" class="w-full font-semibold text-lg outline-none" value="${p.nombre||''}">
+        <div class="text-sm text-slate-500">${p.sku || ''}</div>
       </div>
     </div>
-  </header>
 
-  <!-- Contenido -->
-  <main class="p-4 sm:p-6">
-    <div class="max-w-7xl mx-auto space-y-4">
-
-      <div class="card p-4">
-        <div class="grid md:grid-cols-12 gap-3 items-end">
-          <div class="md:col-span-6">
-            <label class="block text-sm font-medium mb-1">Buscar</label>
-            <input id="q" class="inp w-full" placeholder="nombre, sku, categoría..."/>
-          </div>
-          <div class="md:col-span-4">
-            <label class="block text-sm font-medium mb-1">Categoría</label>
-            <select id="cat" class="inp w-full">
-              <option value="">Filtrar por categoría</option>
-            </select>
-          </div>
-          <div class="md:col-span-2 flex gap-2">
-            <button id="btnRefresh" class="btn w-full">Refrescar</button>
-          </div>
-        </div>
-      </div>
-
-      <div class="flex items-center justify-between">
-        <div class="text-sm text-slate-600">
-          Total: <b id="countItems">0</b> productos
-        </div>
-        <div class="flex gap-2">
-          <button id="btnNew" class="btn-primary rounded-xl px-3 py-2 text-sm">+ Nuevo producto</button>
-        </div>
-      </div>
-
-      <div class="card table-wrap">
-        <table class="min-w-full">
-          <thead class="bg-slate-50">
-            <tr>
-              <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600">SKU</th>
-              <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600">Nombre</th>
-              <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600">Categoría</th>
-              <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600">Subcat</th>
-              <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600">TIPO</th>
-              <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600">SUBTIPO</th>
-              <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600">Imagen</th>
-              <th class="px-4 py-3 text-right text-xs font-semibold text-slate-600">Precio</th>
-              <th class="px-4 py-3 text-right text-xs font-semibold text-slate-600">Costo</th>
-              <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600">Stock</th>
-              <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600">Más vendido</th>
-              <th class="px-4 py-3"></th>
-            </tr>
-          </thead>
-          <tbody id="tbody"></tbody>
-        </table>
-      </div>
-
+    <div class="grid grid-cols-2 gap-2 text-sm">
+      <input data-k="categoria" class="inp" placeholder="Categoría" value="${p.categoria||''}">
+      <input data-k="subcategoria" class="inp" placeholder="Subcategoría" value="${p.subcategoria||''}">
+      <input data-k="TIPO" class="inp" placeholder="Tipo" value="${p.TIPO||''}">
+      <input data-k="SUBTIPO" class="inp" placeholder="Subtipo" value="${p.SUBTIPO||''}">
     </div>
-  </main>
 
-  <!-- Libs -->
-  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <div class="flex flex-col">
+      <label class="text-xs text-slate-500">Imagen (URL)</label>
+      <input data-k="img" class="inp" placeholder="https://..." value="${p.img||''}">
+    </div>
 
-  <script>
-    // ======== AUTH =========
-    let CURRENT_USER = null; // {username, role, token}
+    <div class="flex justify-between items-center text-sm">
+      <div class="flex flex-col">
+        <label class="text-xs text-slate-500">Precio</label>
+        <input data-k="precio" type="number" class="inp w-24 text-right" value="${Number(p.precio)||0}">
+      </div>
+      <div class="flex flex-col">
+        <label class="text-xs text-slate-500">Costo</label>
+        <input data-k="Costo" type="number" class="inp w-24 text-right" value="${Number(p.Costo)||0}">
+      </div>
+      <div class="flex flex-col">
+        <label class="text-xs text-slate-500">Stock</label>
+        <input data-k="stock" class="inp w-20 text-center" value="${stockVal}">
+      </div>
+      <div class="flex items-center gap-1">
+        <input type="checkbox" data-k="masvendido" ${checked}>
+        <label class="text-xs">Más vendido</label>
+      </div>
+    </div>
 
-    function setBadges(){
-      $('#roleBadge').text(CURRENT_USER ? `${CURRENT_USER.username} · ${CURRENT_USER.role}` : '—');
-    }
-    async function apiPost(body){
-      const params = new URLSearchParams(body);
-      if(CURRENT_USER?.token) params.set('token', CURRENT_USER.token);
-      const r = await fetch(ORDERS_WEBAPP_URL, {
-        method:'POST',
-        headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},
-        body: params
-      });
-      const t = await r.text();
-      try{ return JSON.parse(t); }catch{ return { ok:r.ok }; }
-    }
-    async function apiGet(qs){
-      const url = new URL(ORDERS_WEBAPP_URL, location.origin);
-      Object.entries(qs).forEach(([k,v])=> url.searchParams.set(k,v));
-      if(CURRENT_USER?.token) url.searchParams.set('token', CURRENT_USER.token);
-      const r = await fetch(url);
-      return r.json();
-    }
-    async function login(u,p){
-      const res = await apiPost({ action:'login', payload: JSON.stringify({ username:u, password:p }) });
-      if(!res.ok) throw new Error(res.error||'Login inválido');
-      CURRENT_USER = { username:res.username, role:res.role, token:res.token };
-      setBadges();
-      if(CURRENT_USER.role!=='admin') throw new Error('Solo Admin puede editar el menú.');
-      $('#loginOverlay').addClass('hidden');
-    }
+    <div class="flex gap-2 justify-end mt-2">
+      <button class="bg-rose-600 text-white px-3 py-1 rounded" data-action="del">Borrar</button>
+      <button class="bg-slate-700 text-white px-3 py-1 rounded" data-action="save">Guardar</button>
+    </div>
+  </div>`;
+}
 
-    // ======== MENU CRUD =========
-    const $fmt = n => new Intl.NumberFormat('es-AR',{style:'currency',currency:'ARS',maximumFractionDigits:0}).format(Number(n||0));
-    const esc = s => String(s||'').replace(/[&<>"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
+function renderMenu(list){
+  const $list = $('#menuList');
+  $list.empty();
+  const q = ($('#q').val()||'').toLowerCase();
+  const cat = $('#cat').val()||'';
+  list
+    .filter(p => !cat || p.categoria===cat)
+    .filter(p => !q || [p.nombre,p.categoria,p.subcategoria,p.sku].join(' ').toLowerCase().includes(q))
+    .forEach(p => $list.append(productCard(p)));
+}
 
-    function rowHTML(p){
-      const off = String(p.stock).toLowerCase()==='no';
-      const checked = String(p.masvendido).toLowerCase()==='si' ? 'checked' : '';
-      const stockVal = off ? 'no' : (p.stock==='' ? '' : Number(p.stock));
-      return `
-      <tr data-row="${p._row||''}" class="${off?'row-disabled':''}">
-        <td class="px-4 py-2"><input class="inp w-28" data-k="sku" value="${esc(p.sku)}"></td>
-        <td class="px-4 py-2"><input class="inp w-[20rem]" data-k="nombre" value="${esc(p.nombre)}"></td>
-        <td class="px-4 py-2"><input class="inp w-48" data-k="categoria" value="${esc(p.categoria)}"></td>
-        <td class="px-4 py-2"><input class="inp w-48" data-k="subcategoria" value="${esc(p.subcategoria)}"></td>
-        <td class="px-4 py-2"><input class="inp w-36" data-k="TIPO" value="${esc(p.TIPO)}"></td>
-        <td class="px-4 py-2"><input class="inp w-36" data-k="SUBTIPO" value="${esc(p.SUBTIPO)}"></td>
-        <td class="px-4 py-2">
-          <div class="flex items-center gap-2">
-            <img src="${esc(p.img)}" onerror="this.src=''" class="thumb"/>
-            <input class="inp w-[20rem]" data-k="img" placeholder="https://..." value="${esc(p.img)}">
-          </div>
-        </td>
-        <td class="px-4 py-2 text-right"><input class="inp w-28 text-right" data-k="precio" type="number" min="0" value="${Number(p.precio)||0}"></td>
-        <td class="px-4 py-2 text-right"><input class="inp w-28 text-right" data-k="Costo" type="number" min="0" value="${Number(p.Costo)||0}"></td>
-        <td class="px-4 py-2 text-center">
-          <div class="flex items-center justify-center gap-2">
-            <input class="inp w-20 text-center" data-k="stock" placeholder="número o 'no'" value="${esc(stockVal)}">
-            <button class="btn text-xs" data-action="toggle">${off?'Activar':'Desactivar'}</button>
-          </div>
-        </td>
-        <td class="px-4 py-2 text-center"><input type="checkbox" data-k="masvendido" ${checked}></td>
-        <td class="px-4 py-2">
-          <div class="flex flex-col gap-2 items-end">
-            <button class="btn-primary rounded-xl px-3 py-2 text-sm" data-action="save">Guardar</button>
-            <button class="btn rounded-xl px-3 py-2 text-sm" data-action="del">Borrar</button>
-          </div>
-        </td>
-      </tr>`;
-    }
+// =============== CRUD ===============
+function readCard($card){
+  const get = k => $card.find(`[data-k="${k}"]`);
+  return {
+    _row: Number($card.data('row')||0),
+    sku: '',
+    nombre: get('nombre').val(),
+    categoria: get('categoria').val(),
+    subcategoria: get('subcategoria').val(),
+    TIPO: get('TIPO').val(),
+    SUBTIPO: get('SUBTIPO').val(),
+    img: get('img').val(),
+    precio: Number(get('precio').val()||0),
+    Costo: Number(get('Costo').val()||0),
+    stock: (() => {
+      const v = String(get('stock').val()||'').trim();
+      if (v.toLowerCase()==='no') return 'no';
+      const n = Number(v); return isNaN(n)?'':n;
+    })(),
+    masvendido: $card.find('[data-k="masvendido"]').prop('checked') ? 'si' : 'no'
+  };
+}
 
-    function materialize($tr){
-      const get = k => $tr.find(`[data-k="${k}"]`);
-      return {
-        _row: Number($tr.data('row')||0) || undefined,
-        sku: get('sku').val(),
-        nombre: get('nombre').val(),
-        categoria: get('categoria').val(),
-        subcategoria: get('subcategoria').val(),
-        TIPO: get('TIPO').val(),
-        SUBTIPO: get('SUBTIPO').val(),
-        img: get('img').val(),
-        precio: Number(get('precio').val()||0),
-        Costo: Number(get('Costo').val()||0),
-        stock: (()=>{
-          const v = String(get('stock').val()||'').trim();
-          if (v.toLowerCase()==='no') return 'no';
-          const n = Number(v); return isNaN(n)?'':n;
-        })(),
-        masvendido: $tr.find('[data-k="masvendido"]').prop('checked') ? 'si' : 'no'
-        // (items) se deja sin editar; el POS arma los ítems del pedido
-      };
-    }
+$('#menuList').on('click','[data-action="save"]', async function(){
+  const $c = $(this).closest('[data-row]');
+  const payload = readCard($c);
+  const res = await apiPost({action:'menu_upsert', payload: JSON.stringify(payload)});
+  if(!res.ok && !res.created && !res.updated) alert(res.error||'Error al guardar');
+  else await refreshMenu();
+});
 
-    function renderMenu(list){
-      const q = ($('#q').val()||'').toLowerCase();
-      const cat = $('#cat').val()||'';
-      const tbody = $('#tbody').empty();
-      let filtered = list;
-      if (cat) filtered = filtered.filter(x => (x.categoria||'')===cat);
-      if (q) filtered = filtered.filter(x => [x.nombre,x.categoria,x.subcategoria,x.sku].join(' ').toLowerCase().includes(q));
-      $('#countItems').text(filtered.length);
-      filtered.forEach(p => tbody.append(rowHTML(p)));
-    }
+$('#menuList').on('click','[data-action="del"]', async function(){
+  const $c = $(this).closest('[data-row]');
+  const row = Number($c.data('row')||0);
+  if(!row || !confirm('¿Borrar este producto?')) return;
+  const res = await apiPost({action:'menu_delete', payload: JSON.stringify({_row:row})});
+  if(!res.ok && !res.deleted) alert(res.error||'Error al borrar');
+  else $c.remove();
+});
 
-    async function refreshMenu(){
-      const res = await apiGet({ action:'menu_list' });
-      if(!res.ok){ alert(res.error||'No se pudo cargar el menú'); return; }
-      window.__MENU = res.items || [];
+// =============== LOAD ===============
+async function refreshMenu(){
+  const res = await apiGet({action:'menu_list'});
+  if(!res.ok){ alert(res.error||'Error al cargar'); return; }
+  window.__MENU = res.items || [];
+  const cats = [...new Set(window.__MENU.map(x=>x.categoria).filter(Boolean))];
+  $('#cat').empty().append('<option value="">Todas</option>');
+  cats.forEach(c=> $('#cat').append(`<option>${c}</option>`));
+  renderMenu(window.__MENU);
+}
 
-      // Popular combo de categorías
-      const cats = [...new Set(window.__MENU.map(x=>x.categoria).filter(Boolean))].sort();
-      const $cat = $('#cat'); const cur = $cat.val()||'';
-      $cat.empty().append(`<option value="">Filtrar por categoría</option>`);
-      cats.forEach(c => $cat.append(`<option>${c}</option>`));
-      if(cur) $cat.val(cur);
+$('#refresh').on('click', refreshMenu);
+$('#q').on('input', ()=> renderMenu(window.__MENU||[]));
+$('#cat').on('change', ()=> renderMenu(window.__MENU||[]));
 
-      renderMenu(window.__MENU);
-    }
+$(refreshMenu);
+</script>
 
-    // ====== Eventos tabla ======
-    $('#tbody').on('click','[data-action="toggle"]', function(){
-      const $tr = $(this).closest('tr');
-      const $st = $tr.find('[data-k="stock"]');
-      const v = String($st.val()||'').trim().toLowerCase();
-      if (v==='no'){ $st.val('0'); $tr.removeClass('row-disabled'); $(this).text('Desactivar'); }
-      else { $st.val('no'); $tr.addClass('row-disabled'); $(this).text('Activar'); }
-    });
-
-    $('#tbody').on('click','[data-action="save"]', async function(){
-      const $tr = $(this).closest('tr');
-      const payload = materialize($tr);
-      const res = await apiPost({ action:'menu_upsert', payload: JSON.stringify(payload) });
-      if(!(res.ok || res.created || res.updated)){ alert(res.error||'Error al guardar'); return; }
-      await refreshMenu();
-    });
-
-    $('#tbody').on('click','[data-action="del"]', async function(){
-      const $tr = $(this).closest('tr');
-      const row = Number($tr.data('row')||0);
-      if(!row){ if(confirm('Fila nueva sin guardar. ¿Quitar de la vista?')) $tr.remove(); return; }
-      if(!confirm('¿Borrar este producto?')) return;
-      const res = await apiPost({ action:'menu_delete', payload: JSON.stringify({_row: row}) });
-      if(!(res.ok || res.deleted)){ alert(res.error||'No se pudo borrar'); return; }
-      $tr.remove();
-    });
-
-    // Nuevo producto
-    $('#btnNew').on('click', function(){
-      const nuevo = {
-        _row: '', sku:'', nombre:'', categoria:'', subcategoria:'',
-        TIPO:'', SUBTIPO:'', img:'', precio:0, Costo:0, stock:0, masvendido:'no'
-      };
-      $('#tbody').prepend( rowHTML(nuevo) );
-    });
-
-    // Filtros / refresco
-    $('#q').on('input', ()=> renderMenu(window.__MENU||[]));
-    $('#cat').on('change', ()=> renderMenu(window.__MENU||[]));
-    $('#btnRefresh').on('click', refreshMenu);
-
-    // ====== Login flow ======
-    $('#btnLogin').on('click', async()=>{
-      const u=$('#loginUser').val().trim();
-      const p=$('#loginPass').val();
-      $('#loginMsg').addClass('hidden').text('');
-      try{
-        await login(u,p);
-        await refreshMenu();
-      }catch(e){
-        $('#loginMsg').removeClass('hidden').text(e.message||'Error');
-      }
-    });
-
-    // init
-    $(function(){ setBadges(); });
-  </script>
+<style>
+  .inp{ @apply border rounded px-2 py-1 bg-slate-50 focus:bg-white focus:border-slate-400; }
+</style>
 </body>
 </html>
