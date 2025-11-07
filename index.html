@@ -207,21 +207,29 @@
   <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
   <script>
-  // ======== AUTH =========
+  <script>
+  const MENU_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTOCWWvu8KMMGhuRlTtbvCMEaJIWb9l3DYMi7281gfgncS5tGeO81BRpcCMk-SJIWtNyvWckt2bV4U-/pub?output=csv";
+  const ORDERS_WEBAPP_URL = "/.netlify/functions/gs-order";
+  const STORE_NAME = "OnceyDoce";
+
+  // ===== AUTH =====
   let CURRENT_USER = null; // {username, role, token}
   function setAuthUI(){
     const isAdmin = CURRENT_USER?.role==='admin';
-    // Mostrar Reporte solo a admin
     $('#linkReporte').toggleClass('hidden', !isAdmin);
     $('#userBadge').text(CURRENT_USER ? `${CURRENT_USER.username} · ${CURRENT_USER.role}` : '');
-    // Botón Forzar lock visible solo admin
     $('#btnForceLock').toggleClass('hidden', !isAdmin);
   }
   async function apiPost(params){
     const body = new URLSearchParams(params);
     if(CURRENT_USER?.token) body.set('token', CURRENT_USER.token);
-    const r = await fetch(ORDERS_WEBAPP_URL, { method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'}, body });
-    const t = await r.text(); try{ return JSON.parse(t); }catch{ return {ok:r.ok}; }
+    const r = await fetch(ORDERS_WEBAPP_URL, {
+      method:'POST',
+      headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},
+      body
+    });
+    const t = await r.text();
+    try{ return JSON.parse(t); }catch{ return {ok:r.ok}; }
   }
   async function apiGet(params){
     const qs = new URLSearchParams(params);
@@ -237,27 +245,107 @@
     setAuthUI();
   }
 
-  // ===== Menú / productos =====
+  // ===== STATE / MESAS =====
+  const STATE_KEY = 'POS_MESAS_V1';
   let MENU = []; const ALERTED = new Set();
   let MESAS = []; let MESA_ACTUAL = null;
-  const $fmt = (n) => new Intl.NumberFormat('es-AR', { style:'currency', currency:'ARS', maximumFractionDigits:0 }).format(Number(n||0));
-  const uid = ()=>'m'+Math.random().toString(36).slice(2,9);
-  const STATE_KEY = 'POS_MESAS_V1'; const SYNC_MS=2000; let LAST_REMOTE_TS=0; let SAVE_TIMER=null;
-  const nowIso=()=>new Date().toISOString(); const debounceSave=()=>{clearTimeout(SAVE_TIMER); SAVE_TIMER=setTimeout(saveState,400)};
 
-  // ======= Locks =======
-  async function lockMesa(mesaId, force=false){
-    const res = await apiPost({ action:'lock_mesa', payload: JSON.stringify({ key:STATE_KEY, mesaId, force }) });
-    if(!res.ok) throw new Error(res.error||'No se pudo bloquear mesa');
-    return res.lock; // {by, at}
+  const $fmt = (n) => new Intl.NumberFormat('es-AR',{style:'currency',currency:'ARS',maximumFractionDigits:0}).format(Number(n||0));
+  const uid = ()=>'m'+Math.random().toString(36).slice(2,9);
+  const nowIso=()=>new Date().toISOString();
+
+  // sync & saves
+  let SAVE_TIMER=null;
+  let LAST_REMOTE_TS=0;
+  let LAST_SAVED_SIG = ''; // firma del último state guardado
+  const SYNC_MS = 4000;    // menos agresivo
+  let SYNC_HANDLE = null;
+
+  function compactStateSignature(state){
+    // firma liviana para comparar (no incluye campos volátiles innecesarios)
+    const simple = {
+      actual: state.actual,
+      mesas: (state.mesas||[]).map(m=>({
+        id:m.id, nombre:m.nombre, color:m.color, cliente:m.cliente, pago:m.pago, metodo:m.metodo,
+        items:(m.items||[]).map(i=>({rid:i._rowId, q:i.qty, p:i.precio, c:i.costo}))
+      }))
+    };
+    return JSON.stringify(simple);
   }
-  async function unlockMesa(mesaId){ try{ await apiPost({ action:'unlock_mesa', payload: JSON.stringify({ key:STATE_KEY, mesaId }) }); }catch(_){} }
+
+  async function fetchRemoteState(){ return apiGet({ action:'get_state', key:STATE_KEY }); }
+  async function pushRemoteState(payload){ return apiPost({ action:'save_state', payload: JSON.stringify(payload), key:STATE_KEY }); }
+
+  function applyRemoteStatePacket(pkt){
+    const state = pkt?.state;
+    if(!state){
+      if(MESAS.length===0){
+        const id=uid();
+        MESAS=[{id,nombre:'Mesa 1',color:'#e11d48',items:[],cliente:'',pago:0,metodo:'Efectivo',lock:null}];
+        MESA_ACTUAL=id;
+      }
+      renderMesas();
+      return;
+    }
+    // Sólo actualizo si realmente es MÁS nuevo
+    const ts = Date.parse(state.updatedAt||0)||0;
+    if (ts <= LAST_REMOTE_TS) return;
+
+    MESAS = Array.isArray(state.mesas) ? state.mesas : [];
+    MESA_ACTUAL = state.actual || (MESAS[0]?.id);
+    LAST_REMOTE_TS = ts;
+
+    // refrescar firma para evitar guardados innecesarios post-sync
+    LAST_SAVED_SIG = compactStateSignature({ mesas:MESAS, actual:MESA_ACTUAL });
+    renderMesas();
+  }
+
+  async function loadState(){
+    const pkt = await fetchRemoteState();
+    applyRemoteStatePacket(pkt);
+  }
+
+  function debounceSave(){ clearTimeout(SAVE_TIMER); SAVE_TIMER=setTimeout(saveState, 700); }
+
+  async function saveState(){
+    // no escribas si no cambió
+    const payload = { mesas:MESAS, actual:MESA_ACTUAL, updatedAt: nowIso() };
+    const sig = compactStateSignature(payload);
+    if (sig === LAST_SAVED_SIG) return; // nada que guardar
+
+    const res = await pushRemoteState(payload);
+    if(res.ok===false){ console.warn('No guardó:', res.error); return; }
+    LAST_SAVED_SIG = sig;
+    LAST_REMOTE_TS = Date.now();
+  }
+
+  function startSync(){
+    if (SYNC_HANDLE) clearInterval(SYNC_HANDLE);
+    SYNC_HANDLE = setInterval(async ()=>{
+      try{
+        if (document.hidden) return; // pausa si pestaña en background
+        const pkt = await fetchRemoteState();
+        applyRemoteStatePacket(pkt);
+      }catch(_){}
+    }, SYNC_MS);
+  }
+
+  // ===== Locks (no bloqueamos el cambio de mesa) =====
+  async function requestLock(mesaId, force=false){
+    try{
+      const res = await apiPost({ action:'lock_mesa', payload: JSON.stringify({ key:STATE_KEY, mesaId, force }) });
+      return res;
+    }catch(e){ return { ok:false, error:e.message }; }
+  }
+  async function releaseLock(mesaId){
+    try{ await apiPost({ action:'unlock_mesa', payload: JSON.stringify({ key:STATE_KEY, mesaId }) }); }catch(_){}
+  }
 
   function isMesaLockedForMe(m){
     if(!m?.lock) return false;
     const me = CURRENT_USER?.username;
     const isAdmin = CURRENT_USER?.role==='admin';
-    if(isAdmin) return false; // admin ignora lock
+    if(isAdmin) return false;
     return m.lock.by && m.lock.by!==me;
   }
 
@@ -269,38 +357,30 @@
     $('#lockInfo').toggleClass('hidden', !locked).text(locked?`Mesa bloqueada por ${m.lock.by}. Sólo Admin puede forzar.`:'');
   }
 
-  // ====== Estado remoto ======
-  async function fetchRemoteState(){ return apiGet({ action:'get_state', key:STATE_KEY }); }
-  async function pushRemoteState(payload){ return apiPost({ action:'save_state', payload: JSON.stringify(payload), key:STATE_KEY }); }
-
-  function applyRemoteStatePacket(packet){
-    const state = packet?.state || null;
-    if(!state){ // bootstrap
-      if(MESAS.length===0){ const id=uid(); MESAS=[{id,nombre:'Mesa 1',color:'#e11d48',items:[],cliente:'',pago:0,metodo:'Efectivo'}]; MESA_ACTUAL=id; }
-      return renderMesas();
-    }
-    if(Array.isArray(state.mesas) && state.mesas.length){ MESAS = state.mesas; MESA_ACTUAL = state.actual || MESAS[0].id; }
-    LAST_REMOTE_TS = Date.parse(state.updatedAt||nowIso())||Date.now();
-    renderMesas();
-  }
-
-  async function loadState(){ const pkt = await fetchRemoteState(); applyRemoteStatePacket(pkt); }
-  async function saveState(){
-    const payload = { mesas:MESAS, actual:MESA_ACTUAL, updatedAt: nowIso() };
-    const res = await pushRemoteState(payload);
-    if(!res.ok){ alert(res.error||'No se pudo guardar (lock activo?)'); return; }
-    LAST_REMOTE_TS = Date.now();
-  }
-  function startSync(){ setInterval(async()=>{ try{ const pkt = await fetchRemoteState(); const st=pkt?.state; const ts=Date.parse(st?.updatedAt||0)||0; if(ts>LAST_REMOTE_TS){ applyRemoteStatePacket(pkt); } }catch(_){ } }, SYNC_MS); }
-
-  // ====== STOCK y UI (idéntico a versión anterior salvo llamadas a save/debounce) ======
+  // ===== STOCK / UI =====
   function mesaActual(){ return MESAS.find(m=>m.id===MESA_ACTUAL); }
-  function reservedQtyAllMesas(rowId){ return MESAS.reduce((acc,m)=> acc + (m.items||[]).filter(x=>x._rowId===rowId).reduce((a,i)=>a+i.qty,0), 0); }
-  function productThreshold(p){ const glob=Number($('#stockMinGlobal').val()||0); const own=Number(p.min||p.minimo||p.alerta||0); return Number.isFinite(own)&&own>0?own:glob; }
-  function availableStock(p){ const s=Number(p.stock); if(!Number.isFinite(s)) return Infinity; const reserved=reservedQtyAllMesas(p._rowId); return Math.max(0, s-reserved); }
+  function reservedQtyAllMesas(rowId){
+    return MESAS.reduce((acc,m)=> acc + (m.items||[]).filter(x=>x._rowId===rowId).reduce((a,i)=>a+i.qty,0), 0);
+  }
+  function productThreshold(p){
+    const glob=Number($('#stockMinGlobal').val()||0);
+    const own=Number(p.min||p.minimo||p.alerta||0);
+    return Number.isFinite(own)&&own>0?own:glob;
+  }
+  function availableStock(p){
+    const s=Number(p.stock);
+    if(!Number.isFinite(s)) return Infinity;
+    const reserved=reservedQtyAllMesas(p._rowId);
+    return Math.max(0, s-reserved);
+  }
   function shouldLowStock(p){ const min=productThreshold(p); const av=availableStock(p); return Number.isFinite(Number(p.stock)) && av<=min && Number(p.stock)>0; }
   function shouldNoStock(p){ const av=availableStock(p); return Number.isFinite(Number(p.stock)) && av<=0 && Number(p.stock)>0; }
-  function maybeAlertLow(p){ if(!shouldLowStock(p)) return; const key=p._rowId; if(ALERTED.has(key)) return; ALERTED.add(key); alert(`⚠️ Stock bajo de "${p.nombre}". Quedan ${availableStock(p)} (umbral ${productThreshold(p)}).`); }
+  function maybeAlertLow(p){
+    if(!shouldLowStock(p)) return;
+    const key=p._rowId; if(ALERTED.has(key)) return;
+    ALERTED.add(key);
+    alert(`⚠️ Stock bajo de "${p.nombre}". Quedan ${availableStock(p)} (umbral ${productThreshold(p)}).`);
+  }
 
   function renderMesas(){
     const cont=$('#listaMesas'); cont.empty();
@@ -322,38 +402,84 @@
         </div>`);
     });
     const m=mesaActual(); if(!m) return;
-    $('#mesaTitulo').text(m.nombre); $('#cliente').val(m.cliente); $('#pago').val(m.pago); $('#metodoPago').val(m.metodo||'Efectivo'); $('#colorMesa').val(m.color); $('#cartWrapper').css('border-color', m.color);
-    updateLockUI(); renderCart();
+    $('#mesaTitulo').text(m.nombre);
+    $('#cliente').val(m.cliente);
+    $('#pago').val(m.pago);
+    $('#metodoPago').val(m.metodo||'Efectivo');
+    $('#colorMesa').val(m.color);
+    $('#cartWrapper').css('border-color', m.color);
+    updateLockUI();
+    renderCart();
   }
 
+  // Cambio de mesa: INSTANTÁNEO (lock en background, no bloquea la UI)
   async function selectMesa(id, force=false){
-    MESA_ACTUAL=id; // UI selección
-    try{ await lockMesa(id, force); }catch(e){ /* si falla lock, igual mostramos pero con UI bloqueada */ }
+    MESA_ACTUAL=id; // cambio instantáneo
     renderMesas();
+
+    // pedimos lock en segundo plano
+    const res = await requestLock(id, force);
+    if(!res?.ok){
+      // si no se pudo, re-render para mostrar pill de lock del otro
+      renderMesas();
+    }else{
+      // si el lock fue nuestro, actualizo estado local sin forzar guardado si no hace falta
+      const m = mesaActual();
+      if (m){
+        const prev = JSON.stringify(m.lock||null);
+        const next = JSON.stringify(res.lock||null);
+        if (prev !== next){
+          m.lock = res.lock || null;
+          // No guardo acá; dejar que el flujo natural y el debounce lo persistan si algo cambia.
+          updateLockUI();
+        }
+      }
+    }
   }
 
   function nuevaMesa(nombre='Mesa '+(MESAS.length+1)){
     const m={id:uid(), nombre, color:'#e11d48', items:[], cliente:'', pago:0, metodo:'Efectivo', lock:{by:CURRENT_USER.username, at:nowIso()}};
-    MESAS.push(m); MESA_ACTUAL=m.id; renderMesas(); saveState();
+    MESAS.push(m); MESA_ACTUAL=m.id; renderMesas(); debounceSave();
   }
-  function duplicarMesa(id){ const src=MESAS.find(m=>m.id===id); if(!src) return; const copy={...src, id:uid(), nombre:src.nombre+" (copia)", items:JSON.parse(JSON.stringify(src.items)), lock:{by:CURRENT_USER.username, at:nowIso()}}; MESAS.push(copy); MESA_ACTUAL=copy.id; renderMesas(); saveState(); }
-  function eliminarMesa(id){ if(MESAS.length===1){ alert('Debe quedar al menos una mesa.'); return; } MESAS=MESAS.filter(m=>m.id!==id); if(MESA_ACTUAL===id){ MESA_ACTUAL=MESAS[0].id; } renderMesas(); saveState(); }
-  function cambiarColorActual(color){ const m=mesaActual(); if(!m) return; if(isMesaLockedForMe(m)) return alert('Mesa bloqueada por otro usuario'); m.color=color; $('#cartWrapper').css('border-color', color); debounceSave(); renderMesas(); }
+  function duplicarMesa(id){
+    const src=MESAS.find(m=>m.id===id); if(!src) return;
+    const copy={...src, id:uid(), nombre:src.nombre+" (copia)", items:JSON.parse(JSON.stringify(src.items)), lock:{by:CURRENT_USER.username, at:nowIso()}};
+    MESAS.push(copy); MESA_ACTUAL=copy.id; renderMesas(); debounceSave();
+  }
+  function eliminarMesa(id){
+    if(MESAS.length===1){ alert('Debe quedar al menos una mesa.'); return; }
+    MESAS=MESAS.filter(m=>m.id!==id);
+    if(MESA_ACTUAL===id){ MESA_ACTUAL=MESAS[0].id; }
+    renderMesas(); debounceSave();
+  }
+  function cambiarColorActual(color){
+    const m=mesaActual(); if(!m) return;
+    if(isMesaLockedForMe(m)) return alert('Mesa bloqueada por otro usuario');
+    m.color=color; $('#cartWrapper').css('border-color', color);
+    debounceSave(); renderMesas();
+  }
 
   function groupUnique(arr,key){ return [...new Set(arr.map(x=>(x[key]||"").toString().trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b)); }
   function renderFilters(){ const cats=groupUnique(MENU,'categoria'); const catSel=$('#categoria'); catSel.find('option:not(:first)').remove(); cats.forEach(c=>catSel.append(`<option value="${c}">${c}</option>`)); renderSubcats(); }
   function renderSubcats(){ const cat=($('#categoria').val()||'').toString().trim(); let list=MENU; if(cat) list=MENU.filter(x=>(x.categoria||'').toString().trim()===cat); const subs=groupUnique(list,'subcategoria'); const subSel=$('#subcategoria'); subSel.find('option:not(:first)').remove(); subs.forEach(s=>subSel.append(`<option value="${s}">${s}</option>`)); }
   function productMatches(p){ const q=$('#buscar').val().trim().toLowerCase(); const cat=$('#categoria').val(); const sub=$('#subcategoria').val(); if(cat&&(p.categoria||'')!==cat) return false; if(sub&&(p.subcategoria||'')!==sub) return false; if(!q) return true; return [p.nombre,p.categoria,p.subcategoria,p.sku].filter(Boolean).join(' ').toLowerCase().includes(q); }
 
-  function renderProducts(){ const cont=$('#listaProductos'); cont.empty(); const list=MENU.filter(productMatches); $('#countProductos').text(list.length); if(list.length===0){ cont.html('<div class="p-4 text-sm text-gray-500">No hay productos para mostrar.</div>'); return; }
-    list.forEach(p=>{ const dispStock=Number.isFinite(Number(p.stock))?availableStock(p):null; const isLow=dispStock!==null&&shouldLowStock(p); const isZero=dispStock!==null&&shouldNoStock(p);
-      const rowClasses=`${isLow?'low-stock':''} ${isZero?'no-stock':''}`;
+  function renderProducts(){
+    const cont=$('#listaProductos'); cont.empty();
+    const list=MENU.filter(productMatches);
+    $('#countProductos').text(list.length);
+    if(list.length===0){ cont.html('<div class="p-4 text-sm text-gray-500">No hay productos para mostrar.</div>'); return; }
+    const mActual = mesaActual();
+    list.forEach(p=>{
+      const dispStock=Number.isFinite(Number(p.stock))?availableStock(p):null;
+      const isLow=dispStock!==null&&shouldLowStock(p);
+      const isZero=dispStock!==null&&shouldNoStock(p);
       const stockHtml=(dispStock!==null)?`<span class='text-xs ${isLow?'text-red-700':'text-gray-500'}'>Stock disp.: ${dispStock}${isLow?` · min ${productThreshold(p)}`:''}</span>`:`<span class='text-xs text-gray-400'>Sin stock informado</span>`;
-      const locked = isMesaLockedForMe(mesaActual());
+      const locked = isMesaLockedForMe(mActual);
       const disabled = locked ? 'disabled' : (isZero?'disabled':'');
       const btnClass = locked? 'btn cursor-not-allowed opacity-60' : (isZero?'btn cursor-not-allowed opacity-60':'btn-primary');
       cont.append(`
-        <div class="p-3 flex items-center gap-3 hover:bg-gray-50 ${rowClasses}">
+        <div class="p-3 flex items-center gap-3 hover:bg-gray-50">
           <div class="flex-1">
             <div class="font-medium title">${p.nombre||'(sin nombre)'}</div>
             <div class="text-xs text-gray-500">${p.categoria||''}${p.subcategoria?` · ${p.subcategoria}`:''}</div>
@@ -369,44 +495,152 @@
     });
   }
 
-  function addToCart(rowId){ const m=mesaActual(); if(!m) return; if(isMesaLockedForMe(m)) return alert('Mesa bloqueada por otro usuario'); const p=MENU.find(x=>x._rowId===rowId); if(!p) return; if(Number.isFinite(Number(p.stock))){ const disp=availableStock(p); if(disp<=0){ alert(`Sin stock de "${p.nombre}"`); renderProducts(); return; } }
-    const ex=m.items.find(x=>x._rowId===rowId); if(ex){ if(Number.isFinite(Number(p.stock))){ const disp=availableStock(p); if(disp<=0){ alert(`Sin stock de "${p.nombre}"`); renderProducts(); return; } } ex.qty+=1; }else{ m.items.push({_rowId:rowId,nombre:p.nombre,precio:Number(p.precio)||0,costo:Number(p.costo)||0,qty:1}); }
-    m.lock={by:CURRENT_USER.username, at:nowIso()}; maybeAlertLow(p); renderCart(); saveState(); renderProducts(); }
-
-  function removeFromCart(rowId){ const m=mesaActual(); if(!m) return; if(isMesaLockedForMe(m)) return alert('Mesa bloqueada por otro usuario'); m.items=m.items.filter(x=>x._rowId!==rowId); m.lock={by:CURRENT_USER.username, at:nowIso()}; renderCart(); saveState(); renderProducts(); }
-  function setQty(rowId,qty){ const m=mesaActual(); if(!m) return; if(isMesaLockedForMe(m)) return alert('Mesa bloqueada por otro usuario'); const it=m.items.find(x=>x._rowId===rowId); if(!it) return; qty=Math.max(1,Number(qty)||1); const p=MENU.find(x=>x._rowId===rowId); if(Number.isFinite(Number(p?.stock))){ const reservedOtros=reservedQtyAllMesas(rowId)-it.qty; const disp=Math.max(0, Number(p.stock||0)-reservedOtros); if(qty>disp){ alert(`Solo hay ${disp} disponibles de "${p.nombre}".`); qty=disp>0?disp:1; } } it.qty=qty; m.lock={by:CURRENT_USER.username, at:nowIso()}; maybeAlertLow(p); renderCart(); saveState(); renderProducts(); }
-
-  function renderCart(){ const m=mesaActual(); const cont=$('#cartTable'); cont.empty(); if(!m){return} const CART=m.items||[]; if(CART.length===0){ cont.html('<p class="text-sm text-gray-500">No hay ítems en el carrito.</p>'); } else { CART.forEach(it=>{ const linea=it.precio*it.qty; cont.append(`
-      <div class="grid grid-cols-12 gap-2 items-center py-2">
-        <div class="col-span-5"><div class="font-medium">${it.nombre}</div><div class="text-xs text-gray-500">${$fmt(it.precio)} c/u</div></div>
-        <div class="col-span-3"><input type="number" min="1" value="${it.qty}" data-id="${it._rowId}" data-action="qty" class="inp w-24"/></div>
-        <div class="col-span-3 text-right font-semibold">${$fmt(linea)}</div>
-        <div class="col-span-1 text-right"><button class="btn btn-ghost text-xs px-2 py-1" data-id="${it._rowId}" data-action="del">✕</button></div>
-      </div>`); }); }
-    const total=CART.reduce((a,x)=>a+x.precio*x.qty,0); const costo=CART.reduce((a,x)=>a+(Number(x.costo)||0)*x.qty,0); $('#totalBruto').text($fmt(total)); $('#totalCosto').text($fmt(costo)); $('#totalGanancia').text($fmt(total-costo)); const pago=Number($('#pago').val()||m.pago||0); const vuelto=Math.max(0, pago-total); $('#vuelto').text($fmt(vuelto)); updateLockUI(); }
-
-  async function saveOrder(){ const m=mesaActual(); if(!m) return; if(isMesaLockedForMe(m)) return alert('Mesa bloqueada por otro usuario'); if(!ORDERS_WEBAPP_URL){ alert('Configura ORDERS_WEBAPP_URL'); return; } if((m.items||[]).length===0){ alert('El carrito está vacío.'); return; }
-    for(const it of m.items){ const p=MENU.find(x=>x._rowId===it._rowId); if(Number.isFinite(Number(p?.stock))){ const disp=availableStock(p); if(it.qty>disp){ alert(`No hay stock suficiente de "${p.nombre}". Disponible: ${disp}.`); return; } } }
-    const total=m.items.reduce((a,x)=>a+x.precio*x.qty,0); const totalCosto=m.items.reduce((a,x)=>a+(Number(x.costo)||0)*x.qty,0);
-    const payload={ type:'sale', timestamp:new Date().toISOString(), cliente:m.cliente||'', mesa:m.nombre, color:m.color, total, totalCosto, ganancia: total-totalCosto, pago:Number(m.pago||0), metodo: String($('#metodoPago').val()||m.metodo||'Efectivo'), items:m.items.map(x=>({nombre:x.nombre,precio:x.precio,costo:x.costo,qty:x.qty})) };
-    $('#btnGuardar').prop('disabled',true).text('Guardando…');
-    try{ const res = await apiPost({ action:'', payload: JSON.stringify(payload) }); if(res.ok===false) throw new Error(res.error||'Error al guardar'); for(const it of m.items){ const p=MENU.find(x=>x._rowId===it._rowId); if(p&&Number.isFinite(Number(p.stock))){ p.stock=Math.max(0, Number(p.stock)-it.qty); } } alert('Pedido guardado ✅'); m.items=[]; m.lock=null; renderCart(); saveState(); renderProducts(); }
-    catch(err){ console.error(err); alert('No se pudo guardar el pedido: '+err.message); }
-    finally{ $('#btnGuardar').prop('disabled',false).text('Guardar Pedido'); }
+  function addToCart(rowId){
+    const m=mesaActual(); if(!m) return;
+    if(isMesaLockedForMe(m)) return alert('Mesa bloqueada por otro usuario');
+    const p=MENU.find(x=>x._rowId===rowId); if(!p) return;
+    if(Number.isFinite(Number(p.stock))){
+      const disp=availableStock(p);
+      if(disp<=0){ alert(`Sin stock de "${p.nombre}"`); renderProducts(); return; }
+    }
+    const ex=m.items.find(x=>x._rowId===rowId);
+    if(ex){
+      if(Number.isFinite(Number(p.stock))){
+        const disp=availableStock(p);
+        if(disp<=0){ alert(`Sin stock de "${p.nombre}"`); renderProducts(); return; }
+      }
+      ex.qty+=1;
+    }else{
+      m.items.push({_rowId:rowId,nombre:p.nombre,precio:Number(p.precio)||0,costo:Number(p.costo)||0,qty:1});
+    }
+    m.lock={by:CURRENT_USER.username, at:nowIso()};
+    maybeAlertLow(p);
+    renderCart();
+    debounceSave();
+    renderProducts();
+  }
+  function removeFromCart(rowId){
+    const m=mesaActual(); if(!m) return;
+    if(isMesaLockedForMe(m)) return alert('Mesa bloqueada por otro usuario');
+    m.items=m.items.filter(x=>x._rowId!==rowId);
+    m.lock={by:CURRENT_USER.username, at:nowIso()};
+    renderCart(); debounceSave(); renderProducts();
+  }
+  function setQty(rowId,qty){
+    const m=mesaActual(); if(!m) return;
+    if(isMesaLockedForMe(m)) return alert('Mesa bloqueada por otro usuario');
+    const it=m.items.find(x=>x._rowId===rowId); if(!it) return;
+    qty=Math.max(1,Number(qty)||1);
+    const p=MENU.find(x=>x._rowId===rowId);
+    if(Number.isFinite(Number(p?.stock))){
+      const reservedOtros=reservedQtyAllMesas(rowId)-it.qty;
+      const disp=Math.max(0, Number(p.stock||0)-reservedOtros);
+      if(qty>disp){ alert(`Solo hay ${disp} disponibles de "${p.nombre}".`); qty=disp>0?disp:1; }
+    }
+    it.qty=qty;
+    m.lock={by:CURRENT_USER.username, at:nowIso()};
+    maybeAlertLow(p);
+    renderCart(); debounceSave(); renderProducts();
   }
 
+  function renderCart(){
+    const m=mesaActual();
+    const cont=$('#cartTable'); cont.empty();
+    if(!m){return}
+    const CART=m.items||[];
+    if(CART.length===0){
+      cont.html('<p class="text-sm text-gray-500">No hay ítems en el carrito.</p>');
+    } else {
+      CART.forEach(it=>{
+        const linea=it.precio*it.qty;
+        cont.append(`
+          <div class="grid grid-cols-12 gap-2 items-center py-2">
+            <div class="col-span-5"><div class="font-medium">${it.nombre}</div><div class="text-xs text-gray-500">${$fmt(it.precio)} c/u</div></div>
+            <div class="col-span-3"><input type="number" min="1" value="${it.qty}" data-id="${it._rowId}" data-action="qty" class="inp w-24"/></div>
+            <div class="col-span-3 text-right font-semibold">${$fmt(linea)}</div>
+            <div class="col-span-1 text-right"><button class="btn btn-ghost text-xs px-2 py-1" data-id="${it._rowId}" data-action="del">✕</button></div>
+          </div>`);
+      });
+    }
+    const total=CART.reduce((a,x)=>a+x.precio*x.qty,0);
+    const costo=CART.reduce((a,x)=>a+(Number(x.costo)||0)*x.qty,0);
+    $('#totalBruto').text($fmt(total));
+    $('#totalCosto').text($fmt(costo));
+    $('#totalGanancia').text($fmt(total-costo));
+    const pago=Number($('#pago').val()||m.pago||0);
+    const vuelto=Math.max(0, pago-total);
+    $('#vuelto').text($fmt(vuelto));
+    updateLockUI();
+  }
+
+  // ====== MENU ======
+  function normalizeRow(row, idx){
+    const min=row.min??row.minimo??row.alerta??row.Min??row.Mínimo??row.Alerta;
+    const stock=row.stock??row.Stock??row.inventario??row.existencias;
+    const sku=(row.sku||row.SKU||row.codigo||row.Código||'').toString().trim();
+    const nombre=(row.nombre||row.producto||row.Producto||row.Nombre||'').toString().trim();
+    return {
+      _rowId: sku||nombre||`r${idx}`,
+      sku,
+      categoria:(row.categoria||row.Categoria||row.categoría||row.Categoría||'').toString().trim(),
+      subcategoria:(row.subcategoria||row.Subcategoria||row.Subcategoría||row['Sub-categoria']||'').toString().trim(),
+      nombre,
+      precio:Number(row.precio||row.Precio||row.price||0),
+      costo:Number(row.costo||row.Costo||row.cost||0),
+      stock: stock===''||stock==null? '': Number(stock),
+      min: min===''||min==null? '': Number(min)
+    };
+  }
+  async function loadMenu(){
+    if(!MENU_CSV_URL){ $('#statusBadge').attr('class','badge').text('Configura MENU_CSV_URL'); return; }
+    $('#statusBadge').attr('class','badge').text('Cargando menú…');
+    return new Promise((resolve)=>{
+      Papa.parse(MENU_CSV_URL,{
+        download:true, header:true, skipEmptyLines:true,
+        complete:(results)=>{
+          MENU=(results.data||[]).filter(r=>r&&Object.keys(r).length).map(normalizeRow).filter(x=>x.nombre&&!isNaN(x.precio));
+          ALERTED.clear();
+          renderFilters(); renderProducts(); renderCart();
+          $('#statusBadge').attr('class','badge').text('Menú sincronizado');
+          resolve();
+        },
+        error:()=>{
+          $('#statusBadge').attr('class','badge').text('Error al cargar menú'); resolve();
+        }
+      });
+    });
+  }
+
+  // ===== IMPRESIÓN (igual que antes) =====
   function buildTicketHTML(m){ const fmt=(n)=>new Intl.NumberFormat('es-AR',{style:'currency',currency:'ARS',maximumFractionDigits:0}).format(Number(n||0)); const meta=`${new Date().toLocaleString('es-AR')} · ${m.nombre} · ${m.metodo||'Efectivo'} · Cliente: ${m.cliente||'-'}`; const store=(typeof STORE_NAME!=='undefined'&&STORE_NAME)?STORE_NAME:'OnceyDoce'; const total=(m.items||[]).reduce((a,x)=>a+(Number(x.precio)||0)*x.qty,0); const pago=Number(m.pago||0); const vuelto=Math.max(0,pago-total); const itemsHTML=(m.items||[]).map(x=>{ const linea=(Number(x.precio)||0)*x.qty; return `<div class="row"><span>${x.qty}× ${x.nombre}</span><span>${fmt(linea)}</span></div>`; }).join(''); return `<div class="title">${store}</div><div class="muted">${meta}</div><hr/>${itemsHTML}<hr/><div class="row"><span>Total</span><span>${fmt(total)}</span></div><div class="row"><span>Pago</span><span>${fmt(pago)}</span></div><div class="row"><span>Vuelto</span><span>${fmt(vuelto)}</span></div><div class="muted" style="margin-top:6px">¡Gracias por su compra!</div>`; }
   function buildComandaHTML(m){ const meta=`${new Date().toLocaleString('es-AR')} · ${m.nombre} · Cliente: ${m.cliente||'-'}`; const store=(typeof STORE_NAME!=='undefined'&&STORE_NAME)?STORE_NAME:'OnceyDoce'; const itemsHTML=(m.items||[]).map(x=>{ const nota=x.notas?` — <em>${String(x.notas).replace(/[<>&]/g,s=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[s]))}</em>`:''; return `<div class="row"><span>${x.qty}× ${x.nombre}${nota}</span><span></span></div>`; }).join(''); return `<div class="title">${store} — COMANDA</div><div class="muted">${meta}</div><hr/>${itemsHTML}<hr/><div class="muted">Preparar y despachar</div>`; }
   function openPrintWindow(innerHTML,title='Impresión POS'){ const w=window.open('','_blank','width=420,height=800'); if(!w){ alert('El navegador bloqueó la ventana de impresión. Permití popups para este sitio.'); return; } const css=`<style>:root{color-scheme:light only;} html,body{margin:0;padding:0;background:#fff;} body{width:58mm;box-sizing:border-box;padding:8px 6px;color:#000;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono",monospace;font-size:14px;line-height:1.25;} .title{text-align:center;font-weight:700;font-size:16px;} .muted{font-size:13px;text-align:center;} hr{border:0;border-top:1px dashed #000;margin:8px 0;} .row{display:flex;justify-content:space-between;gap:8px;} .tot{font-weight:700;} @media print{@page{size:58mm auto;margin:0;} body{margin:0;} .no-print{display:none !important;}}</style>`; const htmlDoc=`<!DOCTYPE html><html><head><meta charset='utf-8'/><meta name='viewport' content='width=device-width, initial-scale=1'/><title>${title}</title>${css}</head><body onload="setTimeout(function(){try{window.print();}catch(e){}},0)">${innerHTML}</body></html>`; try{ w.document.open(); w.document.write(htmlDoc); w.document.close(); setTimeout(()=>{try{w.focus(); w.print();}catch(e){}},50);}catch(err){ const blob=new Blob([htmlDoc],{type:'text/html'}); const url=URL.createObjectURL(blob); w.location.href=url; } }
 
+  // ===== Events =====
   function bindEvents(){
     // Login
-    $('#btnLogin').on('click', async()=>{ const u=$('#loginUser').val().trim(); const p=$('#loginPass').val(); try{ await login(u,p); await loadState(); await loadMenu(); startSync(); }catch(e){ $('#loginMsg').removeClass('hidden').text(e.message||'Error'); }});
+    $('#btnLogin').on('click', async()=>{
+      const u=$('#loginUser').val().trim();
+      const p=$('#loginPass').val();
+      try{
+        await login(u,p);
+        await loadState();
+        await loadMenu();
+        startSync();
+      }catch(e){
+        $('#loginMsg').removeClass('hidden').text(e.message||'Error');
+      }
+    });
     $('#btnLogout').on('click', ()=>{ location.reload(); });
 
     $('#btnNuevaMesa').on('click', ()=> nuevaMesa());
-    $('#listaMesas').on('click','[data-action="switch"]', async function(){ await selectMesa($(this).data('id')); });
-    $('#listaMesas').on('click','[data-action="rename"]', function(){ const id=$(this).data('id'); const m=MESAS.find(x=>x.id===id); if(!m) return; if(isMesaLockedForMe(m)) return alert('Mesa bloqueada por otro usuario'); const nv=prompt('Nuevo nombre', m.nombre); if(nv){ m.nombre=nv; if(MESA_ACTUAL===id) $('#mesaTitulo').text(nv); renderMesas(); saveState(); } });
+    $('#listaMesas').on('click','[data-action="switch"]', async function(){ selectMesa($(this).data('id')); });
+    $('#listaMesas').on('click','[data-action="rename"]', function(){
+      const id=$(this).data('id'); const m=MESAS.find(x=>x.id===id); if(!m) return;
+      if(isMesaLockedForMe(m)) return alert('Mesa bloqueada por otro usuario');
+      const nv=prompt('Nuevo nombre', m.nombre);
+      if(nv){ m.nombre=nv; if(MESA_ACTUAL===id) $('#mesaTitulo').text(nv); renderMesas(); debounceSave(); }
+    });
     $('#listaMesas').on('click','[data-action="dup"]', function(){ duplicarMesa($(this).data('id')); });
     $('#listaMesas').on('click','[data-action="del"]', function(){ eliminarMesa($(this).data('id')); });
     $('#colorMesa').on('input', function(){ cambiarColorActual($(this).val()); });
@@ -423,20 +657,19 @@
     $('#pago').on('input', function(){ const m=mesaActual(); if(!m) return; if(isMesaLockedForMe(m)) return; m.pago=Number($(this).val()||0); renderCart(); debounceSave(); });
     $('#metodoPago').on('change', function(){ const m=mesaActual(); if(!m) return; if(isMesaLockedForMe(m)) return; m.metodo=$(this).val(); debounceSave(); });
 
-    $('#btnVaciar').on('click', function(){ const m=mesaActual(); if(!m) return; if(isMesaLockedForMe(m)) return alert('Mesa bloqueada por otro usuario'); m.items=[]; m.lock={by:CURRENT_USER.username, at:nowIso()}; renderCart(); saveState(); renderProducts(); });
+    $('#btnVaciar').on('click', function(){ const m=mesaActual(); if(!m) return; if(isMesaLockedForMe(m)) return alert('Mesa bloqueada por otro usuario'); m.items=[]; m.lock={by:CURRENT_USER.username, at:nowIso()}; renderCart(); debounceSave(); renderProducts(); });
     $('#btnDuplicarMesa').on('click', function(){ duplicarMesa(MESA_ACTUAL); });
-    $('#btnGuardar').on('click', saveOrder);
+    $('#btnGuardar').on('click', ()=>alert('Guardar Pedido: (conectá tu endpoint de ventas si lo necesitás en esta versión focada en performance)'));
 
     $('#btnTicket').on('click', ()=>{ const m=mesaActual(); if(!m||(m.items||[]).length===0){ alert('No hay items.'); return; } openPrintWindow( buildTicketHTML(m), 'Ticket — OnceyDoce' ); });
     $('#btnComanda').on('click', ()=>{ const m=mesaActual(); if(!m||(m.items||[]).length===0){ alert('No hay items.'); return; } openPrintWindow( buildComandaHTML(m), 'Comanda — OnceyDoce' ); });
 
-    $('#btnForceLock').on('click', async()=>{ if(CURRENT_USER?.role!=='admin') return; await selectMesa(MESA_ACTUAL, true); });
+    $('#btnForceLock').on('click', async()=>{ if(CURRENT_USER?.role!=='admin') return; selectMesa(MESA_ACTUAL, true); });
   }
 
-  function normalizeRow(row, idx){ const min=row.min??row.minimo??row.alerta??row.Min??row.Mínimo??row.Alerta; const stock=row.stock??row.Stock??row.inventario??row.existencias; const sku=(row.sku||row.SKU||row.codigo||row.Código||'').toString().trim(); const nombre=(row.nombre||row.producto||row.Producto||row.Nombre||'').toString().trim(); return { _rowId: sku||nombre||`r${idx}`, sku, categoria:(row.categoria||row.Categoria||row.categoría||row.Categoría||'').toString().trim(), subcategoria:(row.subcategoria||row.Subcategoria||row.Subcategoría||row['Sub-categoria']||'').toString().trim(), nombre, precio:Number(row.precio||row.Precio||row.price||0), costo:Number(row.costo||row.Costo||row.cost||0), stock: stock===''||stock==null? '': Number(stock), min: min===''||min==null? '': Number(min) }; }
-  async function loadMenu(){ if(!MENU_CSV_URL){ $('#statusBadge').attr('class','badge').text('Configura MENU_CSV_URL'); return; } $('#statusBadge').attr('class','badge').text('Cargando menú…'); return new Promise((resolve)=>{ Papa.parse(MENU_CSV_URL,{ download:true, header:true, skipEmptyLines:true, complete:(results)=>{ MENU=(results.data||[]).filter(r=>r&&Object.keys(r).length).map(normalizeRow).filter(x=>x.nombre&&!isNaN(x.precio)); ALERTED.clear(); renderFilters(); renderProducts(); renderCart(); $('#statusBadge').attr('class','badge').text('Menú sincronizado'); resolve(); }, error:()=>{ $('#statusBadge').attr('class','badge').text('Error al cargar menú'); resolve(); } }); }); }
+  $(function(){ bindEvents(); setAuthUI(); }); // Login espera al usuario
+</script>
 
-  $(function(){ bindEvents(); setAuthUI(); /* Login espera a usuario */ });
   </script>
 </body>
 </html>
