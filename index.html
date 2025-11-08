@@ -614,6 +614,92 @@
   function buildComandaHTML(m){ const meta=`${new Date().toLocaleString('es-AR')} · ${m.nombre} · Cliente: ${m.cliente||'-'}`; const store=(typeof STORE_NAME!=='undefined'&&STORE_NAME)?STORE_NAME:'OnceyDoce'; const itemsHTML=(m.items||[]).map(x=>{ const nota=x.notas?` — <em>${String(x.notas).replace(/[<>&]/g,s=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[s]))}</em>`:''; return `<div class="row"><span>${x.qty}× ${x.nombre}${nota}</span><span></span></div>`; }).join(''); return `<div class="title">${store} — COMANDA</div><div class="muted">${meta}</div><hr/>${itemsHTML}<hr/><div class="muted">Preparar y despachar</div>`; }
   function openPrintWindow(innerHTML,title='Impresión POS'){ const w=window.open('','_blank','width=420,height=800'); if(!w){ alert('El navegador bloqueó la ventana de impresión. Permití popups para este sitio.'); return; } const css=`<style>:root{color-scheme:light only;} html,body{margin:0;padding:0;background:#fff;} body{width:58mm;box-sizing:border-box;padding:8px 6px;color:#000;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono",monospace;font-size:14px;line-height:1.25;} .title{text-align:center;font-weight:700;font-size:16px;} .muted{font-size:13px;text-align:center;} hr{border:0;border-top:1px dashed #000;margin:8px 0;} .row{display:flex;justify-content:space-between;gap:8px;} .tot{font-weight:700;} @media print{@page{size:58mm auto;margin:0;} body{margin:0;} .no-print{display:none !important;}}</style>`; const htmlDoc=`<!DOCTYPE html><html><head><meta charset='utf-8'/><meta name='viewport' content='width=device-width, initial-scale=1'/><title>${title}</title>${css}</head><body onload="setTimeout(function(){try{window.print();}catch(e){}},0)">${innerHTML}</body></html>`; try{ w.document.open(); w.document.write(htmlDoc); w.document.close(); setTimeout(()=>{try{w.focus(); w.print();}catch(e){}},50);}catch(err){ const blob=new Blob([htmlDoc],{type:'text/html'}); const url=URL.createObjectURL(blob); w.location.href=url; } }
 
+async function saveOrder(){
+  const m = mesaActual(); 
+  if (!m) return;
+
+  if (isMesaLockedForMe(m)) {
+    alert('Mesa bloqueada por otro usuario');
+    return;
+  }
+  if (!ORDERS_WEBAPP_URL) {
+    alert('Configura ORDERS_WEBAPP_URL');
+    return;
+  }
+  if ((m.items||[]).length === 0) {
+    alert('El carrito está vacío.');
+    return;
+  }
+
+  // Validar stock disponible
+  for (const it of m.items) {
+    const p = MENU.find(x => x._rowId === it._rowId);
+    if (Number.isFinite(Number(p?.stock))) {
+      const disp = availableStock(p);
+      if (it.qty > disp) {
+        alert(`No hay stock suficiente de "${p.nombre}". Disponible: ${disp}.`);
+        return;
+      }
+    }
+  }
+
+  const total = m.items.reduce((a,x)=>a + x.precio * x.qty, 0);
+  const totalCosto = m.items.reduce((a,x)=>a + (Number(x.costo)||0) * x.qty, 0);
+
+  const itemsPayload = m.items.map(x => {
+    const p = MENU.find(pp => pp._rowId === x._rowId);
+    return {
+      sku: p?.sku || '',
+      nombre: x.nombre,
+      precio: x.precio,
+      costo: x.costo,
+      qty: x.qty
+    };
+  });
+
+  const payload = {
+    type: 'sale',
+    timestamp: new Date().toISOString(),
+    cliente: m.cliente || '',
+    mesa: m.nombre,
+    color: m.color,
+    total,
+    totalCosto,
+    ganancia: total - totalCosto,
+    pago: Number(m.pago || 0),
+    metodo: String($('#metodoPago').val() || m.metodo || 'Efectivo'),
+    items: itemsPayload
+  };
+
+  $('#btnGuardar').prop('disabled', true).text('Guardando…');
+  try {
+    const res = await apiPost({ action:'sale', payload: JSON.stringify(payload) });
+    if (res.ok === false) throw new Error(res.error || 'Error al guardar');
+
+    // Actualizar stock local
+    for (const it of m.items) {
+      const p = MENU.find(x => x._rowId === it._rowId);
+      if (p && Number.isFinite(Number(p.stock))) {
+        p.stock = Math.max(0, Number(p.stock) - it.qty);
+      }
+    }
+
+    alert('Pedido guardado ✅');
+    m.items = [];
+    m.lock = null;
+    renderCart();
+    debounceSave();    // persiste el estado de mesas
+    renderProducts();  // actualiza stocks visibles
+  } catch (err) {
+    console.error(err);
+    alert('No se pudo guardar el pedido: ' + err.message);
+  } finally {
+    $('#btnGuardar').prop('disabled', false).text('Guardar Pedido');
+  }
+}
+
+
+        
   // ===== Events =====
   function bindEvents(){
     // Login
@@ -657,7 +743,9 @@
 
     $('#btnVaciar').on('click', function(){ const m=mesaActual(); if(!m) return; if(isMesaLockedForMe(m)) return alert('Mesa bloqueada por otro usuario'); m.items=[]; m.lock={by:CURRENT_USER.username, at:nowIso()}; renderCart(); debounceSave(); renderProducts(); });
     $('#btnDuplicarMesa').on('click', function(){ duplicarMesa(MESA_ACTUAL); });
-    $('#btnGuardar').on('click', ()=>alert('Guardar Pedido: (conectá tu endpoint de ventas si lo necesitás en esta versión focada en performance)'));
+    
+$('#btnGuardar').on('click', saveOrder);
+
 
     $('#btnTicket').on('click', ()=>{ const m=mesaActual(); if(!m||(m.items||[]).length===0){ alert('No hay items.'); return; } openPrintWindow( buildTicketHTML(m), 'Ticket — OnceyDoce' ); });
     $('#btnComanda').on('click', ()=>{ const m=mesaActual(); if(!m||(m.items||[]).length===0){ alert('No hay items.'); return; } openPrintWindow( buildComandaHTML(m), 'Comanda — OnceyDoce' ); });
