@@ -27,8 +27,8 @@
     body { color:#000; }
     .lock-pill{font-size:11px;padding:.125rem .5rem;border-radius:999px;border:1px solid #e5e7eb}
   </style>
-
 </head>
+
 <body class="bg-slate-50 text-black">
   <!-- LOGIN OVERLAY -->
   <div id="loginOverlay" class="fixed inset-0 bg-white/90 backdrop-blur-sm grid place-items-center z-[100]">
@@ -43,6 +43,15 @@
           <label class="block text-sm mb-1">Clave</label>
           <input id="loginPass" type="password" class="inp w-full" placeholder="••••••"/>
         </div>
+
+        <!-- RECORDAR USUARIO -->
+        <div class="flex items-center justify-between">
+          <label class="flex items-center gap-2 text-sm text-slate-600 select-none cursor-pointer">
+            <input id="rememberUser" type="checkbox" class="accent-[var(--accent-600)]" />
+            Recordar usuario (30 días)
+          </label>
+        </div>
+
         <button id="btnLogin" class="btn-primary w-full rounded-xl py-2 font-semibold">Entrar</button>
         <div id="loginMsg" class="text-sm text-red-600 hidden"></div>
       </div>
@@ -149,51 +158,51 @@
               <div class="divide-y max-h-[520px] overflow-auto" id="listaProductos"></div>
             </div>
 
-              <div id="cartWrapper" class="card overflow-hidden border-2" style="border-color:#e5e7eb">
-                <div class="p-4 border-b flex items-center justify-between">
-                  <h2 class="text-xl font-semibold"><span id="mesaTitulo">Mesa 1</span></h2>
-                  <div class="flex gap-2 items-center">
-                    <span id="mesaLockPill" class="lock-pill hidden">🔒 Bloqueada</span>
-                    <button id="btnForceLock" class="btn btn-ghost text-xs rounded-xl hidden">Forzar (Admin)</button>
-                    <button id="btnDuplicarMesa" class="btn btn-ghost text-sm rounded-xl">Duplicar</button>
-                    <button id="btnVaciar" class="btn btn-ghost text-sm rounded-xl">Vaciar</button>
-                  </div>
-                </div>
-                <div class="p-4">
-                  <div id="cartTable" class="w-full text-sm"></div>
-                  <hr class="my-4" />
-                  <div class="grid grid-cols-2 gap-4 text-sm">
-                    <div class="space-y-2">
-                      <div class="flex items-center justify-between"><span>Total bruto</span><span id="totalBruto" class="font-semibold">$0</span></div>
-                      <div class="flex items-center justify-between"><span>Costo</span><span id="totalCosto" class="font-semibold">$0</span></div>
-                      <div class="flex items-center justify-between"><span>Ganancia</span><span id="totalGanancia" class="font-semibold">$0</span></div>
-                    </div>
-                    <div class="space-y-2">
-                      <label class="block text-sm" for="pago">Pago ($)</label>
-                      <input id="pago" type="number" min="0" class="inp w-full"/>
-                      <div class="flex items-center justify-between"><span>Vuelto</span><span id="vuelto" class="font-semibold">$0</span></div>
-                    </div>
-                  </div>
-
-                  <div class="grid grid-cols-2 gap-4 text-sm mt-4">
-                    <div>
-                      <label class="block text-sm" for="metodoPago">Método de pago</label>
-                      <select id="metodoPago" class="inp w-full">
-                        <option value="Efectivo">Efectivo</option>
-                        <option value="Mercado Pago">Mercado Pago</option>
-                      </select>
-                    </div>
-                    <div class="flex items-end">
-                      <div class="text-xs text-gray-500">Se guardará junto al pedido.</div>
-                    </div>
-                  </div>
-                </div>
-                <div class="p-4 border-t flex flex-col sm:flex-row gap-3 sm:gap-4">
-                  <button id="btnGuardar" class="no-print flex-1 btn-primary rounded-2xl py-3 font-semibold">Guardar Pedido</button>
-                  <button id="btnTicket"  class="no-print flex-1 btn-primary rounded-2xl py-3 font-semibold">Imprimir Ticket</button>
-                  <button id="btnComanda" class="no-print flex-1 btn-primary rounded-2xl py-3 font-semibold">Imprimir Comanda</button>
+            <div id="cartWrapper" class="card overflow-hidden border-2" style="border-color:#e5e7eb">
+              <div class="p-4 border-b flex items-center justify-between">
+                <h2 class="text-xl font-semibold"><span id="mesaTitulo">Mesa 1</span></h2>
+                <div class="flex gap-2 items-center">
+                  <span id="mesaLockPill" class="lock-pill hidden">🔒 Bloqueada</span>
+                  <button id="btnForceLock" class="btn btn-ghost text-xs rounded-xl hidden">Forzar (Admin)</button>
+                  <button id="btnDuplicarMesa" class="btn btn-ghost text-sm rounded-xl">Duplicar</button>
+                  <button id="btnVaciar" class="btn btn-ghost text-sm rounded-xl">Vaciar</button>
                 </div>
               </div>
+              <div class="p-4">
+                <div id="cartTable" class="w-full text-sm"></div>
+                <hr class="my-4" />
+                <div class="grid grid-cols-2 gap-4 text-sm">
+                  <div class="space-y-2">
+                    <div class="flex items-center justify-between"><span>Total bruto</span><span id="totalBruto" class="font-semibold">$0</span></div>
+                    <div class="flex items-center justify-between"><span>Costo</span><span id="totalCosto" class="font-semibold">$0</span></div>
+                    <div class="flex items-center justify-between"><span>Ganancia</span><span id="totalGanancia" class="font-semibold">$0</span></div>
+                  </div>
+                  <div class="space-y-2">
+                    <label class="block text-sm" for="pago">Pago ($)</label>
+                    <input id="pago" type="number" min="0" class="inp w-full"/>
+                    <div class="flex items-center justify-between"><span>Vuelto</span><span id="vuelto" class="font-semibold">$0</span></div>
+                  </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4 text-sm mt-4">
+                  <div>
+                    <label class="block text-sm" for="metodoPago">Método de pago</label>
+                    <select id="metodoPago" class="inp w-full">
+                      <option value="Efectivo">Efectivo</option>
+                      <option value="Mercado Pago">Mercado Pago</option>
+                    </select>
+                  </div>
+                  <div class="flex items-end">
+                    <div class="text-xs text-gray-500">Se guardará junto al pedido.</div>
+                  </div>
+                </div>
+              </div>
+              <div class="p-4 border-t flex flex-col sm:flex-row gap-3 sm:gap-4">
+                <button id="btnGuardar" class="no-print flex-1 btn-primary rounded-2xl py-3 font-semibold">Guardar Pedido</button>
+                <button id="btnTicket"  class="no-print flex-1 btn-primary rounded-2xl py-3 font-semibold">Imprimir Ticket</button>
+                <button id="btnComanda" class="no-print flex-1 btn-primary rounded-2xl py-3 font-semibold">Imprimir Comanda</button>
+              </div>
+            </div>
           </section>
         </section>
       </div>
@@ -202,561 +211,665 @@
 
   <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-  <script>
-  
 
-      (() => {
-  'use strict';
+  <script>
+  (() => {
+    'use strict';
+
     const MENU_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTOCWWvu8KMMGhuRlTtbvCMEaJIWb9l3DYMi7281gfgncS5tGeO81BRpcCMk-SJIWtNyvWckt2bV4U-/pub?output=csv";
     const ORDERS_WEBAPP_URL = "/.netlify/functions/gs-order";
     const STORE_NAME = "OnceyDoce";
-  // ===== AUTH =====
-  let CURRENT_USER = null; // {username, role, token}
-  function setAuthUI(){
-    const isAdmin = CURRENT_USER?.role==='admin';
-    $('#linkReporte').toggleClass('hidden', !isAdmin);
-    $('#userBadge').text(CURRENT_USER ? `${CURRENT_USER.username} · ${CURRENT_USER.role}` : '');
-    $('#btnForceLock').toggleClass('hidden', !isAdmin);
-  }
-  async function apiPost(params){
-    const body = new URLSearchParams(params);
-    if(CURRENT_USER?.token) body.set('token', CURRENT_USER.token);
-    const r = await fetch(ORDERS_WEBAPP_URL, {
-      method:'POST',
-      headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},
-      body
-    });
-    const t = await r.text();
-    try{ return JSON.parse(t); }catch{ return {ok:r.ok}; }
-  }
-  async function apiGet(params){
-    const qs = new URLSearchParams(params);
-    if(CURRENT_USER?.token) qs.set('token', CURRENT_USER.token);
-    const r = await fetch(`${ORDERS_WEBAPP_URL}?${qs.toString()}`);
-    return r.json();
-  }
-  async function login(u,p){
-    const res = await apiPost({ action:'login', payload: JSON.stringify({ username:u, password:p }) });
-    if(!res.ok) throw new Error(res.error||'Login inválido');
-    CURRENT_USER = { username:res.username, role:res.role, token:res.token };
-    $('#loginOverlay').addClass('hidden');
-    setAuthUI();
-  }
 
-  // ===== STATE / MESAS =====
-  const STATE_KEY = 'POS_MESAS_V1';
-  let MENU = []; const ALERTED = new Set();
-  let MESAS = []; let MESA_ACTUAL = null;
+    // ===== AUTH =====
+    let CURRENT_USER = null; // {username, role, token}
 
-  const $fmt = (n) => new Intl.NumberFormat('es-AR',{style:'currency',currency:'ARS',maximumFractionDigits:0}).format(Number(n||0));
-  const uid = ()=>'m'+Math.random().toString(36).slice(2,9);
-  const nowIso=()=>new Date().toISOString();
-
-  // sync & saves
-  let SAVE_TIMER=null;
-  let LAST_REMOTE_TS=0;
-  let LAST_SAVED_SIG = ''; // firma del último state guardado
-  const SYNC_MS = 4000;    // menos agresivo
-  let SYNC_HANDLE = null;
-
-  function compactStateSignature(state){
-    // firma liviana para comparar (no incluye campos volátiles innecesarios)
-    const simple = {
-      actual: state.actual,
-      mesas: (state.mesas||[]).map(m=>({
-        id:m.id, nombre:m.nombre, color:m.color, cliente:m.cliente, pago:m.pago, metodo:m.metodo,
-        items:(m.items||[]).map(i=>({rid:i._rowId, q:i.qty, p:i.precio, c:i.costo}))
-      }))
-    };
-    return JSON.stringify(simple);
-  }
-
-  async function fetchRemoteState(){ return apiGet({ action:'get_state', key:STATE_KEY }); }
-  async function pushRemoteState(payload){ return apiPost({ action:'save_state', payload: JSON.stringify(payload), key:STATE_KEY }); }
-
-  function applyRemoteStatePacket(pkt){
-    const state = pkt?.state;
-    if(!state){
-      if(MESAS.length===0){
-        const id=uid();
-        MESAS=[{id,nombre:'Mesa 1',color:'#e11d48',items:[],cliente:'',pago:0,metodo:'Efectivo',lock:null}];
-        MESA_ACTUAL=id;
-      }
-      renderMesas();
-      return;
+    function setAuthUI(){
+      const isAdmin = CURRENT_USER?.role==='admin';
+      $('#linkReporte').toggleClass('hidden', !isAdmin);
+      $('#userBadge').text(CURRENT_USER ? `${CURRENT_USER.username} · ${CURRENT_USER.role}` : '');
+      $('#btnForceLock').toggleClass('hidden', !isAdmin);
     }
-    // Sólo actualizo si realmente es MÁS nuevo
-    const ts = Date.parse(state.updatedAt||0)||0;
-    if (ts <= LAST_REMOTE_TS) return;
 
-    MESAS = Array.isArray(state.mesas) ? state.mesas : [];
-    MESA_ACTUAL = state.actual || (MESAS[0]?.id);
-    LAST_REMOTE_TS = ts;
+    async function apiPost(params){
+      const body = new URLSearchParams(params);
+      if(CURRENT_USER?.token) body.set('token', CURRENT_USER.token);
+      const r = await fetch(ORDERS_WEBAPP_URL, {
+        method:'POST',
+        headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},
+        body
+      });
+      const t = await r.text();
+      try{ return JSON.parse(t); }catch{ return {ok:r.ok}; }
+    }
 
-    // refrescar firma para evitar guardados innecesarios post-sync
-    LAST_SAVED_SIG = compactStateSignature({ mesas:MESAS, actual:MESA_ACTUAL });
-    renderMesas();
-  }
+    async function apiGet(params){
+      const qs = new URLSearchParams(params);
+      if(CURRENT_USER?.token) qs.set('token', CURRENT_USER.token);
+      const r = await fetch(`${ORDERS_WEBAPP_URL}?${qs.toString()}`);
+      return r.json();
+    }
 
-  async function loadState(){
-    const pkt = await fetchRemoteState();
-    applyRemoteStatePacket(pkt);
-  }
+    async function login(u,p){
+      const res = await apiPost({ action:'login', payload: JSON.stringify({ username:u, password:p }) });
+      if(!res.ok) throw new Error(res.error||'Login inválido');
+      CURRENT_USER = { username:res.username, role:res.role, token:res.token };
+      $('#loginOverlay').addClass('hidden');
+      setAuthUI();
+    }
 
-  function debounceSave(){ clearTimeout(SAVE_TIMER); SAVE_TIMER=setTimeout(saveState, 700); }
+    // ===== REMEMBER USER (30 días) =====
+    const REMEMBER_KEY = 'POS_REMEMBER_USER_V1';
+    const REMEMBER_DAYS = 30;
 
-  async function saveState(){
-    // no escribas si no cambió
-    const payload = { mesas:MESAS, actual:MESA_ACTUAL, updatedAt: nowIso() };
-    const sig = compactStateSignature(payload);
-    if (sig === LAST_SAVED_SIG) return; // nada que guardar
+    function rememberSet(username){
+      const exp = Date.now() + REMEMBER_DAYS * 24 * 60 * 60 * 1000;
+      localStorage.setItem(REMEMBER_KEY, JSON.stringify({ username, exp }));
+    }
 
-    const res = await pushRemoteState(payload);
-    if(res.ok===false){ console.warn('No guardó:', res.error); return; }
-    LAST_SAVED_SIG = sig;
-    LAST_REMOTE_TS = Date.now();
-  }
-
-  function startSync(){
-    if (SYNC_HANDLE) clearInterval(SYNC_HANDLE);
-    SYNC_HANDLE = setInterval(async ()=>{
+    function rememberGet(){
       try{
-        if (document.hidden) return; // pausa si pestaña en background
-        const pkt = await fetchRemoteState();
-        applyRemoteStatePacket(pkt);
-      }catch(_){}
-    }, SYNC_MS);
-  }
+        const raw = localStorage.getItem(REMEMBER_KEY);
+        if(!raw) return null;
+        const data = JSON.parse(raw);
+        if(!data?.username || !data?.exp) return null;
+        if(Date.now() > Number(data.exp)){
+          localStorage.removeItem(REMEMBER_KEY);
+          return null;
+        }
+        return String(data.username);
+      }catch{
+        return null;
+      }
+    }
 
-  // ===== Locks (no bloqueamos el cambio de mesa) =====
-  async function requestLock(mesaId, force=false){
-    try{
-      const res = await apiPost({ action:'lock_mesa', payload: JSON.stringify({ key:STATE_KEY, mesaId, force }) });
-      return res;
-    }catch(e){ return { ok:false, error:e.message }; }
-  }
-  async function releaseLock(mesaId){
-    try{ await apiPost({ action:'unlock_mesa', payload: JSON.stringify({ key:STATE_KEY, mesaId }) }); }catch(_){}
-  }
+    function rememberClear(){
+      localStorage.removeItem(REMEMBER_KEY);
+    }
 
-  function isMesaLockedForMe(m){
-    if(!m?.lock) return false;
-    const me = CURRENT_USER?.username;
-    const isAdmin = CURRENT_USER?.role==='admin';
-    if(isAdmin) return false;
-    return m.lock.by && m.lock.by!==me;
-  }
+    function initRememberUI(){
+      const u = rememberGet();
+      if(u){
+        $('#loginUser').val(u);
+        $('#rememberUser').prop('checked', true);
+        $('#loginPass').focus();
+      }
+    }
 
-  function updateLockUI(){
-    const m = mesaActual(); if(!m) return;
-    const locked = isMesaLockedForMe(m);
-    $('#mesaLockPill').toggleClass('hidden', !locked).text(locked?`🔒 ${m.lock.by}`:'');
-    $('#cartWrapper').toggleClass('opacity-60 pointer-events-none', locked);
-    $('#lockInfo').toggleClass('hidden', !locked).text(locked?`Mesa bloqueada por ${m.lock.by}. Sólo Admin puede forzar.`:'');
-  }
+    // ===== STATE / MESAS =====
+    const STATE_KEY = 'POS_MESAS_V1';
+    let MENU = []; const ALERTED = new Set();
+    let MESAS = []; let MESA_ACTUAL = null;
 
-  // ===== STOCK / UI =====
-  function mesaActual(){ return MESAS.find(m=>m.id===MESA_ACTUAL); }
-  function reservedQtyAllMesas(rowId){
-    return MESAS.reduce((acc,m)=> acc + (m.items||[]).filter(x=>x._rowId===rowId).reduce((a,i)=>a+i.qty,0), 0);
-  }
-  function productThreshold(p){
-    const glob=Number($('#stockMinGlobal').val()||0);
-    const own=Number(p.min||p.minimo||p.alerta||0);
-    return Number.isFinite(own)&&own>0?own:glob;
-  }
-  function availableStock(p){
-    const s=Number(p.stock);
-    if(!Number.isFinite(s)) return Infinity;
-    const reserved=reservedQtyAllMesas(p._rowId);
-    return Math.max(0, s-reserved);
-  }
-  function shouldLowStock(p){ const min=productThreshold(p); const av=availableStock(p); return Number.isFinite(Number(p.stock)) && av<=min && Number(p.stock)>0; }
-  function shouldNoStock(p){ const av=availableStock(p); return Number.isFinite(Number(p.stock)) && av<=0 && Number(p.stock)>0; }
-  function maybeAlertLow(p){
-    if(!shouldLowStock(p)) return;
-    const key=p._rowId; if(ALERTED.has(key)) return;
-    ALERTED.add(key);
-    alert(`⚠️ Stock bajo de "${p.nombre}". Quedan ${availableStock(p)} (umbral ${productThreshold(p)}).`);
-  }
+    const $fmt = (n) => new Intl.NumberFormat('es-AR',{style:'currency',currency:'ARS',maximumFractionDigits:0}).format(Number(n||0));
+    const uid = ()=>'m'+Math.random().toString(36).slice(2,9);
+    const nowIso=()=>new Date().toISOString();
 
-  function renderMesas(){
-    const cont=$('#listaMesas'); cont.empty();
-    MESAS.forEach(m=>{
-      const active=m.id===MESA_ACTUAL; const locked = isMesaLockedForMe(m);
-      cont.append(`
-        <div class="group flex items-center justify-between gap-2 p-2 rounded-xl border ${active?'border-[var(--accent-600)] bg-[var(--accent-50)]':'border-gray-200 hover:bg-gray-50'} ${locked?'opacity-60':''}">
-          <button class="flex items-center gap-2 flex-1 text-left" data-action="switch" data-id="${m.id}">
-            <span class="inline-block w-3 h-3 rounded-full" style="background:${m.color}"></span>
-            <span class="font-medium truncate">${m.nombre}</span>
-            ${m.lock?`<span class='lock-pill'>🔒 ${m.lock.by}</span>`:''}
-            <span class="text-xs text-gray-500 ml-auto">${(m.items||[]).reduce((a,x)=>a+x.qty,0)} ítems</span>
-          </button>
-          <div class="opacity-0 group-hover:opacity-100 transition flex gap-1">
-            <button class="btn btn-ghost text-xs px-2 py-1" title="Renombrar" data-action="rename" data-id="${m.id}">✎</button>
-            <button class="btn btn-ghost text-xs px-2 py-1" title="Duplicar" data-action="dup" data-id="${m.id}">⧉</button>
-            <button class="btn btn-ghost text-xs px-2 py-1" title="Eliminar" data-action="del" data-id="${m.id}">✕</button>
-          </div>
-        </div>`);
-    });
-    const m=mesaActual(); if(!m) return;
-    $('#mesaTitulo').text(m.nombre);
-    $('#cliente').val(m.cliente);
-    $('#pago').val(m.pago);
-    $('#metodoPago').val(m.metodo||'Efectivo');
-    $('#colorMesa').val(m.color);
-    $('#cartWrapper').css('border-color', m.color);
-    updateLockUI();
-    renderCart();
-  }
+    let SAVE_TIMER=null;
+    let LAST_REMOTE_TS=0;
+    let LAST_SAVED_SIG = '';
+    const SYNC_MS = 4000;
+    let SYNC_HANDLE = null;
 
-  // Cambio de mesa: INSTANTÁNEO (lock en background, no bloquea la UI)
-  async function selectMesa(id, force=false){
-    MESA_ACTUAL=id; // cambio instantáneo
-    renderMesas();
+    function compactStateSignature(state){
+      const simple = {
+        actual: state.actual,
+        mesas: (state.mesas||[]).map(m=>({
+          id:m.id, nombre:m.nombre, color:m.color, cliente:m.cliente, pago:m.pago, metodo:m.metodo,
+          items:(m.items||[]).map(i=>({rid:i._rowId, q:i.qty, p:i.precio, c:i.costo}))
+        }))
+      };
+      return JSON.stringify(simple);
+    }
 
-    // pedimos lock en segundo plano
-    const res = await requestLock(id, force);
-    if(!res?.ok){
-      // si no se pudo, re-render para mostrar pill de lock del otro
+    async function fetchRemoteState(){ return apiGet({ action:'get_state', key:STATE_KEY }); }
+    async function pushRemoteState(payload){ return apiPost({ action:'save_state', payload: JSON.stringify(payload), key:STATE_KEY }); }
+
+    function applyRemoteStatePacket(pkt){
+      const state = pkt?.state;
+      if(!state){
+        if(MESAS.length===0){
+          const id=uid();
+          MESAS=[{id,nombre:'Mesa 1',color:'#e11d48',items:[],cliente:'',pago:0,metodo:'Efectivo',lock:null}];
+          MESA_ACTUAL=id;
+        }
+        renderMesas();
+        return;
+      }
+      const ts = Date.parse(state.updatedAt||0)||0;
+      if (ts <= LAST_REMOTE_TS) return;
+
+      MESAS = Array.isArray(state.mesas) ? state.mesas : [];
+      MESA_ACTUAL = state.actual || (MESAS[0]?.id);
+      LAST_REMOTE_TS = ts;
+
+      LAST_SAVED_SIG = compactStateSignature({ mesas:MESAS, actual:MESA_ACTUAL });
       renderMesas();
-    }else{
-      // si el lock fue nuestro, actualizo estado local sin forzar guardado si no hace falta
-      const m = mesaActual();
-      if (m){
-        const prev = JSON.stringify(m.lock||null);
-        const next = JSON.stringify(res.lock||null);
-        if (prev !== next){
-          m.lock = res.lock || null;
-          // No guardo acá; dejar que el flujo natural y el debounce lo persistan si algo cambia.
-          updateLockUI();
+    }
+
+    async function loadState(){
+      const pkt = await fetchRemoteState();
+      applyRemoteStatePacket(pkt);
+    }
+
+    function debounceSave(){ clearTimeout(SAVE_TIMER); SAVE_TIMER=setTimeout(saveState, 700); }
+
+    async function saveState(){
+      const payload = { mesas:MESAS, actual:MESA_ACTUAL, updatedAt: nowIso() };
+      const sig = compactStateSignature(payload);
+      if (sig === LAST_SAVED_SIG) return;
+
+      const res = await pushRemoteState(payload);
+      if(res.ok===false){ console.warn('No guardó:', res.error); return; }
+      LAST_SAVED_SIG = sig;
+      LAST_REMOTE_TS = Date.now();
+    }
+
+    function startSync(){
+      if (SYNC_HANDLE) clearInterval(SYNC_HANDLE);
+      SYNC_HANDLE = setInterval(async ()=>{
+        try{
+          if (document.hidden) return;
+          const pkt = await fetchRemoteState();
+          applyRemoteStatePacket(pkt);
+        }catch(_){}
+      }, SYNC_MS);
+    }
+
+    // ===== Locks =====
+    async function requestLock(mesaId, force=false){
+      try{
+        const res = await apiPost({ action:'lock_mesa', payload: JSON.stringify({ key:STATE_KEY, mesaId, force }) });
+        return res;
+      }catch(e){ return { ok:false, error:e.message }; }
+    }
+    async function releaseLock(mesaId){
+      try{ await apiPost({ action:'unlock_mesa', payload: JSON.stringify({ key:STATE_KEY, mesaId }) }); }catch(_){}
+    }
+
+    function isMesaLockedForMe(m){
+      if(!m?.lock) return false;
+      const me = CURRENT_USER?.username;
+      const isAdmin = CURRENT_USER?.role==='admin';
+      if(isAdmin) return false;
+      return m.lock.by && m.lock.by!==me;
+    }
+
+    function updateLockUI(){
+      const m = mesaActual(); if(!m) return;
+      const locked = isMesaLockedForMe(m);
+      $('#mesaLockPill').toggleClass('hidden', !locked).text(locked?`🔒 ${m.lock.by}`:'');
+      $('#cartWrapper').toggleClass('opacity-60 pointer-events-none', locked);
+      $('#lockInfo').toggleClass('hidden', !locked).text(locked?`Mesa bloqueada por ${m.lock.by}. Sólo Admin puede forzar.`:'');
+    }
+
+    // ===== STOCK / UI =====
+    function mesaActual(){ return MESAS.find(m=>m.id===MESA_ACTUAL); }
+    function reservedQtyAllMesas(rowId){
+      return MESAS.reduce((acc,m)=> acc + (m.items||[]).filter(x=>x._rowId===rowId).reduce((a,i)=>a+i.qty,0), 0);
+    }
+    function productThreshold(p){
+      const glob=Number($('#stockMinGlobal').val()||0);
+      const own=Number(p.min||p.minimo||p.alerta||0);
+      return Number.isFinite(own)&&own>0?own:glob;
+    }
+    function availableStock(p){
+      const s=Number(p.stock);
+      if(!Number.isFinite(s)) return Infinity;
+      const reserved=reservedQtyAllMesas(p._rowId);
+      return Math.max(0, s-reserved);
+    }
+    function shouldLowStock(p){ const min=productThreshold(p); const av=availableStock(p); return Number.isFinite(Number(p.stock)) && av<=min && Number(p.stock)>0; }
+    function shouldNoStock(p){ const av=availableStock(p); return Number.isFinite(Number(p.stock)) && av<=0 && Number(p.stock)>0; }
+    function maybeAlertLow(p){
+      if(!shouldLowStock(p)) return;
+      const key=p._rowId; if(ALERTED.has(key)) return;
+      ALERTED.add(key);
+      alert(`⚠️ Stock bajo de "${p.nombre}". Quedan ${availableStock(p)} (umbral ${productThreshold(p)}).`);
+    }
+
+    function renderMesas(){
+      const cont=$('#listaMesas'); cont.empty();
+      MESAS.forEach(m=>{
+        const active=m.id===MESA_ACTUAL; const locked = isMesaLockedForMe(m);
+        cont.append(`
+          <div class="group flex items-center justify-between gap-2 p-2 rounded-xl border ${active?'border-[var(--accent-600)] bg-[var(--accent-50)]':'border-gray-200 hover:bg-gray-50'} ${locked?'opacity-60':''}">
+            <button class="flex items-center gap-2 flex-1 text-left" data-action="switch" data-id="${m.id}">
+              <span class="inline-block w-3 h-3 rounded-full" style="background:${m.color}"></span>
+              <span class="font-medium truncate">${m.nombre}</span>
+              ${m.lock?`<span class='lock-pill'>🔒 ${m.lock.by}</span>`:''}
+              <span class="text-xs text-gray-500 ml-auto">${(m.items||[]).reduce((a,x)=>a+x.qty,0)} ítems</span>
+            </button>
+            <div class="opacity-0 group-hover:opacity-100 transition flex gap-1">
+              <button class="btn btn-ghost text-xs px-2 py-1" title="Renombrar" data-action="rename" data-id="${m.id}">✎</button>
+              <button class="btn btn-ghost text-xs px-2 py-1" title="Duplicar" data-action="dup" data-id="${m.id}">⧉</button>
+              <button class="btn btn-ghost text-xs px-2 py-1" title="Eliminar" data-action="del" data-id="${m.id}">✕</button>
+            </div>
+          </div>`);
+      });
+      const m=mesaActual(); if(!m) return;
+      $('#mesaTitulo').text(m.nombre);
+      $('#cliente').val(m.cliente);
+      $('#pago').val(m.pago);
+      $('#metodoPago').val(m.metodo||'Efectivo');
+      $('#colorMesa').val(m.color);
+      $('#cartWrapper').css('border-color', m.color);
+      updateLockUI();
+      renderCart();
+    }
+
+    async function selectMesa(id, force=false){
+      MESA_ACTUAL=id;
+      renderMesas();
+
+      const res = await requestLock(id, force);
+      if(!res?.ok){
+        renderMesas();
+      }else{
+        const m = mesaActual();
+        if (m){
+          const prev = JSON.stringify(m.lock||null);
+          const next = JSON.stringify(res.lock||null);
+          if (prev !== next){
+            m.lock = res.lock || null;
+            updateLockUI();
+          }
         }
       }
     }
-  }
 
-  function nuevaMesa(nombre='Mesa '+(MESAS.length+1)){
-    const m={id:uid(), nombre, color:'#e11d48', items:[], cliente:'', pago:0, metodo:'Efectivo', lock:{by:CURRENT_USER.username, at:nowIso()}};
-    MESAS.push(m); MESA_ACTUAL=m.id; renderMesas(); debounceSave();
-  }
-  function duplicarMesa(id){
-    const src=MESAS.find(m=>m.id===id); if(!src) return;
-    const copy={...src, id:uid(), nombre:src.nombre+" (copia)", items:JSON.parse(JSON.stringify(src.items)), lock:{by:CURRENT_USER.username, at:nowIso()}};
-    MESAS.push(copy); MESA_ACTUAL=copy.id; renderMesas(); debounceSave();
-  }
-  function eliminarMesa(id){
-    if(MESAS.length===1){ alert('Debe quedar al menos una mesa.'); return; }
-    MESAS=MESAS.filter(m=>m.id!==id);
-    if(MESA_ACTUAL===id){ MESA_ACTUAL=MESAS[0].id; }
-    renderMesas(); debounceSave();
-  }
-  function cambiarColorActual(color){
-    const m=mesaActual(); if(!m) return;
-    if(isMesaLockedForMe(m)) return alert('Mesa bloqueada por otro usuario');
-    m.color=color; $('#cartWrapper').css('border-color', color);
-    debounceSave(); renderMesas();
-  }
-
-  function groupUnique(arr,key){ return [...new Set(arr.map(x=>(x[key]||"").toString().trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b)); }
-  function renderFilters(){ const cats=groupUnique(MENU,'categoria'); const catSel=$('#categoria'); catSel.find('option:not(:first)').remove(); cats.forEach(c=>catSel.append(`<option value="${c}">${c}</option>`)); renderSubcats(); }
-  function renderSubcats(){ const cat=($('#categoria').val()||'').toString().trim(); let list=MENU; if(cat) list=MENU.filter(x=>(x.categoria||'').toString().trim()===cat); const subs=groupUnique(list,'subcategoria'); const subSel=$('#subcategoria'); subSel.find('option:not(:first)').remove(); subs.forEach(s=>subSel.append(`<option value="${s}">${s}</option>`)); }
-  function productMatches(p){ const q=$('#buscar').val().trim().toLowerCase(); const cat=$('#categoria').val(); const sub=$('#subcategoria').val(); if(cat&&(p.categoria||'')!==cat) return false; if(sub&&(p.subcategoria||'')!==sub) return false; if(!q) return true; return [p.nombre,p.categoria,p.subcategoria,p.sku].filter(Boolean).join(' ').toLowerCase().includes(q); }
-
-  function renderProducts(){
-    const cont=$('#listaProductos'); cont.empty();
-    const list=MENU.filter(productMatches);
-    $('#countProductos').text(list.length);
-    if(list.length===0){ cont.html('<div class="p-4 text-sm text-gray-500">No hay productos para mostrar.</div>'); return; }
-    const mActual = mesaActual();
-    list.forEach(p=>{
-      const dispStock=Number.isFinite(Number(p.stock))?availableStock(p):null;
-      const isLow=dispStock!==null&&shouldLowStock(p);
-      const isZero=dispStock!==null&&shouldNoStock(p);
-      const stockHtml=(dispStock!==null)?`<span class='text-xs ${isLow?'text-red-700':'text-gray-500'}'>Stock disp.: ${dispStock}${isLow?` · min ${productThreshold(p)}`:''}</span>`:`<span class='text-xs text-gray-400'>Sin stock informado</span>`;
-      const locked = isMesaLockedForMe(mActual);
-      const disabled = locked ? 'disabled' : (isZero?'disabled':'');
-      const btnClass = locked? 'btn cursor-not-allowed opacity-60' : (isZero?'btn cursor-not-allowed opacity-60':'btn-primary');
-      cont.append(`
-        <div class="p-3 flex items-center gap-3 hover:bg-gray-50">
-          <div class="flex-1">
-            <div class="font-medium title">${p.nombre||'(sin nombre)'}</div>
-            <div class="text-xs text-gray-500">${p.categoria||''}${p.subcategoria?` · ${p.subcategoria}`:''}</div>
-            ${stockHtml}
-          </div>
-          <div class="text-right">
-            <div class="text-base font-semibold">${$fmt(p.precio)}</div>
-          </div>
-          <div>
-            <button ${disabled} class="p-2 text-sm rounded-xl ${btnClass}" data-id="${p._rowId}" data-action="add">Agregar</button>
-          </div>
-        </div>`);
-    });
-  }
-
-  function addToCart(rowId){
-    const m=mesaActual(); if(!m) return;
-    if(isMesaLockedForMe(m)) return alert('Mesa bloqueada por otro usuario');
-    const p=MENU.find(x=>x._rowId===rowId); if(!p) return;
-    if(Number.isFinite(Number(p.stock))){
-      const disp=availableStock(p);
-      if(disp<=0){ alert(`Sin stock de "${p.nombre}"`); renderProducts(); return; }
+    function nuevaMesa(nombre='Mesa '+(MESAS.length+1)){
+      const m={id:uid(), nombre, color:'#e11d48', items:[], cliente:'', pago:0, metodo:'Efectivo', lock:{by:CURRENT_USER.username, at:nowIso()}};
+      MESAS.push(m); MESA_ACTUAL=m.id; renderMesas(); debounceSave();
     }
-    const ex=m.items.find(x=>x._rowId===rowId);
-    if(ex){
+    function duplicarMesa(id){
+      const src=MESAS.find(m=>m.id===id); if(!src) return;
+      const copy={...src, id:uid(), nombre:src.nombre+" (copia)", items:JSON.parse(JSON.stringify(src.items)), lock:{by:CURRENT_USER.username, at:nowIso()}};
+      MESAS.push(copy); MESA_ACTUAL=copy.id; renderMesas(); debounceSave();
+    }
+    function eliminarMesa(id){
+      if(MESAS.length===1){ alert('Debe quedar al menos una mesa.'); return; }
+      MESAS=MESAS.filter(m=>m.id!==id);
+      if(MESA_ACTUAL===id){ MESA_ACTUAL=MESAS[0].id; }
+      renderMesas(); debounceSave();
+    }
+    function cambiarColorActual(color){
+      const m=mesaActual(); if(!m) return;
+      if(isMesaLockedForMe(m)) return alert('Mesa bloqueada por otro usuario');
+      m.color=color; $('#cartWrapper').css('border-color', color);
+      debounceSave(); renderMesas();
+    }
+
+    function groupUnique(arr,key){ return [...new Set(arr.map(x=>(x[key]||"").toString().trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b)); }
+    function renderFilters(){
+      const cats=groupUnique(MENU,'categoria');
+      const catSel=$('#categoria'); catSel.find('option:not(:first)').remove();
+      cats.forEach(c=>catSel.append(`<option value="${c}">${c}</option>`));
+      renderSubcats();
+    }
+    function renderSubcats(){
+      const cat=($('#categoria').val()||'').toString().trim();
+      let list=MENU;
+      if(cat) list=MENU.filter(x=>(x.categoria||'').toString().trim()===cat);
+      const subs=groupUnique(list,'subcategoria');
+      const subSel=$('#subcategoria'); subSel.find('option:not(:first)').remove();
+      subs.forEach(s=>subSel.append(`<option value="${s}">${s}</option>`));
+    }
+    function productMatches(p){
+      const q=$('#buscar').val().trim().toLowerCase();
+      const cat=$('#categoria').val();
+      const sub=$('#subcategoria').val();
+      if(cat&&(p.categoria||'')!==cat) return false;
+      if(sub&&(p.subcategoria||'')!==sub) return false;
+      if(!q) return true;
+      return [p.nombre,p.categoria,p.subcategoria,p.sku].filter(Boolean).join(' ').toLowerCase().includes(q);
+    }
+
+    function renderProducts(){
+      const cont=$('#listaProductos'); cont.empty();
+      const list=MENU.filter(productMatches);
+      $('#countProductos').text(list.length);
+      if(list.length===0){ cont.html('<div class="p-4 text-sm text-gray-500">No hay productos para mostrar.</div>'); return; }
+      const mActual = mesaActual();
+      list.forEach(p=>{
+        const dispStock=Number.isFinite(Number(p.stock))?availableStock(p):null;
+        const isLow=dispStock!==null&&shouldLowStock(p);
+        const isZero=dispStock!==null&&shouldNoStock(p);
+        const stockHtml=(dispStock!==null)?`<span class='text-xs ${isLow?'text-red-700':'text-gray-500'}'>Stock disp.: ${dispStock}${isLow?` · min ${productThreshold(p)}`:''}</span>`:`<span class='text-xs text-gray-400'>Sin stock informado</span>`;
+        const locked = isMesaLockedForMe(mActual);
+        const disabled = locked ? 'disabled' : (isZero?'disabled':'');
+        const btnClass = locked? 'btn cursor-not-allowed opacity-60' : (isZero?'btn cursor-not-allowed opacity-60':'btn-primary');
+        cont.append(`
+          <div class="p-3 flex items-center gap-3 hover:bg-gray-50">
+            <div class="flex-1">
+              <div class="font-medium title">${p.nombre||'(sin nombre)'}</div>
+              <div class="text-xs text-gray-500">${p.categoria||''}${p.subcategoria?` · ${p.subcategoria}`:''}</div>
+              ${stockHtml}
+            </div>
+            <div class="text-right">
+              <div class="text-base font-semibold">${$fmt(p.precio)}</div>
+            </div>
+            <div>
+              <button ${disabled} class="p-2 text-sm rounded-xl ${btnClass}" data-id="${p._rowId}" data-action="add">Agregar</button>
+            </div>
+          </div>`);
+      });
+    }
+
+    function addToCart(rowId){
+      const m=mesaActual(); if(!m) return;
+      if(isMesaLockedForMe(m)) return alert('Mesa bloqueada por otro usuario');
+      const p=MENU.find(x=>x._rowId===rowId); if(!p) return;
       if(Number.isFinite(Number(p.stock))){
         const disp=availableStock(p);
         if(disp<=0){ alert(`Sin stock de "${p.nombre}"`); renderProducts(); return; }
       }
-      ex.qty+=1;
-    }else{
-      m.items.push({_rowId:rowId,nombre:p.nombre,precio:Number(p.precio)||0,costo:Number(p.costo)||0,qty:1});
+      const ex=m.items.find(x=>x._rowId===rowId);
+      if(ex){
+        if(Number.isFinite(Number(p.stock))){
+          const disp=availableStock(p);
+          if(disp<=0){ alert(`Sin stock de "${p.nombre}"`); renderProducts(); return; }
+        }
+        ex.qty+=1;
+      }else{
+        m.items.push({_rowId:rowId,nombre:p.nombre,precio:Number(p.precio)||0,costo:Number(p.costo)||0,qty:1});
+      }
+      m.lock={by:CURRENT_USER.username, at:nowIso()};
+      maybeAlertLow(p);
+      renderCart();
+      debounceSave();
+      renderProducts();
     }
-    m.lock={by:CURRENT_USER.username, at:nowIso()};
-    maybeAlertLow(p);
-    renderCart();
-    debounceSave();
-    renderProducts();
-  }
-  function removeFromCart(rowId){
-    const m=mesaActual(); if(!m) return;
-    if(isMesaLockedForMe(m)) return alert('Mesa bloqueada por otro usuario');
-    m.items=m.items.filter(x=>x._rowId!==rowId);
-    m.lock={by:CURRENT_USER.username, at:nowIso()};
-    renderCart(); debounceSave(); renderProducts();
-  }
-  function setQty(rowId,qty){
-    const m=mesaActual(); if(!m) return;
-    if(isMesaLockedForMe(m)) return alert('Mesa bloqueada por otro usuario');
-    const it=m.items.find(x=>x._rowId===rowId); if(!it) return;
-    qty=Math.max(1,Number(qty)||1);
-    const p=MENU.find(x=>x._rowId===rowId);
-    if(Number.isFinite(Number(p?.stock))){
-      const reservedOtros=reservedQtyAllMesas(rowId)-it.qty;
-      const disp=Math.max(0, Number(p.stock||0)-reservedOtros);
-      if(qty>disp){ alert(`Solo hay ${disp} disponibles de "${p.nombre}".`); qty=disp>0?disp:1; }
+    function removeFromCart(rowId){
+      const m=mesaActual(); if(!m) return;
+      if(isMesaLockedForMe(m)) return alert('Mesa bloqueada por otro usuario');
+      m.items=m.items.filter(x=>x._rowId!==rowId);
+      m.lock={by:CURRENT_USER.username, at:nowIso()};
+      renderCart(); debounceSave(); renderProducts();
     }
-    it.qty=qty;
-    m.lock={by:CURRENT_USER.username, at:nowIso()};
-    maybeAlertLow(p);
-    renderCart(); debounceSave(); renderProducts();
-  }
+    function setQty(rowId,qty){
+      const m=mesaActual(); if(!m) return;
+      if(isMesaLockedForMe(m)) return alert('Mesa bloqueada por otro usuario');
+      const it=m.items.find(x=>x._rowId===rowId); if(!it) return;
+      qty=Math.max(1,Number(qty)||1);
+      const p=MENU.find(x=>x._rowId===rowId);
+      if(Number.isFinite(Number(p?.stock))){
+        const reservedOtros=reservedQtyAllMesas(rowId)-it.qty;
+        const disp=Math.max(0, Number(p.stock||0)-reservedOtros);
+        if(qty>disp){ alert(`Solo hay ${disp} disponibles de "${p.nombre}".`); qty=disp>0?disp:1; }
+      }
+      it.qty=qty;
+      m.lock={by:CURRENT_USER.username, at:nowIso()};
+      maybeAlertLow(p);
+      renderCart(); debounceSave(); renderProducts();
+    }
 
-  function renderCart(){
-    const m=mesaActual();
-    const cont=$('#cartTable'); cont.empty();
-    if(!m){return}
-    const CART=m.items||[];
-    if(CART.length===0){
-      cont.html('<p class="text-sm text-gray-500">No hay ítems en el carrito.</p>');
-    } else {
-      CART.forEach(it=>{
-        const linea=it.precio*it.qty;
-        cont.append(`
-          <div class="grid grid-cols-12 gap-2 items-center py-2">
-            <div class="col-span-5"><div class="font-medium">${it.nombre}</div><div class="text-xs text-gray-500">${$fmt(it.precio)} c/u</div></div>
-            <div class="col-span-3"><input type="number" min="1" value="${it.qty}" data-id="${it._rowId}" data-action="qty" class="inp w-24"/></div>
-            <div class="col-span-3 text-right font-semibold">${$fmt(linea)}</div>
-            <div class="col-span-1 text-right"><button class="btn btn-ghost text-xs px-2 py-1" data-id="${it._rowId}" data-action="del">✕</button></div>
-          </div>`);
+    function renderCart(){
+      const m=mesaActual();
+      const cont=$('#cartTable'); cont.empty();
+      if(!m){return}
+      const CART=m.items||[];
+      if(CART.length===0){
+        cont.html('<p class="text-sm text-gray-500">No hay ítems en el carrito.</p>');
+      } else {
+        CART.forEach(it=>{
+          const linea=it.precio*it.qty;
+          cont.append(`
+            <div class="grid grid-cols-12 gap-2 items-center py-2">
+              <div class="col-span-5"><div class="font-medium">${it.nombre}</div><div class="text-xs text-gray-500">${$fmt(it.precio)} c/u</div></div>
+              <div class="col-span-3"><input type="number" min="1" value="${it.qty}" data-id="${it._rowId}" data-action="qty" class="inp w-24"/></div>
+              <div class="col-span-3 text-right font-semibold">${$fmt(linea)}</div>
+              <div class="col-span-1 text-right"><button class="btn btn-ghost text-xs px-2 py-1" data-id="${it._rowId}" data-action="del">✕</button></div>
+            </div>`);
+        });
+      }
+      const total=CART.reduce((a,x)=>a+x.precio*x.qty,0);
+      const costo=CART.reduce((a,x)=>a+(Number(x.costo)||0)*x.qty,0);
+      $('#totalBruto').text($fmt(total));
+      $('#totalCosto').text($fmt(costo));
+      $('#totalGanancia').text($fmt(total-costo));
+      const pago=Number($('#pago').val()||m.pago||0);
+      const vuelto=Math.max(0, pago-total);
+      $('#vuelto').text($fmt(vuelto));
+      updateLockUI();
+    }
+
+    // ====== MENU ======
+    function normalizeRow(row, idx){
+      const min=row.min??row.minimo??row.alerta??row.Min??row.Mínimo??row.Alerta;
+      const stock=row.stock??row.Stock??row.inventario??row.existencias;
+      const sku=(row.sku||row.SKU||row.codigo||row.Código||'').toString().trim();
+      const nombre=(row.nombre||row.producto||row.Producto||row.Nombre||'').toString().trim();
+      return {
+        _rowId: sku||nombre||`r${idx}`,
+        sku,
+        categoria:(row.categoria||row.Categoria||row.categoría||row.Categoría||'').toString().trim(),
+        subcategoria:(row.subcategoria||row.Subcategoria||row.Subcategoría||row['Sub-categoria']||'').toString().trim(),
+        nombre,
+        precio:Number(row.precio||row.Precio||row.price||0),
+        costo:Number(row.costo||row.Costo||row.cost||0),
+        stock: stock===''||stock==null? '': Number(stock),
+        min: min===''||min==null? '': Number(min)
+      };
+    }
+    async function loadMenu(){
+      if(!MENU_CSV_URL){ $('#statusBadge').attr('class','badge').text('Configura MENU_CSV_URL'); return; }
+      $('#statusBadge').attr('class','badge').text('Cargando menú…');
+      return new Promise((resolve)=>{
+        Papa.parse(MENU_CSV_URL,{
+          download:true, header:true, skipEmptyLines:true,
+          complete:(results)=>{
+            MENU=(results.data||[]).filter(r=>r&&Object.keys(r).length).map(normalizeRow).filter(x=>x.nombre&&!isNaN(x.precio));
+            ALERTED.clear();
+            renderFilters(); renderProducts(); renderCart();
+            $('#statusBadge').attr('class','badge').text('Menú sincronizado');
+            resolve();
+          },
+          error:()=>{
+            $('#statusBadge').attr('class','badge').text('Error al cargar menú'); resolve();
+          }
+        });
       });
     }
-    const total=CART.reduce((a,x)=>a+x.precio*x.qty,0);
-    const costo=CART.reduce((a,x)=>a+(Number(x.costo)||0)*x.qty,0);
-    $('#totalBruto').text($fmt(total));
-    $('#totalCosto').text($fmt(costo));
-    $('#totalGanancia').text($fmt(total-costo));
-    const pago=Number($('#pago').val()||m.pago||0);
-    const vuelto=Math.max(0, pago-total);
-    $('#vuelto').text($fmt(vuelto));
-    updateLockUI();
-  }
 
-  // ====== MENU ======
-  function normalizeRow(row, idx){
-    const min=row.min??row.minimo??row.alerta??row.Min??row.Mínimo??row.Alerta;
-    const stock=row.stock??row.Stock??row.inventario??row.existencias;
-    const sku=(row.sku||row.SKU||row.codigo||row.Código||'').toString().trim();
-    const nombre=(row.nombre||row.producto||row.Producto||row.Nombre||'').toString().trim();
-    return {
-      _rowId: sku||nombre||`r${idx}`,
-      sku,
-      categoria:(row.categoria||row.Categoria||row.categoría||row.Categoría||'').toString().trim(),
-      subcategoria:(row.subcategoria||row.Subcategoria||row.Subcategoría||row['Sub-categoria']||'').toString().trim(),
-      nombre,
-      precio:Number(row.precio||row.Precio||row.price||0),
-      costo:Number(row.costo||row.Costo||row.cost||0),
-      stock: stock===''||stock==null? '': Number(stock),
-      min: min===''||min==null? '': Number(min)
-    };
-  }
-  async function loadMenu(){
-    if(!MENU_CSV_URL){ $('#statusBadge').attr('class','badge').text('Configura MENU_CSV_URL'); return; }
-    $('#statusBadge').attr('class','badge').text('Cargando menú…');
-    return new Promise((resolve)=>{
-      Papa.parse(MENU_CSV_URL,{
-        download:true, header:true, skipEmptyLines:true,
-        complete:(results)=>{
-          MENU=(results.data||[]).filter(r=>r&&Object.keys(r).length).map(normalizeRow).filter(x=>x.nombre&&!isNaN(x.precio));
-          ALERTED.clear();
-          renderFilters(); renderProducts(); renderCart();
-          $('#statusBadge').attr('class','badge').text('Menú sincronizado');
-          resolve();
-        },
-        error:()=>{
-          $('#statusBadge').attr('class','badge').text('Error al cargar menú'); resolve();
+    // ===== IMPRESIÓN =====
+    function buildTicketHTML(m){
+      const fmt=(n)=>new Intl.NumberFormat('es-AR',{style:'currency',currency:'ARS',maximumFractionDigits:0}).format(Number(n||0));
+      const meta=`${new Date().toLocaleString('es-AR')} · ${m.nombre} · ${m.metodo||'Efectivo'} · Cliente: ${m.cliente||'-'}`;
+      const store=(typeof STORE_NAME!=='undefined'&&STORE_NAME)?STORE_NAME:'OnceyDoce';
+      const total=(m.items||[]).reduce((a,x)=>a+(Number(x.precio)||0)*x.qty,0);
+      const pago=Number(m.pago||0);
+      const vuelto=Math.max(0,pago-total);
+      const itemsHTML=(m.items||[]).map(x=>{
+        const linea=(Number(x.precio)||0)*x.qty;
+        return `<div class="row"><span>${x.qty}× ${x.nombre}</span><span>${fmt(linea)}</span></div>`;
+      }).join('');
+      return `<div class="title">${store}</div><div class="muted">${meta}</div><hr/>${itemsHTML}<hr/><div class="row"><span>Total</span><span>${fmt(total)}</span></div><div class="row"><span>Pago</span><span>${fmt(pago)}</span></div><div class="row"><span>Vuelto</span><span>${fmt(vuelto)}</span></div><div class="muted" style="margin-top:6px">¡Gracias por su compra!</div>`;
+    }
+    function buildComandaHTML(m){
+      const meta=`${new Date().toLocaleString('es-AR')} · ${m.nombre} · Cliente: ${m.cliente||'-'}`;
+      const store=(typeof STORE_NAME!=='undefined'&&STORE_NAME)?STORE_NAME:'OnceyDoce';
+      const itemsHTML=(m.items||[]).map(x=>{
+        const nota=x.notas?` — <em>${String(x.notas).replace(/[<>&]/g,s=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[s]))}</em>`:'';
+        return `<div class="row"><span>${x.qty}× ${x.nombre}${nota}</span><span></span></div>`;
+      }).join('');
+      return `<div class="title">${store} — COMANDA</div><div class="muted">${meta}</div><hr/>${itemsHTML}<hr/><div class="muted">Preparar y despachar</div>`;
+    }
+    function openPrintWindow(innerHTML,title='Impresión POS'){
+      const w=window.open('','_blank','width=420,height=800');
+      if(!w){ alert('El navegador bloqueó la ventana de impresión. Permití popups para este sitio.'); return; }
+      const css=`<style>:root{color-scheme:light only;} html,body{margin:0;padding:0;background:#fff;} body{width:58mm;box-sizing:border-box;padding:8px 6px;color:#000;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono",monospace;font-size:14px;line-height:1.25;} .title{text-align:center;font-weight:700;font-size:16px;} .muted{font-size:13px;text-align:center;} hr{border:0;border-top:1px dashed #000;margin:8px 0;} .row{display:flex;justify-content:space-between;gap:8px;} .tot{font-weight:700;} @media print{@page{size:58mm auto;margin:0;} body{margin:0;} .no-print{display:none !important;}}</style>`;
+      const htmlDoc=`<!DOCTYPE html><html><head><meta charset='utf-8'/><meta name='viewport' content='width=device-width, initial-scale=1'/><title>${title}</title>${css}</head><body onload="setTimeout(function(){try{window.print();}catch(e){}},0)">${innerHTML}</body></html>`;
+      try{
+        w.document.open(); w.document.write(htmlDoc); w.document.close();
+        setTimeout(()=>{try{w.focus(); w.print();}catch(e){}},50);
+      }catch(err){
+        const blob=new Blob([htmlDoc],{type:'text/html'});
+        const url=URL.createObjectURL(blob);
+        w.location.href=url;
+      }
+    }
+
+    async function saveOrder(){
+      const m = mesaActual();
+      if (!m) return;
+
+      if (isMesaLockedForMe(m)) { alert('Mesa bloqueada por otro usuario'); return; }
+      if (!ORDERS_WEBAPP_URL) { alert('Configura ORDERS_WEBAPP_URL'); return; }
+      if ((m.items||[]).length === 0) { alert('El carrito está vacío.'); return; }
+
+      for (const it of m.items) {
+        const p = MENU.find(x => x._rowId === it._rowId);
+        if (Number.isFinite(Number(p?.stock))) {
+          const disp = availableStock(p);
+          if (it.qty > disp) {
+            alert(`No hay stock suficiente de "${p.nombre}". Disponible: ${disp}.`);
+            return;
+          }
+        }
+      }
+
+      const total = m.items.reduce((a,x)=>a + x.precio * x.qty, 0);
+      const totalCosto = m.items.reduce((a,x)=>a + (Number(x.costo)||0) * x.qty, 0);
+
+      const itemsPayload = m.items.map(x => {
+        const p = MENU.find(pp => pp._rowId === x._rowId);
+        return {
+          sku: p?.sku || '',
+          nombre: x.nombre,
+          precio: x.precio,
+          costo: x.costo,
+          qty: x.qty
+        };
+      });
+
+      const payload = {
+        type: 'sale',
+        timestamp: new Date().toISOString(),
+        cliente: m.cliente || '',
+        mesa: m.nombre,
+        color: m.color,
+        total,
+        totalCosto,
+        ganancia: total - totalCosto,
+        pago: Number(m.pago || 0),
+        metodo: String($('#metodoPago').val() || m.metodo || 'Efectivo'),
+        items: itemsPayload
+      };
+
+      $('#btnGuardar').prop('disabled', true).text('Guardando…');
+      try {
+        const res = await apiPost({ action:'sale', payload: JSON.stringify(payload) });
+        if (!res || res.ok === false) throw new Error(res?.error || 'Error al guardar');
+
+        for (const it of m.items) {
+          const p = MENU.find(x => x._rowId === it._rowId);
+          if (p && Number.isFinite(Number(p.stock))) {
+            p.stock = Math.max(0, Number(p.stock) - it.qty);
+          }
+        }
+
+        alert('Pedido guardado ✅');
+        m.items = [];
+        m.lock = null;
+        renderCart();
+        debounceSave();
+        renderProducts();
+      } catch (err) {
+        console.error(err);
+        alert('No se pudo guardar el pedido: ' + err.message);
+      } finally {
+        $('#btnGuardar').prop('disabled', false).text('Guardar Pedido');
+      }
+    }
+
+    // ===== Events =====
+    function bindEvents(){
+      // Login
+      $('#btnLogin').on('click', async()=>{
+        const u = $('#loginUser').val().trim();
+        const p = $('#loginPass').val();
+        const remember = $('#rememberUser').is(':checked');
+
+        try{
+          await login(u,p);
+
+          if (remember) rememberSet(u);
+          else rememberClear();
+
+          await loadState();
+          await loadMenu();
+          startSync();
+        }catch(e){
+          $('#loginMsg').removeClass('hidden').text(e.message||'Error');
         }
       });
-    });
-  }
 
-  // ===== IMPRESIÓN (igual que antes) =====
-  function buildTicketHTML(m){ const fmt=(n)=>new Intl.NumberFormat('es-AR',{style:'currency',currency:'ARS',maximumFractionDigits:0}).format(Number(n||0)); const meta=`${new Date().toLocaleString('es-AR')} · ${m.nombre} · ${m.metodo||'Efectivo'} · Cliente: ${m.cliente||'-'}`; const store=(typeof STORE_NAME!=='undefined'&&STORE_NAME)?STORE_NAME:'OnceyDoce'; const total=(m.items||[]).reduce((a,x)=>a+(Number(x.precio)||0)*x.qty,0); const pago=Number(m.pago||0); const vuelto=Math.max(0,pago-total); const itemsHTML=(m.items||[]).map(x=>{ const linea=(Number(x.precio)||0)*x.qty; return `<div class="row"><span>${x.qty}× ${x.nombre}</span><span>${fmt(linea)}</span></div>`; }).join(''); return `<div class="title">${store}</div><div class="muted">${meta}</div><hr/>${itemsHTML}<hr/><div class="row"><span>Total</span><span>${fmt(total)}</span></div><div class="row"><span>Pago</span><span>${fmt(pago)}</span></div><div class="row"><span>Vuelto</span><span>${fmt(vuelto)}</span></div><div class="muted" style="margin-top:6px">¡Gracias por su compra!</div>`; }
-  function buildComandaHTML(m){ const meta=`${new Date().toLocaleString('es-AR')} · ${m.nombre} · Cliente: ${m.cliente||'-'}`; const store=(typeof STORE_NAME!=='undefined'&&STORE_NAME)?STORE_NAME:'OnceyDoce'; const itemsHTML=(m.items||[]).map(x=>{ const nota=x.notas?` — <em>${String(x.notas).replace(/[<>&]/g,s=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[s]))}</em>`:''; return `<div class="row"><span>${x.qty}× ${x.nombre}${nota}</span><span></span></div>`; }).join(''); return `<div class="title">${store} — COMANDA</div><div class="muted">${meta}</div><hr/>${itemsHTML}<hr/><div class="muted">Preparar y despachar</div>`; }
-  function openPrintWindow(innerHTML,title='Impresión POS'){ const w=window.open('','_blank','width=420,height=800'); if(!w){ alert('El navegador bloqueó la ventana de impresión. Permití popups para este sitio.'); return; } const css=`<style>:root{color-scheme:light only;} html,body{margin:0;padding:0;background:#fff;} body{width:58mm;box-sizing:border-box;padding:8px 6px;color:#000;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono",monospace;font-size:14px;line-height:1.25;} .title{text-align:center;font-weight:700;font-size:16px;} .muted{font-size:13px;text-align:center;} hr{border:0;border-top:1px dashed #000;margin:8px 0;} .row{display:flex;justify-content:space-between;gap:8px;} .tot{font-weight:700;} @media print{@page{size:58mm auto;margin:0;} body{margin:0;} .no-print{display:none !important;}}</style>`; const htmlDoc=`<!DOCTYPE html><html><head><meta charset='utf-8'/><meta name='viewport' content='width=device-width, initial-scale=1'/><title>${title}</title>${css}</head><body onload="setTimeout(function(){try{window.print();}catch(e){}},0)">${innerHTML}</body></html>`; try{ w.document.open(); w.document.write(htmlDoc); w.document.close(); setTimeout(()=>{try{w.focus(); w.print();}catch(e){}},50);}catch(err){ const blob=new Blob([htmlDoc],{type:'text/html'}); const url=URL.createObjectURL(blob); w.location.href=url; } }
+      // Enter para loguear
+      $('#loginUser, #loginPass').on('keydown', function(ev){
+        if(ev.key === 'Enter') $('#btnLogin').trigger('click');
+      });
 
-async function saveOrder(){
-  const m = mesaActual(); 
-  if (!m) return;
+      // Logout (no borra el usuario recordado)
+      $('#btnLogout').on('click', ()=>{ location.reload(); });
 
-  if (isMesaLockedForMe(m)) {
-    alert('Mesa bloqueada por otro usuario');
-    return;
-  }
-  if (!ORDERS_WEBAPP_URL) {
-    alert('Configura ORDERS_WEBAPP_URL');
-    return;
-  }
-  if ((m.items||[]).length === 0) {
-    alert('El carrito está vacío.');
-    return;
-  }
+      $('#btnNuevaMesa').on('click', ()=> nuevaMesa());
+      $('#listaMesas').on('click','[data-action="switch"]', async function(){ selectMesa($(this).data('id')); });
+      $('#listaMesas').on('click','[data-action="rename"]', function(){
+        const id=$(this).data('id'); const m=MESAS.find(x=>x.id===id); if(!m) return;
+        if(isMesaLockedForMe(m)) return alert('Mesa bloqueada por otro usuario');
+        const nv=prompt('Nuevo nombre', m.nombre);
+        if(nv){ m.nombre=nv; if(MESA_ACTUAL===id) $('#mesaTitulo').text(nv); renderMesas(); debounceSave(); }
+      });
+      $('#listaMesas').on('click','[data-action="dup"]', function(){ duplicarMesa($(this).data('id')); });
+      $('#listaMesas').on('click','[data-action="del"]', function(){ eliminarMesa($(this).data('id')); });
+      $('#colorMesa').on('input', function(){ cambiarColorActual($(this).val()); });
 
-  // Validar stock disponible
-  for (const it of m.items) {
-    const p = MENU.find(x => x._rowId === it._rowId);
-    if (Number.isFinite(Number(p?.stock))) {
-      const disp = availableStock(p);
-      if (it.qty > disp) {
-        alert(`No hay stock suficiente de "${p.nombre}". Disponible: ${disp}.`);
-        return;
-      }
-    }
-  }
+      $('#stockMinGlobal').on('input', ()=> renderProducts());
+      $('#categoria').on('change', function(){ renderSubcats(); renderProducts(); });
+      $('#subcategoria, #buscar').on('input change', renderProducts);
 
-  const total = m.items.reduce((a,x)=>a + x.precio * x.qty, 0);
-  const totalCosto = m.items.reduce((a,x)=>a + (Number(x.costo)||0) * x.qty, 0);
+      $('#listaProductos').on('click','button[data-action="add"]', function(){ addToCart($(this).data('id')); });
+      $('#cartTable').on('click','button[data-action="del"]', function(){ removeFromCart($(this).data('id')); });
+      $('#cartTable').on('input','input[data-action="qty"]', function(){ setQty($(this).data('id'), $(this).val()); });
 
-  const itemsPayload = m.items.map(x => {
-    const p = MENU.find(pp => pp._rowId === x._rowId);
-    return {
-      sku: p?.sku || '',
-      nombre: x.nombre,
-      precio: x.precio,
-      costo: x.costo,
-      qty: x.qty
-    };
-  });
+      $('#cliente').on('input', function(){ const m=mesaActual(); if(!m) return; if(isMesaLockedForMe(m)) return; m.cliente=$(this).val(); debounceSave(); });
+      $('#pago').on('input', function(){ const m=mesaActual(); if(!m) return; if(isMesaLockedForMe(m)) return; m.pago=Number($(this).val()||0); renderCart(); debounceSave(); });
+      $('#metodoPago').on('change', function(){ const m=mesaActual(); if(!m) return; if(isMesaLockedForMe(m)) return; m.metodo=$(this).val(); debounceSave(); });
 
-  const payload = {
-    type: 'sale',
-    timestamp: new Date().toISOString(),
-    cliente: m.cliente || '',
-    mesa: m.nombre,
-    color: m.color,
-    total,
-    totalCosto,
-    ganancia: total - totalCosto,
-    pago: Number(m.pago || 0),
-    metodo: String($('#metodoPago').val() || m.metodo || 'Efectivo'),
-    items: itemsPayload
-  };
+      $('#btnVaciar').on('click', function(){
+        const m=mesaActual(); if(!m) return;
+        if(isMesaLockedForMe(m)) return alert('Mesa bloqueada por otro usuario');
+        m.items=[]; m.lock={by:CURRENT_USER.username, at:nowIso()};
+        renderCart(); debounceSave(); renderProducts();
+      });
+      $('#btnDuplicarMesa').on('click', function(){ duplicarMesa(MESA_ACTUAL); });
 
-  $('#btnGuardar').prop('disabled', true).text('Guardando…');
-  try {
-    const res = await apiPost({ action:'sale', payload: JSON.stringify(payload) });
-    if (res.ok === false) throw new Error(res.error || 'Error al guardar');
+      $('#btnGuardar').on('click', saveOrder);
 
-    // Actualizar stock local
-    for (const it of m.items) {
-      const p = MENU.find(x => x._rowId === it._rowId);
-      if (p && Number.isFinite(Number(p.stock))) {
-        p.stock = Math.max(0, Number(p.stock) - it.qty);
-      }
+      $('#btnTicket').on('click', ()=>{
+        const m=mesaActual();
+        if(!m||(m.items||[]).length===0){ alert('No hay items.'); return; }
+        openPrintWindow( buildTicketHTML(m), 'Ticket — OnceyDoce' );
+      });
+      $('#btnComanda').on('click', ()=>{
+        const m=mesaActual();
+        if(!m||(m.items||[]).length===0){ alert('No hay items.'); return; }
+        openPrintWindow( buildComandaHTML(m), 'Comanda — OnceyDoce' );
+      });
+
+      $('#btnForceLock').on('click', async()=>{
+        if(CURRENT_USER?.role!=='admin') return;
+        selectMesa(MESA_ACTUAL, true);
+      });
     }
 
-    alert('Pedido guardado ✅');
-    m.items = [];
-    m.lock = null;
-    renderCart();
-    debounceSave();    // persiste el estado de mesas
-    renderProducts();  // actualiza stocks visibles
-  } catch (err) {
-    console.error(err);
-    alert('No se pudo guardar el pedido: ' + err.message);
-  } finally {
-    $('#btnGuardar').prop('disabled', false).text('Guardar Pedido');
-  }
-}
-
-
-        
-  // ===== Events =====
-  function bindEvents(){
-    // Login
-    $('#btnLogin').on('click', async()=>{
-      const u=$('#loginUser').val().trim();
-      const p=$('#loginPass').val();
-      try{
-        await login(u,p);
-        await loadState();
-        await loadMenu();
-        startSync();
-      }catch(e){
-        $('#loginMsg').removeClass('hidden').text(e.message||'Error');
-      }
+    $(function(){
+      bindEvents();
+      setAuthUI();
+      initRememberUI(); // <-- precarga usuario por 30 días
     });
-    $('#btnLogout').on('click', ()=>{ location.reload(); });
 
-    $('#btnNuevaMesa').on('click', ()=> nuevaMesa());
-    $('#listaMesas').on('click','[data-action="switch"]', async function(){ selectMesa($(this).data('id')); });
-    $('#listaMesas').on('click','[data-action="rename"]', function(){
-      const id=$(this).data('id'); const m=MESAS.find(x=>x.id===id); if(!m) return;
-      if(isMesaLockedForMe(m)) return alert('Mesa bloqueada por otro usuario');
-      const nv=prompt('Nuevo nombre', m.nombre);
-      if(nv){ m.nombre=nv; if(MESA_ACTUAL===id) $('#mesaTitulo').text(nv); renderMesas(); debounceSave(); }
-    });
-    $('#listaMesas').on('click','[data-action="dup"]', function(){ duplicarMesa($(this).data('id')); });
-    $('#listaMesas').on('click','[data-action="del"]', function(){ eliminarMesa($(this).data('id')); });
-    $('#colorMesa').on('input', function(){ cambiarColorActual($(this).val()); });
-
-    $('#stockMinGlobal').on('input', ()=> renderProducts());
-    $('#categoria').on('change', function(){ renderSubcats(); renderProducts(); });
-    $('#subcategoria, #buscar').on('input change', renderProducts);
-
-    $('#listaProductos').on('click','button[data-action="add"]', function(){ addToCart($(this).data('id')); });
-    $('#cartTable').on('click','button[data-action="del"]', function(){ removeFromCart($(this).data('id')); });
-    $('#cartTable').on('input','input[data-action="qty"]', function(){ setQty($(this).data('id'), $(this).val()); });
-
-    $('#cliente').on('input', function(){ const m=mesaActual(); if(!m) return; if(isMesaLockedForMe(m)) return; m.cliente=$(this).val(); debounceSave(); });
-    $('#pago').on('input', function(){ const m=mesaActual(); if(!m) return; if(isMesaLockedForMe(m)) return; m.pago=Number($(this).val()||0); renderCart(); debounceSave(); });
-    $('#metodoPago').on('change', function(){ const m=mesaActual(); if(!m) return; if(isMesaLockedForMe(m)) return; m.metodo=$(this).val(); debounceSave(); });
-
-    $('#btnVaciar').on('click', function(){ const m=mesaActual(); if(!m) return; if(isMesaLockedForMe(m)) return alert('Mesa bloqueada por otro usuario'); m.items=[]; m.lock={by:CURRENT_USER.username, at:nowIso()}; renderCart(); debounceSave(); renderProducts(); });
-    $('#btnDuplicarMesa').on('click', function(){ duplicarMesa(MESA_ACTUAL); });
-    
-$('#btnGuardar').on('click', saveOrder);
-
-
-    $('#btnTicket').on('click', ()=>{ const m=mesaActual(); if(!m||(m.items||[]).length===0){ alert('No hay items.'); return; } openPrintWindow( buildTicketHTML(m), 'Ticket — OnceyDoce' ); });
-    $('#btnComanda').on('click', ()=>{ const m=mesaActual(); if(!m||(m.items||[]).length===0){ alert('No hay items.'); return; } openPrintWindow( buildComandaHTML(m), 'Comanda — OnceyDoce' ); });
-
-    $('#btnForceLock').on('click', async()=>{ if(CURRENT_USER?.role!=='admin') return; selectMesa(MESA_ACTUAL, true); });
-  }
-
-  $(function(){ bindEvents(); setAuthUI(); }); // Login espera al usuario
-
-       })();
-       </script>
-
+  })();
+  </script>
 </body>
 </html>
