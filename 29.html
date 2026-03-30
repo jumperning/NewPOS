@@ -1,159 +1,184 @@
 <!DOCTYPE html>
-<html class="light" lang="en">
+<html class="light" lang="es">
 <head>
     <meta charset="utf-8"/>
     <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-    <title>Culinary Engine - Dashboard Dinámico</title>
+    <title>Culinary Engine - Dashboard Realtime</title>
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/>
-    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@400;700&display=swap" rel="stylesheet"/>
     <script id="tailwind-config">
           tailwind.config = {
-            darkMode: "class",
             theme: {
               extend: {
-                colors: {
-                  "primary": "#ab2d00",
-                  "surface": "#f6f6f6",
-                  "on-surface": "#2d2f2f",
-                },
-                fontFamily: {
-                  "headline": ["Manrope"],
-                  "body": ["Inter"]
-                },
+                colors: { "primary": "#ab2d00", "surface": "#f6f6f6" },
+                fontFamily: { "headline": ["Manrope"], "body": ["Inter"] },
               },
             },
           }
     </script>
     <style>
-        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; vertical-align: middle; }
+        .material-symbols-outlined { vertical-align: middle; }
         .primary-gradient { background: linear-gradient(135deg, #ab2d00 0%, #ff7851 100%); }
+        .card-shadow { box-shadow: 0 4px 20px -2px rgba(0,0,0,0.05); }
     </style>
 </head>
-<body class="bg-surface text-on-surface font-body antialiased">
+<body class="bg-surface text-slate-800 font-body antialiased">
 
-    <aside class="h-screen w-64 fixed left-0 top-0 bg-[#0c0f0f] shadow-2xl flex flex-col p-6 justify-between z-50">
-        <div class="space-y-8">
-            <div class="flex items-center gap-3">
-                <div class="w-10 h-10 primary-gradient rounded-lg flex items-center justify-center">
-                    <span class="material-symbols-outlined text-white">restaurant_menu</span>
-                </div>
-                <h1 class="text-xl font-black text-white tracking-tight uppercase font-headline">Culinary Engine</h1>
+    <aside class="h-screen w-64 fixed left-0 top-0 bg-[#0c0f0f] flex flex-col p-6 z-50">
+        <div class="flex items-center gap-3 mb-10">
+            <div class="w-10 h-10 primary-gradient rounded-lg flex items-center justify-center">
+                <span class="material-symbols-outlined text-white">restaurant_menu</span>
             </div>
-            <nav class="space-y-2">
-                <div class="flex items-center gap-3 px-4 py-3 bg-[#ab2d00] text-white rounded-lg font-bold text-sm">
-                    <span class="material-symbols-outlined">analytics</span>
-                    <span>Ventas Reales</span>
-                </div>
-            </nav>
+            <h1 class="text-xl font-black text-white tracking-tight uppercase font-headline">Onceydoce</h1>
         </div>
+        <nav class="space-y-2">
+            <div class="flex items-center gap-3 px-4 py-3 bg-[#ab2d00] text-white rounded-lg font-bold text-sm">
+                <span class="material-symbols-outlined">analytics</span>
+                <span>Ventas Consolidadas</span>
+            </div>
+        </nav>
     </aside>
 
     <main class="ml-64 min-h-screen">
         <div class="p-8 max-w-7xl mx-auto space-y-8">
-            <header>
-                <h2 class="text-4xl font-extrabold font-headline tracking-tight">Detalle de Ventas</h2>
-                <p class="text-slate-500 italic">Datos procesados en tiempo real desde JSON</p>
+            <header class="flex justify-between items-center">
+                <div>
+                    <h2 class="text-4xl font-extrabold font-headline tracking-tight text-slate-900">Dashboard de Ventas</h2>
+                    <p class="text-slate-500 font-medium">Sincronizado con ventas29.json</p>
+                </div>
+                <div id="status-badge" class="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-bold uppercase tracking-widest">
+                    En línea
+                </div>
             </header>
 
             <div class="grid grid-cols-4 gap-6">
-                <div class="bg-white rounded-xl p-6 shadow-sm border-l-4 border-primary">
-                    <p class="text-slate-400 text-xs font-bold uppercase mb-2">Ingresos Totales</p>
-                    <p id="stat-ingresos" class="text-3xl font-black font-headline">$0</p>
+                <div class="bg-white rounded-2xl p-6 card-shadow border-t-4 border-primary">
+                    <p class="text-slate-400 text-xs font-bold uppercase mb-2">Ingresos Brutos</p>
+                    <p id="stat-ingresos" class="text-3xl font-black font-headline text-slate-900">$0</p>
                 </div>
-                <div class="bg-white rounded-xl p-6 shadow-sm">
-                    <p class="text-slate-400 text-xs font-bold uppercase mb-2">Unidades</p>
-                    <p id="stat-unidades" class="text-3xl font-black font-headline">0</p>
+                <div class="bg-white rounded-2xl p-6 card-shadow">
+                    <p class="text-slate-400 text-xs font-bold uppercase mb-2">Unidades Vendidas</p>
+                    <p id="stat-unidades" class="text-3xl font-black font-headline text-slate-900">0</p>
                 </div>
-                <div class="bg-white rounded-xl p-6 shadow-sm">
-                    <p class="text-slate-400 text-xs font-bold uppercase mb-2">Margen Promedio</p>
-                    <p id="stat-margen" class="text-3xl font-black font-headline">0%</p>
-                    <div class="w-full bg-slate-100 h-1.5 rounded-full mt-3 overflow-hidden">
-                        <div id="bar-margen" class="bg-green-500 h-full transition-all duration-500" style="width: 0%"></div>
+                <div class="bg-white rounded-2xl p-6 card-shadow">
+                    <p class="text-slate-400 text-xs font-bold uppercase mb-2">Margen Ganancia</p>
+                    <p id="stat-margen" class="text-3xl font-black font-headline text-slate-900">0%</p>
+                    <div class="w-full bg-slate-100 h-2 rounded-full mt-3 overflow-hidden">
+                        <div id="bar-margen" class="bg-primary h-full transition-all duration-700" style="width: 0%"></div>
                     </div>
                 </div>
-                <div class="bg-white rounded-xl p-6 shadow-sm text-red-600">
-                    <p class="text-slate-400 text-xs font-bold uppercase mb-2">Costo Mercadería</p>
-                    <p id="stat-costos" class="text-3xl font-black font-headline">$0</p>
+                <div class="bg-white rounded-2xl p-6 card-shadow">
+                    <p class="text-slate-400 text-xs font-bold uppercase mb-2">Costo Total</p>
+                    <p id="stat-costos" class="text-3xl font-black font-headline text-red-600">$0</p>
                 </div>
             </div>
 
-            <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+            <div class="bg-white rounded-2xl card-shadow overflow-hidden">
                 <table class="w-full text-left">
                     <thead class="bg-slate-50 border-b border-slate-100">
                         <tr>
-                            <th class="px-8 py-4 text-xs font-bold uppercase text-slate-400">Producto</th>
-                            <th class="px-6 py-4 text-xs font-bold uppercase text-slate-400 text-right">Precio Unit.</th>
-                            <th class="px-6 py-4 text-xs font-bold uppercase text-slate-400 text-center">Cant.</th>
-                            <th class="px-8 py-4 text-xs font-bold uppercase text-primary text-right">Total</th>
+                            <th class="px-8 py-5 text-xs font-bold uppercase text-slate-500">Producto</th>
+                            <th class="px-6 py-5 text-xs font-bold uppercase text-slate-500 text-right">Precio</th>
+                            <th class="px-6 py-5 text-xs font-bold uppercase text-slate-500 text-center">Cant.</th>
+                            <th class="px-8 py-5 text-xs font-bold uppercase text-primary text-right font-black tracking-widest">Total Ítem</th>
                         </tr>
                     </thead>
                     <tbody id="tabla-body" class="divide-y divide-slate-50">
-                        </tbody>
+                        <tr>
+                            <td colspan="4" class="p-20 text-center text-slate-400">Procesando datos...</td>
+                        </tr>
+                    </tbody>
                 </table>
             </div>
         </div>
     </main>
 
     <script>
-        // --- CONFIGURACIÓN ---
-        // Si el JSON está en la misma carpeta, usa 'ventas29.json'
+        // URL de tu JSON en Netlify
         const JSON_URL = 'https://onceydocepos.netlify.app/ventas29.json'; 
 
-        async function init() {
+        async function fetchData() {
             try {
+                // 1. Fetch de los datos
                 const response = await fetch(JSON_URL);
-                const data = await response.json();
-                const items = data.flat();
+                if (!response.ok) throw new Error('Error en red');
+                
+                const rawText = await response.text();
 
+                // 2. LIMPIEZA DE DATOS (Crucial para tu archivo ventas29.json)
+                // Tu archivo parece tener múltiples arrays uno tras otro. 
+                // Esta línea los une correctamente para que JS los entienda.
+                const cleanJson = "[" + rawText.trim().replace(/\n/g, ",").replace(/\]\s*\[/g, "],[") + "]";
+                const nestedData = JSON.parse(cleanJson);
+                const allItems = nestedData.flat();
+
+                // 3. PROCESAMIENTO (Agrupar productos)
                 const consolidado = {};
-                let totalVentas = 0;
-                let totalCostos = 0;
-                let totalQty = 0;
+                let metrics = { ventas: 0, costos: 0, qty: 0 };
 
-                items.forEach(item => {
+                allItems.forEach(item => {
+                    if (!item.nombre) return; // Saltar si está vacío
+
                     if (!consolidado[item.nombre]) {
-                        consolidado[item.nombre] = { ...item, total: 0 };
+                        consolidado[item.nombre] = { 
+                            nombre: item.nombre, 
+                            precio: item.precio, 
+                            costo: item.costo, 
+                            qty: 0, 
+                            total: 0 
+                        };
                     }
                     consolidado[item.nombre].qty += item.qty;
                     consolidado[item.nombre].total += (item.precio * item.qty);
                     
-                    totalVentas += (item.precio * item.qty);
-                    totalCostos += (item.costo * item.qty);
-                    totalQty += item.qty;
+                    metrics.ventas += (item.precio * item.qty);
+                    metrics.costos += (item.costo * item.qty);
+                    metrics.qty += item.qty;
                 });
 
-                // Actualizar Stats
-                document.getElementById('stat-ingresos').innerText = `$${totalVentas.toLocaleString()}`;
-                document.getElementById('stat-unidades').innerText = totalQty;
-                document.getElementById('stat-costos').innerText = `$${totalCostos.toLocaleString()}`;
+                // 4. ACTUALIZAR INTERFAZ
+                document.getElementById('stat-ingresos').innerText = `$${metrics.ventas.toLocaleString('es-AR')}`;
+                document.getElementById('stat-unidades').innerText = metrics.qty;
+                document.getElementById('stat-costos').innerText = `$${metrics.costos.toLocaleString('es-AR')}`;
                 
-                const margen = ((totalVentas - totalCostos) / totalVentas) * 100;
-                document.getElementById('stat-margen').innerText = `${margen.toFixed(1)}%`;
-                document.getElementById('bar-margen').style.width = `${margen}%`;
+                const margenPorcentaje = ((metrics.ventas - metrics.costos) / metrics.ventas) * 100;
+                document.getElementById('stat-margen').innerText = `${margenPorcentaje.toFixed(1)}%`;
+                document.getElementById('bar-margen').style.width = `${margenPorcentaje}%`;
 
-                // Poblar Tabla
+                // 5. RENDERIZAR TABLA
                 const tbody = document.getElementById('tabla-body');
-                tbody.innerHTML = Object.values(consolidado)
+                const htmlRows = Object.values(consolidado)
                     .sort((a, b) => b.total - a.total)
                     .map(p => `
-                        <tr class="hover:bg-slate-50 transition-colors">
-                            <td class="px-8 py-5 font-bold text-slate-700">${p.nombre}</td>
-                            <td class="px-6 py-5 text-right text-slate-500">$${p.precio.toLocaleString()}</td>
-                            <td class="px-6 py-5 text-center">
-                                <span class="bg-slate-100 px-2 py-1 rounded text-sm font-bold">${p.qty}</span>
+                        <tr class="hover:bg-orange-50/30 transition-colors">
+                            <td class="px-8 py-5">
+                                <span class="font-bold text-slate-800">${p.nombre}</span>
                             </td>
-                            <td class="px-8 py-5 text-right font-black text-lg">$${p.total.toLocaleString()}</td>
+                            <td class="px-6 py-5 text-right text-slate-500 font-medium">$${p.precio.toLocaleString('es-AR')}</td>
+                            <td class="px-6 py-5 text-center">
+                                <span class="bg-slate-100 text-slate-700 px-3 py-1 rounded-full text-xs font-black">${p.qty}</span>
+                            </td>
+                            <td class="px-8 py-5 text-right font-black text-slate-900 text-lg">$${p.total.toLocaleString('es-AR')}</td>
                         </tr>
                     `).join('');
+                
+                tbody.innerHTML = htmlRows;
 
-            } catch (e) {
-                console.error("Error al cargar datos:", e);
-                document.getElementById('tabla-body').innerHTML = `<tr><td colspan="4" class="p-8 text-center text-red-500">Error cargando archivo JSON. Verifica que el archivo esté en la misma carpeta o la URL sea correcta.</td></tr>`;
+            } catch (error) {
+                console.error("Fallo detallado:", error);
+                document.getElementById('status-badge').className = "px-3 py-1 bg-red-100 text-red-700 rounded-full text-xs font-bold";
+                document.getElementById('status-badge').innerText = "Error de Conexión";
+                document.getElementById('tabla-body').innerHTML = `
+                    <tr><td colspan="4" class="p-10 text-center text-red-500 font-bold">
+                        No se pudo cargar el JSON. <br>
+                        <small class="text-slate-400 font-normal">Causa: Posible bloqueo CORS o formato de archivo inválido.</small>
+                    </td></tr>`;
             }
         }
 
-        init();
+        // Iniciar
+        document.addEventListener('DOMContentLoaded', fetchData);
     </script>
 </body>
 </html>
