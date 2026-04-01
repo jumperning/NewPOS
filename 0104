@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html class="light" lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OnceyDoce — Reporte de Ventas</title>
+
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@400;700&display=swap" rel="stylesheet" />
+
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+  <script id="tailwind-config">
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: { "primary": "#ab2d00", "surface": "#f6f6f6" },
+          fontFamily: { "headline": ["Manrope"], "body": ["Inter"] },
+        },
+      },
+    }
+  </script>
+
+  <style>
+    .material-symbols-outlined { vertical-align: middle; }
+    .primary-gradient { background: linear-gradient(135deg, #ab2d00 0%, #ff7851 100%); }
+    .card-shadow { box-shadow: 0 4px 20px -2px rgba(0,0,0,0.05); }
+    .nav-active { background: #ab2d00; color: white; font-weight: bold; }
+    .table-container { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    input, select { border-radius: 0.75rem !important; border-color: #e2e8f0 !important; }
+    input:focus, select:focus { ring-color: #ab2d00 !important; border-color: #ab2d00 !important; }
+  </style>
+</head>
+
+<body class="bg-surface text-slate-800 font-body antialiased">
+
+  <aside class="w-full lg:w-64 lg:h-screen lg:fixed left-0 top-0 bg-[#0c0f0f] flex lg:flex-col p-4 lg:p-6 justify-between lg:justify-start z-50">
+    <div class="flex items-center gap-3 lg:mb-10">
+      <div class="w-8 h-8 lg:w-10 lg:h-10 primary-gradient rounded-lg flex items-center justify-center">
+        <span class="material-symbols-outlined text-white text-sm lg:text-base">restaurant_menu</span>
+      </div>
+      <h1 class="text-lg lg:text-xl font-black text-white tracking-tight uppercase font-headline">Onceydoce</h1>
+    </div>
+    
+    <nav class="hidden lg:block space-y-2">
+      <a href="./index.html" class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-white transition-colors text-sm">
+        <span class="material-symbols-outlined">point_of_sale</span>
+        <span>POS</span>
+      </a>
+      <a href="./reporte.html" class="flex items-center gap-3 px-4 py-3 nav-active rounded-lg text-sm">
+        <span class="material-symbols-outlined">analytics</span>
+        <span>Reportes</span>
+      </a>
+    </nav>
+
+    <div class="hidden lg:block mt-auto pt-6 border-t border-slate-800">
+        <p class="text-[10px] text-slate-500 text-center font-bold uppercase tracking-widest">© 2026 OnceyDoce</p>
+    </div>
+  </aside>
+
+  <main class="lg:ml-64 min-h-screen">
+    <div class="p-4 md:p-8 max-w-7xl mx-auto space-y-6 lg:space-y-8">
+      
+      <header class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h2 class="text-2xl md:text-4xl font-extrabold font-headline tracking-tight text-slate-900">Análisis de Ventas</h2>
+          <p class="text-slate-500 text-sm md:text-base font-medium italic" id="statusBadge">Sincronizando datos...</p>
+        </div>
+        <div class="flex gap-2">
+            <button id="btnToggleMoneda" class="p-2 bg-white rounded-xl card-shadow border border-slate-100 hover:bg-slate-50 transition-colors">
+                <span class="material-symbols-outlined text-slate-600">visibility</span>
+            </button>
+        </div>
+      </header>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+        <div class="bg-white rounded-2xl p-5 md:p-6 card-shadow border-t-4 border-primary">
+          <p class="text-slate-400 text-[10px] font-bold uppercase mb-1">Ingresos (Mes)</p>
+          <p id="kpiIngresos" class="text-2xl md:text-3xl font-black font-headline text-slate-900">$0</p>
+        </div>
+        <div class="bg-white rounded-2xl p-5 md:p-6 card-shadow">
+          <p class="text-slate-400 text-[10px] font-bold uppercase mb-1">Ganancia (Mes)</p>
+          <p id="kpiGananciaMes" class="text-2xl md:text-3xl font-black font-headline text-green-600">$0</p>
+        </div>
+        <div class="bg-white rounded-2xl p-5 md:p-6 card-shadow">
+          <p class="text-slate-400 text-[10px] font-bold uppercase mb-1">Ventas (Mes)</p>
+          <p id="kpiVentas" class="text-2xl md:text-3xl font-black font-headline text-slate-900">0</p>
+        </div>
+        <div class="bg-white rounded-2xl p-5 md:p-6 card-shadow">
+          <p class="text-slate-400 text-[10px] font-bold uppercase mb-1">Unidades (Mes)</p>
+          <p id="kpiUnidades" class="text-2xl md:text-3xl font-black font-headline text-slate-900">0</p>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        
+        <aside class="lg:col-span-3 space-y-6">
+          <div class="bg-white rounded-2xl p-6 card-shadow space-y-4">
+            <h3 class="text-sm font-black uppercase tracking-widest text-slate-900 mb-4 flex items-center gap-2">
+                <span class="material-symbols-outlined text-sm">filter_list</span> Filtros
+            </h3>
+            
+            <div>
+              <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Seleccionar Mes</label>
+              <select id="mesFiltro" class="w-full border-slate-200 focus:ring-primary focus:border-primary text-sm font-semibold"></select>
+            </div>
+
+            <div>
+              <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Filtrar por Día</label>
+              <input id="diaFiltro" type="date" class="w-full border-slate-200 text-sm mb-2" />
+              <div class="grid grid-cols-3 gap-1">
+                <button id="btnHoy" class="py-1 bg-slate-50 border border-slate-200 rounded-lg text-[10px] font-bold hover:bg-slate-100 uppercase">Hoy</button>
+                <button id="btnAyer" class="py-1 bg-slate-50 border border-slate-200 rounded-lg text-[10px] font-bold hover:bg-slate-100 uppercase">Ayer</button>
+                <button id="btnMenos2" class="py-1 bg-slate-50 border border-slate-200 rounded-lg text-[10px] font-bold hover:bg-slate-100 uppercase">-2d</button>
+              </div>
+            </div>
+
+            <hr class="border-slate-50">
+
+            <div>
+                <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Métodos de Pago (Mes)</label>
+                <div class="space-y-1 mt-2">
+                    <div class="flex justify-between text-xs font-medium"><span>Efectivo:</span> <b id="kpiEfectivoMes" class="text-slate-900">$0</b></div>
+                    <div class="flex justify-between text-xs font-medium"><span>MercadoPago:</span> <b id="kpiMpMes" class="text-slate-900">$0</b></div>
+                </div>
+            </div>
+          </div>
+
+          <div class="bg-white/50 rounded-2xl p-4 border border-dashed border-slate-300">
+            <label class="block text-[10px] font-bold text-slate-400 uppercase mb-2">Fuente de Datos (CSV)</label>
+            <input id="csvUrl" type="text" class="w-full text-[10px] bg-transparent border-slate-200 rounded-lg mb-2" value="https://docs.google.com/spreadsheets/d/e/2PACX-1vTNZmwzwN0zHiYYSEpk0N11IIRouQUu85lzE6eYe4DoR1WbtnV239mtGRXPfBdbbVbSI9Scx3LVcww-/pub?gid=474194648&single=true&output=csv" />
+            <button id="btnReload" class="w-full py-2 bg-slate-900 text-white rounded-lg text-[10px] font-bold uppercase tracking-widest hover:bg-black transition-colors">Sincronizar Ahora</button>
+          </div>
+        </aside>
+
+        <div class="lg:col-span-9 space-y-6">
+          
+          <div class="bg-white rounded-2xl p-6 card-shadow">
+            <div class="flex items-center justify-between mb-6">
+                <h3 class="font-headline font-bold text-lg text-slate-900">Cierre de Caja <span id="cierreRangoLbl" class="text-slate-400 font-medium text-sm ml-2"></span></h3>
+                <span class="px-3 py-1 bg-primary/10 text-primary rounded-full text-[10px] font-black uppercase tracking-widest">Resumen Diario</span>
+            </div>
+            
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
+              <div>
+                <p class="text-[10px] font-bold text-slate-400 uppercase mb-1">Ingresos</p>
+                <p id="kpiIngDia" class="text-xl font-black text-slate-900">$0</p>
+              </div>
+              <div>
+                <p class="text-[10px] font-bold text-slate-400 uppercase mb-1">Costo</p>
+                <p id="kpiCostoDia" class="text-xl font-black text-red-600">$0</p>
+              </div>
+              <div>
+                <p class="text-[10px] font-bold text-slate-400 uppercase mb-1">Ganancia Bruta</p>
+                <p id="kpiGanDia" class="text-xl font-black text-green-600">$0</p>
+              </div>
+              <div>
+                <p class="text-[10px] font-bold text-slate-400 uppercase mb-1">Tickets/Unid</p>
+                <p id="kpiGanDiaLbl" class="text-sm font-bold text-slate-600">0 ventas · 0 unid.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-white rounded-2xl p-6 card-shadow">
+            <h3 class="font-headline font-bold text-lg text-slate-900 mb-4">Picos de Venta por Hora</h3>
+            <div class="h-64">
+              <canvas id="chartHoras"></canvas>
+            </div>
+          </div>
+
+          <div class="bg-white rounded-2xl card-shadow overflow-hidden">
+            <div class="px-6 py-4 border-b border-slate-50 flex justify-between items-center bg-slate-50/50">
+                <h3 class="font-headline font-bold text-slate-900 uppercase text-xs tracking-widest">Movimientos Mensuales</h3>
+                <div class="flex gap-2">
+                    <button id="btnExcel" class="text-[10px] font-bold uppercase tracking-widest bg-white px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 transition-colors">Excel</button>
+                </div>
+            </div>
+            <div class="table-container">
+              <table class="w-full text-left min-w-[800px]">
+                <thead class="bg-slate-50/80">
+                  <tr>
+                    <th class="px-6 py-4 text-[10px] font-bold uppercase text-slate-500">Fecha/Hora</th>
+                    <th class="px-6 py-4 text-[10px] font-bold uppercase text-slate-500">Cliente / Mesa</th>
+                    <th class="px-6 py-4 text-[10px] font-bold uppercase text-slate-500">Items</th>
+                    <th class="px-6 py-4 text-[10px] font-bold uppercase text-primary text-right">Total</th>
+                    <th class="px-6 py-4 text-[10px] font-bold uppercase text-slate-500 text-right">Ganancia</th>
+                  </tr>
+                </thead>
+                <tbody id="tbodyVentas" class="divide-y divide-slate-50">
+                    </tbody>
+              </table>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    const API = '/.netlify/functions/gs-order';
+    const $fmt = (n) => new Intl.NumberFormat('es-AR', { style:'currency', currency:'ARS', maximumFractionDigits:0 }).format(Number(n||0));
+    
+    let ROWS = [];
+    let mesSelKey = '';
+
+    const toDate = (s) => {
+      if (!s) return null;
+      const t = String(s).trim();
+      if (/^\d{4}-\d{2}-\d{2}/.test(t)) return new Date(t);
+      if (/^\d{2}\/\d{2}\/\d{4}/.test(t)) {
+        const [d,m,y] = t.split('/');
+        return new Date(`${y}-${m}-${d}`);
+      }
+      const d = new Date(t);
+      return isNaN(d) ? null : d;
+    };
+
+    async function loadCSV(){
+      const url = $('#csvUrl').val().trim();
+      $('#statusBadge').text('Actualizando base de datos...');
+      return new Promise((resolve, reject)=>{
+        Papa.parse(url, {
+          download: true,
+          header: true,
+          skipEmptyLines: true,
+          complete: (res)=>{
+            try{
+              ROWS = (res.data||[]).map(r=>{
+                const ts = r.timestamp || r.fecha || r.Timestamp || '';
+                const d  = toDate(ts);
+                return {
+                  date: d,
+                  y: d? d.getFullYear(): null,
+                  m: d? d.getMonth()+1 : null,
+                  cliente: r.cliente || r.Cliente || '-',
+                  mesa: r.mesa || r.Mesa || '-',
+                  metodo: (r.metodoPago || r.metodo || '').toString().trim(),
+                  total: Number(r.total || 0),
+                  totalCosto: Number(r.totalCosto || 0),
+                  ganancia: Number(r.ganancia || (Number(r.total||0)-Number(r.totalCosto||0))),
+                  items: r['items(json)'] || r.items || '[]'
+                };
+              }).filter(r => r.date);
+              
+              buildMesOptions();
+              $('#statusBadge').text('Sincronizado en tiempo real');
+              resolve();
+            }catch(e){ reject(e); }
+          }
+        });
+      });
+    }
+
+    function buildMesOptions(){
+      const set = new Set(ROWS.map(r => `${r.y}-${String(r.m).padStart(2,'0')}`));
+      const opts = [...set].sort().reverse();
+      const sel = $('#mesFiltro'); sel.empty();
+      
+      opts.forEach(key => {
+        const [yy, mm] = key.split('-').map(Number);
+        const d = new Date(yy, mm-1, 1);
+        const label = d.toLocaleDateString('es-AR', { month:'long', year:'numeric' });
+        sel.append(`<option value="${key}">${label.charAt(0).toUpperCase()+label.slice(1)}</option>`);
+      });
+
+      mesSelKey = opts[0] || '';
+      renderAll();
+    }
+
+    function renderAll(){
+      if(!mesSelKey) return;
+      const [yy, mm] = mesSelKey.split('-').map(Number);
+      const rows = ROWS.filter(r => r.y === yy && r.m === mm);
+
+      // KPIs
+      const ingresos = rows.reduce((a,r) => a + r.total, 0);
+      const ganancia = rows.reduce((a,r) => a + r.ganancia, 0);
+      const unidades = rows.reduce((a,r) => {
+        try { return a + JSON.parse(r.items).reduce((s,i) => s + (i.qty||0), 0); } catch { return a; }
+      }, 0);
+
+      $('#kpiIngresos').text($fmt(ingresos));
+      $('#kpiGananciaMes').text($fmt(ganancia));
+      $('#kpiVentas').text(rows.length);
+      $('#kpiUnidades').text(unidades);
+
+      // Tabla Ventas
+      const $tb = $('#tbodyVentas'); $tb.empty();
+      rows.sort((a,b) => b.date - a.date).forEach(r => {
+        let itemNames = '';
+        try { itemNames = JSON.parse(r.items).map(i => i.nombre).join(', '); } catch {}
+        
+        $tb.append(`
+          <tr class="hover:bg-orange-50/30 transition-colors">
+            <td class="px-6 py-4 text-xs font-medium text-slate-500">${r.date.toLocaleString('es-AR', {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'})}</td>
+            <td class="px-6 py-4">
+              <div class="text-sm font-bold text-slate-800">${r.cliente}</div>
+              <div class="text-[10px] text-slate-400 uppercase font-black">Mesa: ${r.mesa}</div>
+            </td>
+            <td class="px-6 py-4 text-xs text-slate-500 max-w-xs truncate">${itemNames}</td>
+            <td class="px-6 py-4 text-right font-black text-slate-900 text-sm">${$fmt(r.total)}</td>
+            <td class="px-6 py-4 text-right text-xs font-bold text-green-600">${$fmt(r.ganancia)}</td>
+          </tr>
+        `);
+      });
+
+      renderKPIsDia();
+    }
+
+    function renderKPIsDia(){
+      const selDia = $('#diaFiltro').val();
+      if(!selDia) return;
+      
+      const rowsDia = ROWS.filter(r => r.date.toISOString().slice(0,10) === selDia);
+      const ing = rowsDia.reduce((a,r) => a + r.total, 0);
+      const cos = rowsDia.reduce((a,r) => a + r.totalCosto, 0);
+      const gan = ing - cos;
+
+      $('#kpiIngDia').text($fmt(ing));
+      $('#kpiCostoDia').text($fmt(cos));
+      $('#kpiGanDia').text($fmt(gan));
+      $('#kpiGanDiaLbl').text(`${rowsDia.length} ventas · ${selDia}`);
+      $('#cierreRangoLbl').text(selDia);
+    }
+
+    // Eventos
+    $('#btnReload').on('click', loadCSV);
+    $('#mesFiltro').on('change', function(){ mesSelKey = $(this).val(); renderAll(); });
+    $('#diaFiltro').on('change', renderKPIsDia);
+    $('#btnHoy').on('click', () => { $('#diaFiltro').val(new Date().toISOString().slice(0,10)).trigger('change'); });
+
+    $(document).ready(loadCSV);
+  </script>
+</body>
+</html>
