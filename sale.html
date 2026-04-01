@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>OnceyDoce — Reporte Categorizado</title>
+  <title>OnceyDoce — Reporte Inteligente</title>
 
   <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
@@ -27,7 +27,8 @@
     .primary-gradient { background: linear-gradient(135deg, #ab2d00 0%, #ff7851 100%); }
     .card-shadow { box-shadow: 0 4px 20px -2px rgba(0,0,0,0.05); }
     .nav-active { background: #ab2d00; color: white; font-weight: bold; }
-    .table-container { overflow-x: auto; }
+    input[type="date"] { border: none; font-family: 'Inter', sans-serif; font-weight: 600; font-size: 0.75rem; color: #1e293b; }
+    input[type="date"]:focus { ring: 0; outline: none; }
   </style>
 </head>
 
@@ -41,9 +42,9 @@
       <h1 class="text-lg lg:text-xl font-black text-white tracking-tight uppercase font-headline">Onceydoce</h1>
     </div>
     <nav class="hidden lg:block space-y-2">
-      <div class="flex items-center gap-3 px-4 py-3 nav-active rounded-lg text-sm cursor-pointer">
-        <span class="material-symbols-outlined">insert_chart</span>
-        <span>Análisis Pro</span>
+      <div class="flex items-center gap-3 px-4 py-3 nav-active rounded-lg text-sm">
+        <span class="material-symbols-outlined">dashboard</span>
+        <span>Reporte de Ventas</span>
       </div>
     </nav>
   </aside>
@@ -53,166 +54,164 @@
       
       <header class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h2 class="text-3xl font-extrabold font-headline tracking-tight text-slate-900">Ventas por Categoría</h2>
-          <p class="text-slate-500 text-sm italic" id="statusBadge">Cargando...</p>
+          <h2 class="text-3xl font-extrabold font-headline tracking-tight text-slate-900">Análisis por Categoría</h2>
+          <p class="text-slate-500 text-sm italic" id="statusBadge">Sincronizando menú y ventas...</p>
         </div>
-        <div class="flex items-center bg-white p-2 rounded-2xl card-shadow border border-slate-100">
-             <input id="fechaDesde" type="date" class="border-none text-xs font-bold focus:ring-0" />
-             <span class="text-slate-300 mx-1">/</span>
-             <input id="fechaHasta" type="date" class="border-none text-xs font-bold focus:ring-0" />
+        <div class="flex items-center bg-white px-4 py-2 rounded-2xl card-shadow border border-slate-100">
+             <input id="fechaDesde" type="date" />
+             <span class="text-slate-300 mx-2">/</span>
+             <input id="fechaHasta" type="date" />
         </div>
       </header>
 
       <div id="gridCategorias" class="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div class="bg-white rounded-2xl p-6 card-shadow border-b-4 border-blue-500">
-              <div class="flex justify-between items-start mb-4">
-                <span class="material-symbols-outlined text-blue-500 bg-blue-50 p-2 rounded-lg">local_bar</span>
-                <span id="pctBebida" class="text-[10px] font-black text-slate-400">0%</span>
-              </div>
-              <p class="text-slate-400 text-[10px] font-bold uppercase tracking-widest">Bebidas</p>
+              <p class="text-slate-400 text-[10px] font-bold uppercase tracking-widest mb-1">Bebidas</p>
               <p id="totalBebida" class="text-2xl font-black font-headline text-slate-900">$0</p>
           </div>
           <div class="bg-white rounded-2xl p-6 card-shadow border-b-4 border-orange-500">
-              <div class="flex justify-between items-start mb-4">
-                <span class="material-symbols-outlined text-orange-500 bg-orange-50 p-2 rounded-lg">coffee</span>
-                <span id="pctCafe" class="text-[10px] font-black text-slate-400">0%</span>
-              </div>
-              <p class="text-slate-400 text-[10px] font-bold uppercase tracking-widest">Cafetería</p>
+              <p class="text-slate-400 text-[10px] font-bold uppercase tracking-widest mb-1">Cafetería</p>
               <p id="totalCafe" class="text-2xl font-black font-headline text-slate-900">$0</p>
           </div>
           <div class="bg-white rounded-2xl p-6 card-shadow border-b-4 border-green-500">
-              <div class="flex justify-between items-start mb-4">
-                <span class="material-symbols-outlined text-green-500 bg-green-50 p-2 rounded-lg">flatware</span>
-                <span id="pctComida" class="text-[10px] font-black text-slate-400">0%</span>
-              </div>
-              <p class="text-slate-400 text-[10px] font-bold uppercase tracking-widest">Comida</p>
+              <p class="text-slate-400 text-[10px] font-bold uppercase tracking-widest mb-1">Comida</p>
               <p id="totalComida" class="text-2xl font-black font-headline text-slate-900">$0</p>
           </div>
       </div>
 
       <div class="bg-white rounded-3xl card-shadow overflow-hidden border border-slate-100">
         <div class="px-8 py-6 border-b border-slate-50 bg-slate-50/50 flex justify-between items-center">
-            <h3 class="font-headline font-bold text-slate-900 uppercase text-xs tracking-widest">Ranking de Productos Vendidos</h3>
-            <button id="btnReload" class="text-[10px] font-black uppercase text-primary tracking-tighter">Sincronizar</button>
+            <h3 class="font-headline font-bold text-slate-900 uppercase text-xs tracking-widest">Desglose de Productos</h3>
+            <button id="btnReload" class="p-2 hover:bg-slate-200 rounded-full transition-colors">
+                <span class="material-symbols-outlined text-slate-400">refresh</span>
+            </button>
         </div>
         <div class="table-container">
           <table class="w-full text-left">
             <thead class="bg-slate-50/80">
               <tr>
                 <th class="px-8 py-4 text-[10px] font-bold uppercase text-slate-400">Producto</th>
-                <th class="px-8 py-4 text-[10px] font-bold uppercase text-slate-400">Categoría</th>
-                <th class="px-8 py-4 text-[10px] font-bold uppercase text-slate-400 text-center">Cant.</th>
-                <th class="px-8 py-4 text-[10px] font-bold uppercase text-slate-400 text-right">Total Ventas</th>
+                <th class="px-8 py-4 text-[10px] font-bold uppercase text-slate-400">Categoría Excel</th>
+                <th class="px-8 py-4 text-[10px] font-bold uppercase text-slate-400 text-center">Unidades</th>
+                <th class="px-8 py-4 text-[10px] font-bold uppercase text-slate-400 text-right">Recaudación</th>
               </tr>
             </thead>
-            <tbody id="tbodyRanking" class="divide-y divide-slate-50">
-                </tbody>
+            <tbody id="tbodyRanking" class="divide-y divide-slate-50"></tbody>
           </table>
         </div>
       </div>
 
-      <input id="csvUrl" type="hidden" value="https://docs.google.com/spreadsheets/d/e/2PACX-1vTNZmwzwN0zHiYYSEpk0N11IIRouQUu85lzE6eYe4DoR1WbtnV239mtGRXPfBdbbVbSI9Scx3LVcww-/pub?gid=2113257466&single=true&output=csv" />
     </div>
   </main>
 
   <script>
+    const URL_VENTAS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTNZmwzwN0zHiYYSEpk0N11IIRouQUu85lzE6eYe4DoR1WbtnV239mtGRXPfBdbbVbSI9Scx3LVcww-/pub?gid=2113257466&single=true&output=csv";
+    const URL_MENU = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTNZmwzwN0zHiYYSEpk0N11IIRouQUu85lzE6eYe4DoR1WbtnV239mtGRXPfBdbbVbSI9Scx3LVcww-/pub?gid=974390874&single=true&output=csv";
+
     const $fmt = (n) => new Intl.NumberFormat('es-AR', { style:'currency', currency:'ARS', maximumFractionDigits:0 }).format(Number(n||0));
-    let ROWS = [];
+    
+    let DICCIONARIO_MENU = {}; 
+    let VENTAS_RAW = [];
 
-    // --- CONFIGURACIÓN DE CATEGORÍAS ---
-    // Agrega aquí las palabras clave que definen tus productos
-    const CATEGORIAS = {
-        'Bebida': ['cerveza', 'gaseosa', 'agua', 'jugo', 'stella', 'corona', 'coca', 'sprite', 'villavicencio', 'vino'],
-        'Cafeteria': ['cafe', 'café', 'cortado', 'latte', 'medialuna', 'tostada', 'capuccino', 'té', 'te ', 'alfajor'],
-        'Comida': ['sandwich', 'hamburguesa', 'pizza', 'papas', 'lomo', 'tostado', 'wrap', 'ensalada', 'empanada']
-    };
-
-    function asignarCategoria(nombre) {
-        const n = nombre.toLowerCase();
-        if (CATEGORIAS['Bebida'].some(k => n.includes(k))) return 'Bebida';
-        if (CATEGORIAS['Cafeteria'].some(k => n.includes(k))) return 'Cafetería';
-        if (CATEGORIAS['Comida'].some(k => n.includes(k))) return 'Comida';
-        return 'Otros';
+    // 1. CARGAR EL MENÚ PRIMERO
+    async function cargarMenu() {
+        return new Promise((resolve) => {
+            Papa.parse(URL_MENU, {
+                download: true, header: true, skipEmptyLines: true,
+                complete: (res) => {
+                    res.data.forEach(item => {
+                        const nombre = (item.producto || item.nombre || "").trim().toLowerCase();
+                        const cat = (item.categoria || item.Categoría || "Otros").trim();
+                        if(nombre) DICCIONARIO_MENU[nombre] = cat;
+                    });
+                    resolve();
+                }
+            });
+        });
     }
 
-    async function loadCSV(){
-      Papa.parse($('#csvUrl').val(), {
-        download: true, header: true, skipEmptyLines: true,
-        complete: (res) => {
-          ROWS = res.data.map(r => ({
-            date: new Date(r.timestamp || r.fecha || r.Timestamp),
-            total: Number(r.total || 0),
-            items: JSON.parse(r['items(json)'] || r.items || '[]')
-          })).filter(r => !isNaN(r.date));
-          
-          const hoy = new Date().toISOString().slice(0,10);
-          $('#fechaDesde').val(hoy); $('#fechaHasta').val(hoy).trigger('change');
-          $('#statusBadge').text('Base de datos actualizada');
-        }
-      });
+    // 2. CARGAR LAS VENTAS
+    async function cargarVentas() {
+        return new Promise((resolve) => {
+            Papa.parse(URL_VENTAS, {
+                download: true, header: true, skipEmptyLines: true,
+                complete: (res) => {
+                    VENTAS_RAW = res.data.map(r => ({
+                        date: new Date(r.timestamp || r.fecha || r.Timestamp),
+                        items: JSON.parse(r['items(json)'] || r.items || '[]')
+                    })).filter(v => !isNaN(v.date));
+                    resolve();
+                }
+            });
+        });
     }
 
-    function procesarDatos() {
-      const dLimit = new Date($('#fechaDesde').val() + "T00:00:00");
-      const hLimit = new Date($('#fechaHasta').val() + "T23:59:59");
-      
-      const filtrados = ROWS.filter(r => r.date >= dLimit && r.date <= hLimit);
-      
-      let prodMap = {}; // Para el ranking
-      let catTotales = { 'Bebida': 0, 'Cafetería': 0, 'Comida': 0, 'Otros': 0 };
-      let totalGral = 0;
-
-      filtrados.forEach(venta => {
-          venta.items.forEach(it => {
-              const cat = asignarCategoria(it.nombre);
-              const subtotal = Number(it.total || (it.precio * it.qty));
-              
-              catTotales[cat] += subtotal;
-              totalGral += subtotal;
-
-              if(!prodMap[it.nombre]) {
-                  prodMap[it.nombre] = { nombre: it.nombre, cat: cat, qty: 0, total: 0 };
-              }
-              prodMap[it.nombre].qty += Number(it.qty);
-              prodMap[it.nombre].total += subtotal;
-          });
-      });
-
-      // UI Categorías
-      $('#totalBebida').text($fmt(catTotales['Bebida']));
-      $('#totalCafe').text($fmt(catTotales['Cafetería']));
-      $('#totalComida').text($fmt(catTotales['Comida']));
-      
-      const calcPct = (v) => totalGral > 0 ? Math.round((v/totalGral)*100) + '%' : '0%';
-      $('#pctBebida').text(calcPct(catTotales['Bebida']));
-      $('#pctCafe').text(calcPct(catTotales['Cafetería']));
-      $('#pctComida').text(calcPct(catTotales['Comida']));
-
-      // UI Ranking Tabla
-      const ranking = Object.values(prodMap).sort((a,b) => b.total - a.total);
-      const $tb = $('#tbodyRanking');
-      $tb.empty();
-
-      ranking.forEach(p => {
-          $tb.append(`
-            <tr class="hover:bg-slate-50 transition-colors">
-              <td class="px-8 py-5 text-sm font-bold text-slate-800">${p.nombre}</td>
-              <td class="px-8 py-5">
-                <span class="text-[10px] font-black uppercase px-2 py-1 rounded-md ${
-                    p.cat === 'Bebida' ? 'bg-blue-50 text-blue-600' : 
-                    p.cat === 'Comida' ? 'bg-green-50 text-green-600' : 'bg-orange-50 text-orange-600'
-                }">${p.cat}</span>
-              </td>
-              <td class="px-8 py-5 text-center text-sm font-medium text-slate-500">${p.qty}</td>
-              <td class="px-8 py-5 text-right font-black text-slate-900">${$fmt(p.total)}</td>
-            </tr>
-          `);
-      });
+    function obtenerCategoriaReal(nombreProducto) {
+        const n = nombreProducto.trim().toLowerCase();
+        // Busca en el diccionario cargado de la pestaña Menu
+        return DICCIONARIO_MENU[n] || "Otros";
     }
 
-    $('#fechaDesde, #fechaHasta').on('change', procesarDatos);
-    $('#btnReload').on('click', loadCSV);
-    $(document).ready(loadCSV);
+    function procesarYRenderizar() {
+        const dStr = $('#fechaDesde').val();
+        const hStr = $('#fechaHasta').val();
+        if(!dStr || !hStr) return;
+
+        const dLimit = new Date(dStr + "T00:00:00");
+        const hLimit = new Date(hStr + "T23:59:59");
+
+        let prodMap = {};
+        let totalesPorAgrupador = { 'Bebida': 0, 'Cafetería': 0, 'Comida': 0, 'Otros': 0 };
+
+        VENTAS_RAW.filter(v => v.date >= dLimit && v.date <= hLimit).forEach(v => {
+            v.items.forEach(it => {
+                const catExcel = obtenerCategoriaReal(it.nombre);
+                const subtotal = Number(it.total || (it.precio * it.qty));
+                
+                // Clasificación para las tarjetas de arriba (agrupación lógica)
+                const c = catExcel.toLowerCase();
+                if(c.includes('bebida') || c.includes('cerveza') || c.includes('gaseosa') || c.includes('vino')) totalesPorAgrupador['Bebida'] += subtotal;
+                else if(c.includes('cafe') || c.includes('pasteleria') || c.includes('dulce')) totalesPorAgrupador['Cafetería'] += subtotal;
+                else if(c.includes('comida') || c.includes('sandwich') || c.includes('burguer') || c.includes('pizza')) totalesPorAgrupador['Comida'] += subtotal;
+                else totalesPorAgrupador['Otros'] += subtotal;
+
+                if(!prodMap[it.nombre]) prodMap[it.nombre] = { nombre: it.nombre, cat: catExcel, qty: 0, total: 0 };
+                prodMap[it.nombre].qty += Number(it.qty);
+                prodMap[it.nombre].total += subtotal;
+            });
+        });
+
+        // Actualizar Tarjetas
+        $('#totalBebida').text($fmt(totalesPorAgrupador['Bebida']));
+        $('#totalCafe').text($fmt(totalesPorAgrupador['Cafetería']));
+        $('#totalComida').text($fmt(totalesPorAgrupador['Comida']));
+
+        // Actualizar Tabla
+        const $tb = $('#tbodyRanking').empty();
+        Object.values(prodMap).sort((a,b) => b.total - a.total).forEach(p => {
+            $tb.append(`
+                <tr class="hover:bg-slate-50 transition-colors">
+                    <td class="px-8 py-5 text-sm font-bold text-slate-900">${p.nombre}</td>
+                    <td class="px-8 py-5 text-[10px] font-black uppercase text-slate-400">${p.cat}</td>
+                    <td class="px-8 py-5 text-center text-sm font-medium text-slate-600">${p.qty}</td>
+                    <td class="px-8 py-5 text-right font-black text-slate-900">${$fmt(p.total)}</td>
+                </tr>
+            `);
+        });
+    }
+
+    async function init() {
+        await cargarMenu();
+        await cargarVentas();
+        const hoy = new Date().toISOString().slice(0,10);
+        $('#fechaDesde').val(hoy);
+        $('#fechaHasta').val(hoy).trigger('change');
+        $('#statusBadge').text('Sincronización completa');
+    }
+
+    $('#fechaDesde, #fechaHasta').on('change', procesarYRenderizar);
+    $('#btnReload').on('click', init);
+    $(document).ready(init);
   </script>
 </body>
 </html>
