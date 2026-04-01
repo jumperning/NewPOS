@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html class="light" lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OnceyDoce — Reporte Categorizado</title>
+
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@400;700&display=swap" rel="stylesheet" />
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+
+  <script id="tailwind-config">
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: { "primary": "#ab2d00", "surface": "#f6f6f6" },
+          fontFamily: { "headline": ["Manrope"], "body": ["Inter"] },
+        },
+      },
+    }
+  </script>
+
+  <style>
+    .material-symbols-outlined { vertical-align: middle; }
+    .primary-gradient { background: linear-gradient(135deg, #ab2d00 0%, #ff7851 100%); }
+    .card-shadow { box-shadow: 0 4px 20px -2px rgba(0,0,0,0.05); }
+    .nav-active { background: #ab2d00; color: white; font-weight: bold; }
+    .table-container { overflow-x: auto; }
+  </style>
+</head>
+
+<body class="bg-surface text-slate-800 font-body antialiased">
+
+  <aside class="w-full lg:w-64 lg:h-screen lg:fixed left-0 top-0 bg-[#0c0f0f] flex lg:flex-col p-4 lg:p-6 justify-between lg:justify-start z-50">
+    <div class="flex items-center gap-3 lg:mb-10">
+      <div class="w-8 h-8 lg:w-10 lg:h-10 primary-gradient rounded-lg flex items-center justify-center">
+        <span class="material-symbols-outlined text-white text-sm lg:text-base">analytics</span>
+      </div>
+      <h1 class="text-lg lg:text-xl font-black text-white tracking-tight uppercase font-headline">Onceydoce</h1>
+    </div>
+    <nav class="hidden lg:block space-y-2">
+      <div class="flex items-center gap-3 px-4 py-3 nav-active rounded-lg text-sm cursor-pointer">
+        <span class="material-symbols-outlined">insert_chart</span>
+        <span>Análisis Pro</span>
+      </div>
+    </nav>
+  </aside>
+
+  <main class="lg:ml-64 min-h-screen">
+    <div class="p-4 md:p-8 max-w-7xl mx-auto space-y-8">
+      
+      <header class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+          <h2 class="text-3xl font-extrabold font-headline tracking-tight text-slate-900">Ventas por Categoría</h2>
+          <p class="text-slate-500 text-sm italic" id="statusBadge">Cargando...</p>
+        </div>
+        <div class="flex items-center bg-white p-2 rounded-2xl card-shadow border border-slate-100">
+             <input id="fechaDesde" type="date" class="border-none text-xs font-bold focus:ring-0" />
+             <span class="text-slate-300 mx-1">/</span>
+             <input id="fechaHasta" type="date" class="border-none text-xs font-bold focus:ring-0" />
+        </div>
+      </header>
+
+      <div id="gridCategorias" class="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div class="bg-white rounded-2xl p-6 card-shadow border-b-4 border-blue-500">
+              <div class="flex justify-between items-start mb-4">
+                <span class="material-symbols-outlined text-blue-500 bg-blue-50 p-2 rounded-lg">local_bar</span>
+                <span id="pctBebida" class="text-[10px] font-black text-slate-400">0%</span>
+              </div>
+              <p class="text-slate-400 text-[10px] font-bold uppercase tracking-widest">Bebidas</p>
+              <p id="totalBebida" class="text-2xl font-black font-headline text-slate-900">$0</p>
+          </div>
+          <div class="bg-white rounded-2xl p-6 card-shadow border-b-4 border-orange-500">
+              <div class="flex justify-between items-start mb-4">
+                <span class="material-symbols-outlined text-orange-500 bg-orange-50 p-2 rounded-lg">coffee</span>
+                <span id="pctCafe" class="text-[10px] font-black text-slate-400">0%</span>
+              </div>
+              <p class="text-slate-400 text-[10px] font-bold uppercase tracking-widest">Cafetería</p>
+              <p id="totalCafe" class="text-2xl font-black font-headline text-slate-900">$0</p>
+          </div>
+          <div class="bg-white rounded-2xl p-6 card-shadow border-b-4 border-green-500">
+              <div class="flex justify-between items-start mb-4">
+                <span class="material-symbols-outlined text-green-500 bg-green-50 p-2 rounded-lg">flatware</span>
+                <span id="pctComida" class="text-[10px] font-black text-slate-400">0%</span>
+              </div>
+              <p class="text-slate-400 text-[10px] font-bold uppercase tracking-widest">Comida</p>
+              <p id="totalComida" class="text-2xl font-black font-headline text-slate-900">$0</p>
+          </div>
+      </div>
+
+      <div class="bg-white rounded-3xl card-shadow overflow-hidden border border-slate-100">
+        <div class="px-8 py-6 border-b border-slate-50 bg-slate-50/50 flex justify-between items-center">
+            <h3 class="font-headline font-bold text-slate-900 uppercase text-xs tracking-widest">Ranking de Productos Vendidos</h3>
+            <button id="btnReload" class="text-[10px] font-black uppercase text-primary tracking-tighter">Sincronizar</button>
+        </div>
+        <div class="table-container">
+          <table class="w-full text-left">
+            <thead class="bg-slate-50/80">
+              <tr>
+                <th class="px-8 py-4 text-[10px] font-bold uppercase text-slate-400">Producto</th>
+                <th class="px-8 py-4 text-[10px] font-bold uppercase text-slate-400">Categoría</th>
+                <th class="px-8 py-4 text-[10px] font-bold uppercase text-slate-400 text-center">Cant.</th>
+                <th class="px-8 py-4 text-[10px] font-bold uppercase text-slate-400 text-right">Total Ventas</th>
+              </tr>
+            </thead>
+            <tbody id="tbodyRanking" class="divide-y divide-slate-50">
+                </tbody>
+          </table>
+        </div>
+      </div>
+
+      <input id="csvUrl" type="hidden" value="https://docs.google.com/spreadsheets/d/e/2PACX-1vTNZmwzwN0zHiYYSEpk0N11IIRouQUu85lzE6eYe4DoR1WbtnV239mtGRXPfBdbbVbSI9Scx3LVcww-/pub?gid=2113257466&single=true&output=csv" />
+    </div>
+  </main>
+
+  <script>
+    const $fmt = (n) => new Intl.NumberFormat('es-AR', { style:'currency', currency:'ARS', maximumFractionDigits:0 }).format(Number(n||0));
+    let ROWS = [];
+
+    // --- CONFIGURACIÓN DE CATEGORÍAS ---
+    // Agrega aquí las palabras clave que definen tus productos
+    const CATEGORIAS = {
+        'Bebida': ['cerveza', 'gaseosa', 'agua', 'jugo', 'stella', 'corona', 'coca', 'sprite', 'villavicencio', 'vino'],
+        'Cafeteria': ['cafe', 'café', 'cortado', 'latte', 'medialuna', 'tostada', 'capuccino', 'té', 'te ', 'alfajor'],
+        'Comida': ['sandwich', 'hamburguesa', 'pizza', 'papas', 'lomo', 'tostado', 'wrap', 'ensalada', 'empanada']
+    };
+
+    function asignarCategoria(nombre) {
+        const n = nombre.toLowerCase();
+        if (CATEGORIAS['Bebida'].some(k => n.includes(k))) return 'Bebida';
+        if (CATEGORIAS['Cafeteria'].some(k => n.includes(k))) return 'Cafetería';
+        if (CATEGORIAS['Comida'].some(k => n.includes(k))) return 'Comida';
+        return 'Otros';
+    }
+
+    async function loadCSV(){
+      Papa.parse($('#csvUrl').val(), {
+        download: true, header: true, skipEmptyLines: true,
+        complete: (res) => {
+          ROWS = res.data.map(r => ({
+            date: new Date(r.timestamp || r.fecha || r.Timestamp),
+            total: Number(r.total || 0),
+            items: JSON.parse(r['items(json)'] || r.items || '[]')
+          })).filter(r => !isNaN(r.date));
+          
+          const hoy = new Date().toISOString().slice(0,10);
+          $('#fechaDesde').val(hoy); $('#fechaHasta').val(hoy).trigger('change');
+          $('#statusBadge').text('Base de datos actualizada');
+        }
+      });
+    }
+
+    function procesarDatos() {
+      const dLimit = new Date($('#fechaDesde').val() + "T00:00:00");
+      const hLimit = new Date($('#fechaHasta').val() + "T23:59:59");
+      
+      const filtrados = ROWS.filter(r => r.date >= dLimit && r.date <= hLimit);
+      
+      let prodMap = {}; // Para el ranking
+      let catTotales = { 'Bebida': 0, 'Cafetería': 0, 'Comida': 0, 'Otros': 0 };
+      let totalGral = 0;
+
+      filtrados.forEach(venta => {
+          venta.items.forEach(it => {
+              const cat = asignarCategoria(it.nombre);
+              const subtotal = Number(it.total || (it.precio * it.qty));
+              
+              catTotales[cat] += subtotal;
+              totalGral += subtotal;
+
+              if(!prodMap[it.nombre]) {
+                  prodMap[it.nombre] = { nombre: it.nombre, cat: cat, qty: 0, total: 0 };
+              }
+              prodMap[it.nombre].qty += Number(it.qty);
+              prodMap[it.nombre].total += subtotal;
+          });
+      });
+
+      // UI Categorías
+      $('#totalBebida').text($fmt(catTotales['Bebida']));
+      $('#totalCafe').text($fmt(catTotales['Cafetería']));
+      $('#totalComida').text($fmt(catTotales['Comida']));
+      
+      const calcPct = (v) => totalGral > 0 ? Math.round((v/totalGral)*100) + '%' : '0%';
+      $('#pctBebida').text(calcPct(catTotales['Bebida']));
+      $('#pctCafe').text(calcPct(catTotales['Cafetería']));
+      $('#pctComida').text(calcPct(catTotales['Comida']));
+
+      // UI Ranking Tabla
+      const ranking = Object.values(prodMap).sort((a,b) => b.total - a.total);
+      const $tb = $('#tbodyRanking');
+      $tb.empty();
+
+      ranking.forEach(p => {
+          $tb.append(`
+            <tr class="hover:bg-slate-50 transition-colors">
+              <td class="px-8 py-5 text-sm font-bold text-slate-800">${p.nombre}</td>
+              <td class="px-8 py-5">
+                <span class="text-[10px] font-black uppercase px-2 py-1 rounded-md ${
+                    p.cat === 'Bebida' ? 'bg-blue-50 text-blue-600' : 
+                    p.cat === 'Comida' ? 'bg-green-50 text-green-600' : 'bg-orange-50 text-orange-600'
+                }">${p.cat}</span>
+              </td>
+              <td class="px-8 py-5 text-center text-sm font-medium text-slate-500">${p.qty}</td>
+              <td class="px-8 py-5 text-right font-black text-slate-900">${$fmt(p.total)}</td>
+            </tr>
+          `);
+      });
+    }
+
+    $('#fechaDesde, #fechaHasta').on('change', procesarDatos);
+    $('#btnReload').on('click', loadCSV);
+    $(document).ready(loadCSV);
+  </script>
+</body>
+</html>
