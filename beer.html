@@ -12,17 +12,13 @@
     <style>
         .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
         .progress-ring__circle { transition: stroke-dashoffset 0.35s; transform: rotate(-90deg); transform-origin: 50% 50%; }
+        .hide-scroll::-webkit-scrollbar { display: none; }
     </style>
     <script id="tailwind-config">
         tailwind.config = {
           theme: {
             extend: {
-              "colors": {
-                "primary": "#ab2d00",
-                "surface": "#f6f6f6",
-                "secondary": "#515d64",
-                "error": "#b31b25"
-              },
+              "colors": { "primary": "#ab2d00", "surface": "#f6f6f6", "secondary": "#515d64", "error": "#b31b25" },
               "fontFamily": { "headline": ["Manrope"], "body": ["Inter"] }
             },
           },
@@ -34,66 +30,77 @@
 <aside class="hidden md:flex flex-col h-full py-8 gap-y-2 bg-[#0c0f0f] w-64 z-50">
     <div class="px-6 mb-8">
         <h1 class="text-2xl font-black text-white italic font-headline">KegControl</h1>
-        <p class="text-white/60 text-xs tracking-wide uppercase">Precision Bar Management</p>
+        <p class="text-white/60 text-[10px] tracking-widest uppercase">OnceyDoce Bar Management</p>
     </div>
     <nav class="flex-grow space-y-1">
         <a class="bg-gradient-to-r from-[#ab2d00] to-[#ff7851] text-white rounded-md mx-4 py-3 px-4 flex items-center gap-3" href="#">
             <span class="material-symbols-outlined">dashboard</span>
-            <span class="text-sm">Dashboard</span>
+            <span class="text-sm font-bold">Monitor de Stock</span>
         </a>
     </nav>
 </aside>
 
-<main class="flex-grow overflow-y-auto h-full flex flex-col">
-    <header class="flex justify-between items-center w-full px-10 h-16 bg-[#f6f6f6] border-b border-gray-200 z-40">
-        <h2 class="text-xl font-black text-[#2d2f2f] font-headline">Culinary Engine</h2>
+<main class="flex-grow overflow-y-auto h-full flex flex-col hide-scroll">
+    <header class="flex justify-between items-center w-full px-10 h-16 bg-white/80 backdrop-blur-md border-b border-gray-100 sticky top-0 z-40">
+        <h2 class="text-xl font-black text-[#2d2f2f] font-headline">Inventario en Tiempo Real</h2>
         <div class="flex items-center gap-4">
-            <span id="syncStatus" class="text-xs font-bold text-secondary italic">Sincronizando...</span>
-            <button id="btnReload" class="p-2 hover:bg-gray-200 rounded-full transition-colors">
+            <span id="syncStatus" class="text-[10px] font-black uppercase tracking-widest text-secondary italic bg-gray-100 px-3 py-1 rounded-full">Sincronizando...</span>
+            <button id="btnReload" class="p-2 hover:bg-gray-100 rounded-full transition-all active:scale-90">
                 <span class="material-symbols-outlined">refresh</span>
             </button>
         </div>
     </header>
 
-    <div class="p-10 space-y-10">
-        <section class="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div class="bg-white rounded-xl p-6 shadow-sm border-l-4 border-primary">
-                <p class="text-xs text-secondary uppercase tracking-wider mb-1">Total Litros en Stock</p>
-                <h3 id="totalLiters" class="text-4xl font-headline font-bold text-on-surface">0<span class="text-lg font-medium ml-1">L</span></h3>
+    <div class="p-10 space-y-12">
+        <section class="space-y-6">
+            <div class="flex justify-between items-end">
+                <div>
+                    <h2 class="text-2xl font-black font-headline tracking-tight text-slate-900">Barriles & Canillas</h2>
+                    <p class="text-sm text-slate-500">Control de flujo y temperatura de barriles de 30L y 50L.</p>
+                </div>
+                <div class="flex gap-4">
+                    <div class="bg-white px-6 py-3 rounded-xl shadow-sm border-b-4 border-primary">
+                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Litros Barril</p>
+                        <h3 id="totalLiters" class="text-2xl font-black font-headline">0L</h3>
+                    </div>
+                </div>
             </div>
-            <div class="bg-white rounded-xl p-6 shadow-sm">
-                <p class="text-xs text-secondary uppercase tracking-wider mb-1">Canillas Activas</p>
-                <h3 id="activeTaps" class="text-4xl font-headline font-bold text-on-surface">0</h3>
-            </div>
-            <div class="bg-white rounded-xl p-6 shadow-sm">
-                <p class="text-xs text-secondary uppercase tracking-wider mb-1">Alertas Nivel Bajo</p>
-                <h3 id="lowAlerts" class="text-4xl font-headline font-bold text-error">0</h3>
+            
+            <div class="bg-white rounded-2xl shadow-sm overflow-hidden border border-gray-100">
+                <div class="grid grid-cols-12 gap-4 px-8 py-4 bg-gray-50/50 text-[10px] font-bold text-slate-400 uppercase tracking-widest border-b">
+                    <div class="col-span-1">Nivel</div>
+                    <div class="col-span-4">Producto</div>
+                    <div class="col-span-2">Capacidad</div>
+                    <div class="col-span-2">Actual</div>
+                    <div class="col-span-2">Temp</div>
+                    <div class="col-span-1 text-right">Alerta</div>
+                </div>
+                <div id="kegList" class="divide-y divide-gray-50"></div>
             </div>
         </section>
 
-        <section class="space-y-4">
-            <h2 class="text-2xl font-headline font-extrabold tracking-tight">Monitoreo de Canillas (Live)</h2>
-            <div class="bg-white rounded-xl shadow-sm overflow-hidden">
-                <div class="grid grid-cols-12 gap-4 px-8 py-4 bg-gray-50 text-[10px] font-bold text-secondary uppercase tracking-widest border-b">
-                    <div class="col-span-1">Estado</div>
-                    <div class="col-span-3">Producto</div>
-                    <div class="col-span-2">Capacidad</div>
-                    <div class="col-span-2">Vol. Actual</div>
-                    <div class="col-span-2">Temperatura</div>
-                    <div class="col-span-2 text-right">Acción</div>
+        <section class="space-y-6">
+            <div class="flex justify-between items-end">
+                <div>
+                    <h2 class="text-2xl font-black font-headline tracking-tight text-slate-900">Botellas & Destilados</h2>
+                    <p class="text-sm text-slate-500">Control de botellas abiertas y stock de barra.</p>
                 </div>
-                <div id="kegList" class="divide-y divide-gray-100">
-                    </div>
+                <div class="bg-white px-6 py-3 rounded-xl shadow-sm border-b-4 border-blue-500">
+                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Botellas Activas</p>
+                    <h3 id="bottleCount" class="text-2xl font-black font-headline">0</h3>
+                </div>
             </div>
+
+            <div id="bottleGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                </div>
         </section>
     </div>
 </main>
 
 <script>
-    // URL de publicación en CSV (basada en tu ID de documento y GID)
     const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTNZmwzwN0zHiYYSEpk0N11IIRouQUu85lzE6eYe4DoR1WbtnV239mtGRXPfBdbbVbSI9Scx3LVcww-/pub?gid=510719426&single=true&output=csv";
 
-    async function fetchData() {
+    function fetchData() {
         $('#syncStatus').text('Actualizando...');
         Papa.parse(SHEET_URL, {
             download: true,
@@ -102,81 +109,86 @@
             complete: function(results) {
                 renderDashboard(results.data);
                 $('#syncStatus').text('Sincronizado');
-            },
-            error: function(err) {
-                console.error("Error al cargar datos:", err);
-                $('#syncStatus').text('Error de conexión');
             }
         });
     }
 
     function renderDashboard(data) {
-        const $list = $('#kegList').empty();
+        const $kegList = $('#kegList').empty();
+        const $bottleGrid = $('#bottleGrid').empty();
+        
         let totalL = 0;
-        let active = 0;
-        let alerts = 0;
+        let bCount = 0;
 
         data.forEach((row, index) => {
-            const product = row.Product || 'Vacío';
+            const type = (row.Type || 'canilla').toLowerCase().trim();
+            const product = row.Product || 'Sin nombre';
             const capacity = parseFloat(row.Capacity) || 0;
             const current = parseFloat(row.Current) || 0;
             const temp = row.Temperature || '--';
-            const status = row.Status || 'Optimal';
-            
             const percent = capacity > 0 ? Math.round((current / capacity) * 100) : 0;
-            const offset = 125.6 - (125.6 * percent / 100);
+            
+            // Lógica para CANILLAS
+            if (type === 'canilla') {
+                totalL += current;
+                let color = percent < 15 ? '#ef4444' : percent < 30 ? '#f59e0b' : '#10b981';
+                const offset = 125.6 - (125.6 * percent / 100);
 
-            // Colores basados en el porcentaje/estado
-            let statusColor = '#10b981'; // Verde
-            if (percent < 15) { statusColor = '#ef4444'; alerts++; }
-            else if (percent < 30) { statusColor = '#f59e0b'; }
-
-            totalL += current;
-            if (current > 0) active++;
-
-            const htmlItem = `
-                <div class="grid grid-cols-12 gap-4 px-8 py-5 items-center hover:bg-gray-50 transition-colors">
-                    <div class="col-span-1">
-                        <div class="relative w-12 h-12">
-                            <svg class="w-12 h-12">
-                                <circle class="text-gray-200" cx="24" cy="24" fill="transparent" r="20" stroke="currentColor" stroke-width="4"></circle>
-                                <circle cx="24" cy="24" fill="transparent" r="20" stroke="${statusColor}" stroke-dasharray="125.6" stroke-dashoffset="${offset}" stroke-linecap="round" stroke-width="4" style="transform: rotate(-90deg); transform-origin: 50% 50%;"></circle>
-                            </svg>
-                            <div class="absolute inset-0 flex items-center justify-center text-[10px] font-bold">${percent}%</div>
+                $kegList.append(`
+                    <div class="grid grid-cols-12 gap-4 px-8 py-5 items-center hover:bg-slate-50 transition-colors">
+                        <div class="col-span-1">
+                            <div class="relative w-10 h-10">
+                                <svg class="w-10 h-10"><circle class="text-gray-100" cx="20" cy="20" r="18" fill="transparent" stroke="currentColor" stroke-width="3"></circle>
+                                <circle cx="20" cy="20" r="18" fill="transparent" stroke="${color}" stroke-dasharray="113" stroke-dashoffset="${113 - (113 * percent / 100)}" stroke-linecap="round" stroke-width="3" style="transform: rotate(-90deg); transform-origin: 50% 50%;"></circle></svg>
+                                <div class="absolute inset-0 flex items-center justify-center text-[9px] font-black">${percent}%</div>
+                            </div>
+                        </div>
+                        <div class="col-span-4"><p class="font-bold text-slate-900">${product}</p><p class="text-[10px] text-slate-400 uppercase">Tap #${index+1}</p></div>
+                        <div class="col-span-2 text-sm font-medium text-slate-500">${capacity}L</div>
+                        <div class="col-span-2 text-sm font-black" style="color: ${color}">${current}L</div>
+                        <div class="col-span-2"><span class="bg-slate-100 px-2 py-1 rounded text-[10px] font-mono font-bold">${temp}°C</span></div>
+                        <div class="col-span-1 text-right">
+                            ${percent < 15 ? '<span class="material-symbols-outlined text-error animate-bounce">warning</span>' : '<span class="material-symbols-outlined text-emerald-400">check_circle</span>'}
                         </div>
                     </div>
-                    <div class="col-span-3">
-                        <div class="font-headline font-bold text-slate-900">${product}</div>
-                        <div class="text-xs text-secondary font-label">Canilla #${index + 1}</div>
+                `);
+            } 
+            // Lógica para BOTELLAS
+            else if (type === 'botella') {
+                bCount++;
+                let colorClass = percent < 20 ? 'bg-error' : 'bg-blue-500';
+                $bottleGrid.append(`
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:border-blue-200 transition-all">
+                        <div class="flex justify-between items-start mb-4">
+                            <div>
+                                <h4 class="font-black text-slate-900">${product}</h4>
+                                <p class="text-[10px] text-slate-400 uppercase tracking-widest">Destilado / Botella</p>
+                            </div>
+                            <span class="material-symbols-outlined text-slate-300">liquor</span>
+                        </div>
+                        <div class="space-y-2">
+                            <div class="flex justify-between text-xs font-bold">
+                                <span class="text-slate-400">${current} / ${capacity} ml</span>
+                                <span class="${percent < 20 ? 'text-error' : 'text-blue-500'}">${percent}%</span>
+                            </div>
+                            <div class="w-full bg-gray-100 h-2 rounded-full overflow-hidden">
+                                <div class="${colorClass} h-full transition-all duration-1000" style="width: ${percent}%"></div>
+                            </div>
+                        </div>
                     </div>
-                    <div class="col-span-2 text-sm font-medium">${capacity}L</div>
-                    <div class="col-span-2 text-sm font-bold" style="color: ${statusColor}">${current}L</div>
-                    <div class="col-span-2">
-                        <span class="bg-gray-100 px-2.5 py-1 rounded-md text-xs font-mono font-bold">${temp}°C</span>
-                    </div>
-                    <div class="col-span-2 text-right">
-                        ${percent < 15 ? 
-                            '<button class="px-4 py-1.5 rounded-md text-xs font-bold bg-error text-white animate-pulse">REEMPLAZAR</button>' : 
-                            '<button class="px-4 py-1.5 rounded-md text-xs font-bold bg-gray-200 text-slate-700">OK</button>'}
-                    </div>
-                </div>
-            `;
-            $list.append(htmlItem);
+                `);
+            }
         });
 
-        // Actualizar contadores superiores
-        $('#totalLiters').html(`${totalL.toFixed(1)}<span class="text-lg font-medium ml-1">L</span>`);
-        $('#activeTaps').text(active.toString().padStart(2, '0'));
-        $('#lowAlerts').text(alerts.toString().padStart(2, '0'));
+        $('#totalLiters').text(totalL.toFixed(1) + 'L');
+        $('#bottleCount').text(bCount);
     }
 
     $(document).ready(function() {
         fetchData();
         $('#btnReload').on('click', fetchData);
-        // Auto-refresh cada 5 minutos
-        setInterval(fetchData, 300000);
+        setInterval(fetchData, 60000); // Auto-refresh cada 1 min
     });
 </script>
-
 </body>
 </html>
