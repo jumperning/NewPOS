@@ -219,31 +219,24 @@ const MENU_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTOCWWvu8K
 const ORDERS_WEBAPP_URL = "/.netlify/functions/gs-order";
 const STORE_NAME = "OnceyDoce";
 
+// ===== AUTH =====
 let CURRENT_USER = null;
 
 // ===== STATE =====
 const STATE_KEY = 'POS_MESAS_V1';
-const LOCAL_MESA_KEY = 'POS_MESA_ACTUAL';
+let MENU = []; const ALERTED = new Set();
+let MESAS = []; let MESA_ACTUAL = null;
 
-let MENU = [];
-let MESAS = [];
-let MESA_ACTUAL = null;
+const uid = ()=>'m'+Math.random().toString(36).slice(2,9);
+const nowIso=()=>new Date().toISOString();
 
 let SAVE_TIMER=null;
 let LAST_REMOTE_TS=0;
 let LAST_SAVED_SIG = '';
-let LAST_LOCAL_CHANGE = 0;
+let LAST_LOCAL_CHANGE = 0; // ✅ FIX
 
 const SYNC_MS = 4000;
 let SYNC_HANDLE = null;
-
-// ===== UTILS =====
-const uid = ()=>'m'+Math.random().toString(36).slice(2,9);
-const nowIso=()=>new Date().toISOString();
-
-function compactStateSignature(state){
-  return JSON.stringify(state.mesas);
-}
 
 // ===== API =====
 async function apiPost(params){
@@ -257,7 +250,7 @@ async function apiPost(params){
 async function apiGet(params){
   const qs = new URLSearchParams(params);
   if(CURRENT_USER?.token) qs.set('token', CURRENT_USER.token);
-  const r = await fetch(`${ORDERS_WEBAPP_URL}?${qs}`);
+  const r = await fetch(`${ORDERS_WEBAPP_URL}?${qs.toString()}`);
   return r.json();
 }
 
@@ -267,20 +260,36 @@ async function pushRemoteState(payload){ return apiPost({ action:'save_state', p
 
 function applyRemoteStatePacket(pkt){
   const state = pkt?.state;
-  if(!state) return;
+
+  if(!state){
+    if(MESAS.length===0){
+      const id=uid();
+      MESAS=[{id,nombre:'Mesa 1',color:'#e11d48',items:[]}];
+      MESA_ACTUAL=id;
+    }
+    renderMesas();
+    return;
+  }
 
   const ts = Date.parse(state.updatedAt||0)||0;
-
-  if (Date.now() - LAST_LOCAL_CHANGE < 3000) return;
   if (ts <= LAST_REMOTE_TS) return;
+
+  // 🚫 FIX: evitar que el sync pise la mesa si el usuario interactuó hace poco
+  if (Date.now() - LAST_LOCAL_CHANGE < 3000) {
+    return renderMesas();
+  }
 
   MESAS = Array.isArray(state.mesas) ? state.mesas : [];
 
+  // ✅ mantener mesa actual si existe
   const exists = MESAS.find(m => m.id === MESA_ACTUAL);
-  if (!exists) MESA_ACTUAL = MESAS[0]?.id;
+
+  if (!exists) {
+    MESA_ACTUAL = state.actual || (MESAS[0]?.id);
+  }
 
   LAST_REMOTE_TS = ts;
-  LAST_SAVED_SIG = compactStateSignature({mesas:MESAS});
+  LAST_SAVED_SIG = JSON.stringify(MESAS);
 
   renderMesas();
 }
@@ -288,24 +297,14 @@ function applyRemoteStatePacket(pkt){
 async function loadState(){
   const pkt = await fetchRemoteState();
   applyRemoteStatePacket(pkt);
-
-  const savedMesa = localStorage.getItem(LOCAL_MESA_KEY);
-  if(savedMesa && MESAS.find(m=>m.id===savedMesa)){
-    MESA_ACTUAL = savedMesa;
-  }
-
-  if(!MESA_ACTUAL && MESAS.length){
-    MESA_ACTUAL = MESAS[0].id;
-  }
-
-  renderMesas();
 }
 
 function debounceSave(){ clearTimeout(SAVE_TIMER); SAVE_TIMER=setTimeout(saveState, 700); }
 
 async function saveState(){
-  const payload = { mesas:MESAS, updatedAt: nowIso() };
-  const sig = compactStateSignature(payload);
+  const payload = { mesas:MESAS, actual:MESA_ACTUAL, updatedAt: nowIso() };
+  const sig = JSON.stringify(MESAS);
+
   if (sig === LAST_SAVED_SIG) return;
 
   await pushRemoteState(payload);
@@ -327,27 +326,13 @@ function startSync(){
 function mesaActual(){ return MESAS.find(m=>m.id===MESA_ACTUAL); }
 
 async function selectMesa(id){
-  LAST_LOCAL_CHANGE = Date.now();
+  LAST_LOCAL_CHANGE = Date.now(); // ✅ FIX
 
   MESA_ACTUAL=id;
-  localStorage.setItem(LOCAL_MESA_KEY, id);
-
   renderMesas();
 }
 
-function nuevaMesa(){
-  const m={
-    id:uid(),
-    nombre:'Mesa '+(MESAS.length+1),
-    color:'#e11d48',
-    items:[]
-  };
-  MESAS.push(m);
-  selectMesa(m.id);
-  debounceSave();
-}
-
-// ===== UI =====
+// ===== UI (simplificado igual al tuyo) =====
 function renderMesas(){
   const cont = $('#listaMesas');
   cont.empty();
@@ -373,7 +358,7 @@ function renderCart(){
   const cont=$('#cartTable');
   cont.empty();
 
-  m.items.forEach(it=>{
+  (m.items||[]).forEach(it=>{
     cont.append(`<div>${it.nombre} x${it.qty}</div>`);
   });
 }
@@ -406,8 +391,6 @@ function bindEvents(){
   $('#listaMesas').on('click','button',function(){
     selectMesa($(this).data('id'));
   });
-
-  $('#btnNuevaMesa').on('click', nuevaMesa);
 }
 
 // ===== INIT =====
