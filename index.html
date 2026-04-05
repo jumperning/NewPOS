@@ -1,237 +1,227 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>POS — OnceyDoce</title>
-<script> window.tailwind = { config: { darkMode: 'class' } } </script>
-<script src="https://cdn.tailwindcss.com"></script>
-<style>
-:root{ --surface:#ffffff; --surface-weak:#f6f7f9; --accent-50:#fff1f2; --accent-100:#ffe4e6; --accent-500:#f43f5e; --accent-600:#e11d48; }
-html,body{height:100%}
-.container-grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:1rem}
-@media (min-width:1024px){ .container-grid{gap:1rem} }
-.card{ background:var(--surface); border-radius:1rem; border:1px solid rgba(15,23,42,.08); }
-.btn{ padding:.5rem .875rem; border-radius:.75rem; border:1px solid rgba(15,23,42,.10); background:#fff; }
-.btn:hover{ background:#f9fafb }
-.btn-primary{ border:none; background:var(--accent-600); color:#fff }
-.btn-primary:hover{ background:var(--accent-500) }
-.btn-ghost{ border-color:rgba(15,23,42,.10); background:#fff }
-.btn-ghost:hover{ background:#f9fafb }
-.inp{ border-radius:.75rem; border:1px solid #e5e7eb; padding:.5rem .75rem }
-.inp:focus{ outline:none; box-shadow:0 0 0 3px rgba(244,63,94,.15),0 0 0 1px var(--accent-500); border-color:var(--accent-500) }
-.navlink{ display:flex; gap:.625rem; align-items:center; padding:.5rem .75rem; border-radius:.75rem; color:#334155 }
-.navlink:hover{ background:#f3f4f6 }
-.navlink.active{ background:var(--accent-50); color:var(--accent-600) }
-.badge{ display:inline-flex; align-items:center; gap:.375rem; padding:.25rem .5rem; border-radius:999px; font-size:.75rem; color:#000; background:#f3f4f6; }
-body { color:#000; }
-.lock-pill{font-size:11px;padding:.125rem .5rem;border-radius:999px;border:1px solid #e5e7eb}
-</style>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>POS — OnceyDoce</title>
+  <script> window.tailwind = { config: { darkMode: 'class' } } </script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    :root{ --surface:#ffffff; --surface-weak:#f6f7f9; --accent-50:#fff1f2; --accent-100:#ffe4e6; --accent-500:#f43f5e; --accent-600:#e11d48; }
+    html,body{height:100%}
+    .container-grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:1rem}
+    @media (min-width:1024px){ .container-grid{gap:1rem} }
+    .card{ background:var(--surface); border-radius:1rem; border:1px solid rgba(15,23,42,.08); }
+    .btn{ padding:.5rem .875rem; border-radius:.75rem; border:1px solid rgba(15,23,42,.10); background:#fff; }
+    .btn:hover{ background:#f9fafb }
+    .btn-primary{ border:none; background:var(--accent-600); color:#fff }
+    .btn-primary:hover{ background:var(--accent-500) }
+    .btn-ghost{ border-color:rgba(15,23,42,.10); background:#fff }
+    .btn-ghost:hover{ background:#f9fafb }
+    .inp{ border-radius:.75rem; border:1px solid #e5e7eb; padding:.5rem .75rem }
+    .inp:focus{ outline:none; box-shadow:0 0 0 3px rgba(244,63,94,.15),0 0 0 1px var(--accent-500); border-color:var(--accent-500) }
+    .navlink{ display:flex; gap:.625rem; align-items:center; padding:.5rem .75rem; border-radius:.75rem; color:#334155 }
+    .navlink:hover{ background:#f3f4f6 }
+    .navlink.active{ background:var(--accent-50); color:var(--accent-600) }
+    .badge{ display:inline-flex; align-items:center; gap:.375rem; padding:.25rem .5rem; border-radius:999px; font-size:.75rem; color:#000; background:#f3f4f6; }
+    body { color:#000; }
+    .lock-pill{font-size:11px;padding:.125rem .5rem;border-radius:999px;border:1px solid #e5e7eb}
+  </style>
 </head>
 
 <body class="bg-slate-50 text-black">
-<!-- LOGIN OVERLAY -->
-<div id="loginOverlay" class="fixed inset-0 bg-white/90 backdrop-blur-sm grid place-items-center z-[100]">
-<div class="w-[min(420px,92vw)] card p-6">
-<h2 class="text-xl font-bold mb-4">Ingresar al POS</h2>
-<div class="space-y-3">
-<div>
-<label class="block text-sm mb-1">Usuario</label>
-<input id="loginUser" class="inp w-full" placeholder="Admin / Maximiliano / Matias / Javier / invitado"/>
-</div>
-<div>
-<label class="block text-sm mb-1">Clave</label>
-<input id="loginPass" type="password" class="inp w-full" placeholder="••••••"/>
-</div>
+  <!-- LOGIN OVERLAY -->
+  <div id="loginOverlay" class="fixed inset-0 bg-white/90 backdrop-blur-sm grid place-items-center z-[100]">
+    <div class="w-[min(420px,92vw)] card p-6">
+      <h2 class="text-xl font-bold mb-4">Ingresar al POS</h2>
+      <div class="space-y-3">
+        <div>
+          <label class="block text-sm mb-1">Usuario</label>
+          <input id="loginUser" class="inp w-full" placeholder="Admin / Maximiliano / Matias / Javier / invitado"/>
+        </div>
+        <div>
+          <label class="block text-sm mb-1">Clave</label>
+          <input id="loginPass" type="password" class="inp w-full" placeholder="••••••"/>
+        </div>
 
-<!-- RECORDAR USUARIO -->
-<div class="flex items-center justify-between">
-<label class="flex items-center gap-2 text-sm text-slate-600 select-none cursor-pointer">
-<input id="rememberUser" type="checkbox" class="accent-[var(--accent-600)]" />
-Recordar usuario (30 días)
-</label>
-</div>
+        <!-- RECORDAR USUARIO -->
+        <div class="flex items-center justify-between">
+          <label class="flex items-center gap-2 text-sm text-slate-600 select-none cursor-pointer">
+            <input id="rememberUser" type="checkbox" class="accent-[var(--accent-600)]" />
+            Recordar usuario (30 días)
+          </label>
+        </div>
 
-<button id="btnLogin" class="btn-primary w-full rounded-xl py-2 font-semibold">Entrar</button>
-<div id="loginMsg" class="text-sm text-red-600 hidden"></div>
-</div>
-<p class="text-xs text-gray-500 mt-4">Solo <b>Admin</b> puede editar precios, productos y ver reportes. Los demás usuarios sólo cargan carritos.</p>
-</div>
-</div>
+        <button id="btnLogin" class="btn-primary w-full rounded-xl py-2 font-semibold">Entrar</button>
+        <div id="loginMsg" class="text-sm text-red-600 hidden"></div>
+      </div>
+      <p class="text-xs text-gray-500 mt-4">Solo <b>Admin</b> puede editar precios, productos y ver reportes. Los demás usuarios sólo cargan carritos.</p>
+    </div>
+  </div>
 
-<!-- Sidebar -->
-<aside class="hidden md:flex md:flex-col fixed inset-y-0 left-0 w-64 bg-white border-r border-slate-200">
-<div class="px-5 pt-6 pb-4 flex items-center gap-3">
-<div class="h-9 w-9 grid place-items-center rounded-xl bg-[var(--accent-600)] text-white font-black">OD</div>
-<div>
-<div class="text-lg font-extrabold">OnceyDoce</div>
-<div class="text-xs text-slate-500">POS & Reportes</div>
-</div>
-</div>
-<nav class="mt-2 px-2 space-y-1" id="navLinks">
-<a href="./index.html" class="navlink active">
-<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12l2-2 7-7 7 7-2 2v8a1 1 0 0 1-1 1h-3m-6 0h6"/></svg>
-<span>POS</span>
-</a>
-<a href="./reporte.html" id="linkReporte" class="navlink hidden">
-<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h6a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"/><path d="M11 11h4a2 2 0 0 1 2 2v6"/></svg>
-<span>Reporte</span>
-</a>
-</nav>
-<div class="mt-auto p-3">
-<div id="userBadge" class="text-xs text-gray-500 mb-2"></div>
-<button id="btnLogout" class="btn w-full">Salir</button>
-<div class="text-[10px] text-slate-400 mt-2 text-center">© 2025 OnceyDoce</div>
-</div>
-</aside>
+  <!-- Sidebar -->
+  <aside class="hidden md:flex md:flex-col fixed inset-y-0 left-0 w-64 bg-white border-r border-slate-200">
+    <div class="px-5 pt-6 pb-4 flex items-center gap-3">
+      <div class="h-9 w-9 grid place-items-center rounded-xl bg-[var(--accent-600)] text-white font-black">OD</div>
+      <div>
+        <div class="text-lg font-extrabold">OnceyDoce</div>
+        <div class="text-xs text-slate-500">POS & Reportes</div>
+      </div>
+    </div>
+    <nav class="mt-2 px-2 space-y-1" id="navLinks">
+      <a href="./index.html" class="navlink active">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12l2-2 7-7 7 7-2 2v8a1 1 0 0 1-1 1h-3m-6 0h6"/></svg>
+        <span>POS</span>
+      </a>
+      <a href="./reporte.html" id="linkReporte" class="navlink hidden">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h6a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"/><path d="M11 11h4a2 2 0 0 1 2 2v6"/></svg>
+        <span>Reporte</span>
+      </a>
+    </nav>
+    <div class="mt-auto p-3">
+      <div id="userBadge" class="text-xs text-gray-500 mb-2"></div>
+      <button id="btnLogout" class="btn w-full">Salir</button>
+      <div class="text-[10px] text-slate-400 mt-2 text-center">© 2025 OnceyDoce</div>
+    </div>
+  </aside>
 
-<!-- Topbar -->
-<header class="md:ml-64 sticky top-0 z-40 bg-white border-b border-slate-200">
-<div class="px-4 py-3 flex items-center justify-between md:justify-end">
-<div class="md:hidden flex items-center gap-3">
-<div class="h-8 w-8 grid place-items-center rounded-lg bg-[var(--accent-600)] text-white font-black">OD</div>
-<span class="font-bold">OnceyDoce</span>
-</div>
-<div class="text-sm text-slate-500">POS</div>
-</div>
-</header>
+  <!-- Topbar -->
+  <header class="md:ml-64 sticky top-0 z-40 bg-white border-b border-slate-200">
+    <div class="px-4 py-3 flex items-center justify-between md:justify-end">
+      <div class="md:hidden flex items-center gap-3">
+        <div class="h-8 w-8 grid place-items-center rounded-lg bg-[var(--accent-600)] text-white font-black">OD</div>
+        <span class="font-bold">OnceyDoce</span>
+      </div>
+      <div class="text-sm text-slate-500">POS</div>
+    </div>
+  </header>
 
-<!-- Contenido principal -->
-<main class="md:ml-64 p-4 sm:p-6">
-<div class="max-w-7xl mx-auto space-y-6">
-<div class="card p-6 flex items-center justify-between">
-<div>
-<h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight">POS OnceyDoce</h1>
-<p class="text-sm text-gray-500">Multi-carritos · Google Sheets</p>
-</div>
-<div class="text-right space-y-1">
-<div id="statusBadge" class="badge">Sincronizando…</div>
-<div id="lockInfo" class="text-[11px] text-gray-500 hidden"></div>
-</div>
-</div>
+  <!-- Contenido principal -->
+  <main class="md:ml-64 p-4 sm:p-6">
+    <div class="max-w-7xl mx-auto space-y-6">
+      <div class="card p-6 flex items-center justify-between">
+        <div>
+          <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight">POS OnceyDoce</h1>
+          <p class="text-sm text-gray-500">Multi-carritos · Google Sheets</p>
+        </div>
+        <div class="text-right space-y-1">
+          <div id="statusBadge" class="badge">Sincronizando…</div>
+          <div id="lockInfo" class="text-[11px] text-gray-500 hidden"></div>
+        </div>
+      </div>
 
-<div class="container-grid">
-<aside class="lg:col-span-3 col-span-12 card p-4 h-fit lg:sticky lg:top-6">
-<div class="flex items-center justify-between mb-3">
-<h2 class="text-lg font-semibold">Mesas / Carritos</h2>
-<button id="btnNuevaMesa" class="btn-primary text-sm rounded-xl p-2">+ Nueva</button>
-</div>
-<div id="listaMesas" class="space-y-2"></div>
+      <div class="container-grid">
+        <aside class="lg:col-span-3 col-span-12 card p-4 h-fit lg:sticky lg:top-6">
+          <div class="flex items-center justify-between mb-3">
+            <h2 class="text-lg font-semibold">Mesas / Carritos</h2>
+            <button id="btnNuevaMesa" class="btn-primary text-sm rounded-xl p-2">+ Nueva</button>
+          </div>
+          <div id="listaMesas" class="space-y-2"></div>
 
-<div class="mt-4 p-3 rounded-xl bg-slate-50">
-<label class="block text-xs text-gray-500 mb-1">Color de la mesa seleccionada</label>
-<input id="colorMesa" type="color" class="w-full h-10 rounded cursor-pointer" />
-</div>
+          <div class="mt-4 p-3 rounded-xl bg-slate-50">
+            <label class="block text-xs text-gray-500 mb-1">Color de la mesa seleccionada</label>
+            <input id="colorMesa" type="color" class="w-full h-10 rounded cursor-pointer" />
+          </div>
 
-<div class="mt-4 p-3 rounded-xl bg-slate-50">
-<label class="block text-xs text-gray-500 mb-1">Alerta stock (mínimo global)</label>
-<div class="flex items-center gap-2">
-<input id="stockMinGlobal" type="number" min="0" value="3" class="inp w-24" />
-<span class="text-xs text-gray-500">*Si un producto no trae su propio mínimo</span>
-</div>
-</div>
-<p class="text-xs text-gray-500 mt-4">Si una mesa está bloqueada por otro usuario verás la etiqueta y no podrás editarla (salvo Admin).</p>
-</aside>
+          <div class="mt-4 p-3 rounded-xl bg-slate-50">
+            <label class="block text-xs text-gray-500 mb-1">Alerta stock (mínimo global)</label>
+            <div class="flex items-center gap-2">
+              <input id="stockMinGlobal" type="number" min="0" value="3" class="inp w-24" />
+              <span class="text-xs text-gray-500">*Si un producto no trae su propio mínimo</span>
+            </div>
+          </div>
+          <p class="text-xs text-gray-500 mt-4">Si una mesa está bloqueada por otro usuario verás la etiqueta y no podrás editarla (salvo Admin).</p>
+        </aside>
 
-<section class="lg:col-span-9 col-span-12 space-y-6">
-<section class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-<div class="card p-4">
-<label class="block text-sm font-medium mb-1" for="categoria">Categoría</label>
-<select id="categoria" class="inp w-full"><option value="">Todas</option></select>
-</div>
-<div class="card p-4">
-<label class="block text-sm font-medium mb-1" for="subcategoria">Subcategoría</label>
-<select id="subcategoria" class="inp w-full"><option value="">Todas</option></select>
-</div>
-<div class="card p-4">
-<label class="block text-sm font-medium mb-1" for="cliente">Nombre del cliente</label>
-<input id="cliente" type="text" placeholder="Ej: Juan Pérez" class="inp w-full" />
-</div>
-</section>
+        <section class="lg:col-span-9 col-span-12 space-y-6">
+          <section class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <div class="card p-4">
+              <label class="block text-sm font-medium mb-1" for="categoria">Categoría</label>
+              <select id="categoria" class="inp w-full"><option value="">Todas</option></select>
+            </div>
+            <div class="card p-4">
+              <label class="block text-sm font-medium mb-1" for="subcategoria">Subcategoría</label>
+              <select id="subcategoria" class="inp w-full"><option value="">Todas</option></select>
+            </div>
+            <div class="card p-4">
+              <label class="block text-sm font-medium mb-1" for="cliente">Nombre del cliente</label>
+              <input id="cliente" type="text" placeholder="Ej: Juan Pérez" class="inp w-full" />
+            </div>
+          </section>
 
-<section class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-<div class="card overflow-hidden">
-<div class="p-4 border-b flex items-center gap-3">
-<input id="buscar" type="text" placeholder="Buscar producto…" class="inp flex-1" />
-<span class="text-sm text-gray-500">Productos: <b id="countProductos">0</b></span>
-</div>
-<div class="divide-y max-h-[520px] overflow-auto" id="listaProductos"></div>
-</div>
+          <section class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div class="card overflow-hidden">
+              <div class="p-4 border-b flex items-center gap-3">
+                <input id="buscar" type="text" placeholder="Buscar producto…" class="inp flex-1" />
+                <span class="text-sm text-gray-500">Productos: <b id="countProductos">0</b></span>
+              </div>
+              <div class="divide-y max-h-[520px] overflow-auto" id="listaProductos"></div>
+            </div>
 
-<div id="cartWrapper" class="card overflow-hidden border-2" style="border-color:#e5e7eb">
-<div class="p-4 border-b flex items-center justify-between">
-<h2 class="text-xl font-semibold"><span id="mesaTitulo">Mesa 1</span></h2>
-<div class="flex gap-2 items-center">
-<span id="mesaLockPill" class="lock-pill hidden">🔒 Bloqueada</span>
-<button id="btnForceLock" class="btn btn-ghost text-xs rounded-xl hidden">Forzar (Admin)</button>
-<button id="btnDuplicarMesa" class="btn btn-ghost text-sm rounded-xl">Duplicar</button>
-<button id="btnVaciar" class="btn btn-ghost text-sm rounded-xl">Vaciar</button>
-</div>
-</div>
-<div class="p-4">
-<div id="cartTable" class="w-full text-sm"></div>
-<hr class="my-4" />
-<div class="grid grid-cols-2 gap-4 text-sm">
-<div class="space-y-2">
-<div class="flex items-center justify-between"><span>Total bruto</span><span id="totalBruto" class="font-semibold">$0</span></div>
-<div class="flex items-center justify-between"><span>Costo</span><span id="totalCosto" class="font-semibold">$0</span></div>
-<div class="flex items-center justify-between"><span>Ganancia</span><span id="totalGanancia" class="font-semibold">$0</span></div>
-</div>
-<div class="space-y-2">
-<label class="block text-sm" for="pago">Pago ($)</label>
-<input id="pago" type="number" min="0" class="inp w-full"/>
-<div class="flex items-center justify-between"><span>Vuelto</span><span id="vuelto" class="font-semibold">$0</span></div>
-</div>
-</div>
+            <div id="cartWrapper" class="card overflow-hidden border-2" style="border-color:#e5e7eb">
+              <div class="p-4 border-b flex items-center justify-between">
+                <h2 class="text-xl font-semibold"><span id="mesaTitulo">Mesa 1</span></h2>
+                <div class="flex gap-2 items-center">
+                  <span id="mesaLockPill" class="lock-pill hidden">🔒 Bloqueada</span>
+                  <button id="btnForceLock" class="btn btn-ghost text-xs rounded-xl hidden">Forzar (Admin)</button>
+                  <button id="btnDuplicarMesa" class="btn btn-ghost text-sm rounded-xl">Duplicar</button>
+                  <button id="btnVaciar" class="btn btn-ghost text-sm rounded-xl">Vaciar</button>
+                </div>
+              </div>
+              <div class="p-4">
+                <div id="cartTable" class="w-full text-sm"></div>
+                <hr class="my-4" />
+                <div class="grid grid-cols-2 gap-4 text-sm">
+                  <div class="space-y-2">
+                    <div class="flex items-center justify-between"><span>Total bruto</span><span id="totalBruto" class="font-semibold">$0</span></div>
+                    <div class="flex items-center justify-between"><span>Costo</span><span id="totalCosto" class="font-semibold">$0</span></div>
+                    <div class="flex items-center justify-between"><span>Ganancia</span><span id="totalGanancia" class="font-semibold">$0</span></div>
+                  </div>
+                  <div class="space-y-2">
+                    <label class="block text-sm" for="pago">Pago ($)</label>
+                    <input id="pago" type="number" min="0" class="inp w-full"/>
+                    <div class="flex items-center justify-between"><span>Vuelto</span><span id="vuelto" class="font-semibold">$0</span></div>
+                  </div>
+                </div>
 
-<div class="grid grid-cols-2 gap-4 text-sm mt-4">
-<div>
-<label class="block text-sm" for="metodoPago">Método de pago</label>
-<select id="metodoPago" class="inp w-full">
-<option value="Efectivo">Efectivo</option>
-<option value="Mercado Pago">Mercado Pago</option>
-</select>
-</div>
-<div class="flex items-end">
-<div class="text-xs text-gray-500">Se guardará junto al pedido.</div>
-</div>
-</div>
-</div>
-<div class="p-4 border-t flex flex-col sm:flex-row gap-3 sm:gap-4">
-<button id="btnGuardar" class="no-print flex-1 btn-primary rounded-2xl py-3 font-semibold">Guardar Pedido</button>
-<button id="btnTicket"  class="no-print flex-1 btn-primary rounded-2xl py-3 font-semibold">Imprimir Ticket</button>
-<button id="btnComanda" class="no-print flex-1 btn-primary rounded-2xl py-3 font-semibold">Imprimir Comanda</button>
-</div>
-</div>
-</section>
-</section>
-</div>
-</div>
-</main>
+                <div class="grid grid-cols-2 gap-4 text-sm mt-4">
+                  <div>
+                    <label class="block text-sm" for="metodoPago">Método de pago</label>
+                    <select id="metodoPago" class="inp w-full">
+                      <option value="Efectivo">Efectivo</option>
+                      <option value="Mercado Pago">Mercado Pago</option>
+                    </select>
+                  </div>
+                  <div class="flex items-end">
+                    <div class="text-xs text-gray-500">Se guardará junto al pedido.</div>
+                  </div>
+                </div>
+              </div>
+              <div class="p-4 border-t flex flex-col sm:flex-row gap-3 sm:gap-4">
+                <button id="btnGuardar" class="no-print flex-1 btn-primary rounded-2xl py-3 font-semibold">Guardar Pedido</button>
+                <button id="btnTicket"  class="no-print flex-1 btn-primary rounded-2xl py-3 font-semibold">Imprimir Ticket</button>
+                <button id="btnComanda" class="no-print flex-1 btn-primary rounded-2xl py-3 font-semibold">Imprimir Comanda</button>
+              </div>
+            </div>
+          </section>
+        </section>
+      </div>
+    </div>
+  </main>
 
-<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-<script>
-(() => {
-'use strict';
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 
   <script>
   (() => {
     'use strict';
-const MENU_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTOCWWvu8KMMGhuRlTtbvCMEaJIWb9l3DYMi7281gfgncS5tGeO81BRpcCMk-SJIWtNyvWckt2bV4U-/pub?output=csv";
-const ORDERS_WEBAPP_URL = "/.netlify/functions/gs-order";
-const STORE_NAME = "OnceyDoce";
 
     const MENU_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTOCWWvu8KMMGhuRlTtbvCMEaJIWb9l3DYMi7281gfgncS5tGeO81BRpcCMk-SJIWtNyvWckt2bV4U-/pub?output=csv";
     const ORDERS_WEBAPP_URL = "/.netlify/functions/gs-order";
     const STORE_NAME = "OnceyDoce";
-let CURRENT_USER = null;
 
     // ===== AUTH =====
     let CURRENT_USER = null; // {username, role, token}
-// ===== STATE =====
-const STATE_KEY = 'POS_MESAS_V1';
-const LOCAL_MESA_KEY = 'POS_MESA_ACTUAL';
 
     function setAuthUI(){
       const isAdmin = CURRENT_USER?.role==='admin';
@@ -270,9 +260,6 @@ const LOCAL_MESA_KEY = 'POS_MESA_ACTUAL';
     // ===== REMEMBER USER (30 días) =====
     const REMEMBER_KEY = 'POS_REMEMBER_USER_V1';
     const REMEMBER_DAYS = 30;
-let MENU = [];
-let MESAS = [];
-let MESA_ACTUAL = null;
 
     function rememberSet(username){
       const exp = Date.now() + REMEMBER_DAYS * 24 * 60 * 60 * 1000;
@@ -298,10 +285,6 @@ let MESA_ACTUAL = null;
     function rememberClear(){
       localStorage.removeItem(REMEMBER_KEY);
     }
-let SAVE_TIMER=null;
-let LAST_REMOTE_TS=0;
-let LAST_SAVED_SIG = '';
-let LAST_LOCAL_CHANGE = 0;
 
     function initRememberUI(){
       const u = rememberGet();
@@ -311,8 +294,6 @@ let LAST_LOCAL_CHANGE = 0;
         $('#loginPass').focus();
       }
     }
-const SYNC_MS = 4000;
-let SYNC_HANDLE = null;
 
     // ===== STATE / MESAS =====
     const STATE_KEY = 'POS_MESAS_V1';
@@ -339,9 +320,6 @@ let SYNC_HANDLE = null;
       };
       return JSON.stringify(simple);
     }
-// ===== UTILS =====
-const uid = ()=>'m'+Math.random().toString(36).slice(2,9);
-const nowIso=()=>new Date().toISOString();
 
     async function fetchRemoteState(){ return apiGet({ action:'get_state', key:STATE_KEY }); }
     async function pushRemoteState(payload){ return apiPost({ action:'save_state', payload: JSON.stringify(payload), key:STATE_KEY }); }
@@ -423,127 +401,6 @@ const nowIso=()=>new Date().toISOString();
       $('#cartWrapper').toggleClass('opacity-60 pointer-events-none', locked);
       $('#lockInfo').toggleClass('hidden', !locked).text(locked?`Mesa bloqueada por ${m.lock.by}. Sólo Admin puede forzar.`:'');
     }
-function compactStateSignature(state){
-  return JSON.stringify(state.mesas);
-}
-
-// ===== API =====
-async function apiPost(params){
-  const body = new URLSearchParams(params);
-  if(CURRENT_USER?.token) body.set('token', CURRENT_USER.token);
-  const r = await fetch(ORDERS_WEBAPP_URL,{method:'POST',body});
-  const t = await r.text();
-  try{ return JSON.parse(t); }catch{ return {ok:r.ok}; }
-}
-
-async function apiGet(params){
-  const qs = new URLSearchParams(params);
-  if(CURRENT_USER?.token) qs.set('token', CURRENT_USER.token);
-  const r = await fetch(`${ORDERS_WEBAPP_URL}?${qs}`);
-  return r.json();
-}
-
-// ===== SYNC =====
-async function fetchRemoteState(){ return apiGet({ action:'get_state', key:STATE_KEY }); }
-async function pushRemoteState(payload){ return apiPost({ action:'save_state', payload: JSON.stringify(payload), key:STATE_KEY }); }
-
-function applyRemoteStatePacket(pkt){
-  const state = pkt?.state;
-  if(!state) return;
-
-  const ts = Date.parse(state.updatedAt||0)||0;
-
-  if (Date.now() - LAST_LOCAL_CHANGE < 3000) return;
-  if (ts <= LAST_REMOTE_TS) return;
-
-  MESAS = Array.isArray(state.mesas) ? state.mesas : [];
-
-  const exists = MESAS.find(m => m.id === MESA_ACTUAL);
-  if (!exists) MESA_ACTUAL = MESAS[0]?.id;
-
-  LAST_REMOTE_TS = ts;
-  LAST_SAVED_SIG = compactStateSignature({mesas:MESAS});
-
-  renderMesas();
-}
-
-async function loadState(){
-  const pkt = await fetchRemoteState();
-  applyRemoteStatePacket(pkt);
-
-  const savedMesa = localStorage.getItem(LOCAL_MESA_KEY);
-  if(savedMesa && MESAS.find(m=>m.id===savedMesa)){
-    MESA_ACTUAL = savedMesa;
-  }
-
-  if(!MESA_ACTUAL && MESAS.length){
-    MESA_ACTUAL = MESAS[0].id;
-  }
-
-  renderMesas();
-}
-
-function debounceSave(){ clearTimeout(SAVE_TIMER); SAVE_TIMER=setTimeout(saveState, 700); }
-
-async function saveState(){
-  const payload = { mesas:MESAS, updatedAt: nowIso() };
-  const sig = compactStateSignature(payload);
-  if (sig === LAST_SAVED_SIG) return;
-
-  await pushRemoteState(payload);
-
-  LAST_SAVED_SIG = sig;
-  LAST_REMOTE_TS = Date.now();
-}
-
-function startSync(){
-  if (SYNC_HANDLE) clearInterval(SYNC_HANDLE);
-  SYNC_HANDLE = setInterval(async ()=>{
-    if (document.hidden) return;
-    const pkt = await fetchRemoteState();
-    applyRemoteStatePacket(pkt);
-  }, SYNC_MS);
-}
-
-// ===== MESAS =====
-function mesaActual(){ return MESAS.find(m=>m.id===MESA_ACTUAL); }
-
-async function selectMesa(id){
-  LAST_LOCAL_CHANGE = Date.now();
-
-  MESA_ACTUAL=id;
-  localStorage.setItem(LOCAL_MESA_KEY, id);
-
-  renderMesas();
-}
-
-function nuevaMesa(){
-  const m={
-    id:uid(),
-    nombre:'Mesa '+(MESAS.length+1),
-    color:'#e11d48',
-    items:[]
-  };
-  MESAS.push(m);
-  selectMesa(m.id);
-  debounceSave();
-}
-
-// ===== UI =====
-function renderMesas(){
-  const cont = $('#listaMesas');
-  cont.empty();
-
-  MESAS.forEach(m=>{
-    const active = m.id===MESA_ACTUAL;
-    cont.append(`
-      <div class="p-2 border ${active?'bg-pink-100':''}">
-        <button data-id="${m.id}" class="w-full text-left">
-          ${m.nombre}
-        </button>
-      </div>
-    `);
-  });
 
     // ===== STOCK / UI =====
     function mesaActual(){ return MESAS.find(m=>m.id===MESA_ACTUAL); }
@@ -569,8 +426,6 @@ function renderMesas(){
       ALERTED.add(key);
       alert(`⚠️ Stock bajo de "${p.nombre}". Quedan ${availableStock(p)} (umbral ${productThreshold(p)}).`);
     }
-  renderCart();
-}
 
     function renderMesas(){
       const cont=$('#listaMesas'); cont.empty();
@@ -601,9 +456,6 @@ function renderMesas(){
       updateLockUI();
       renderCart();
     }
-function renderCart(){
-  const m=mesaActual();
-  if(!m) return;
 
     async function selectMesa(id, force=false){
       MESA_ACTUAL=id;
@@ -624,8 +476,6 @@ function renderCart(){
         }
       }
     }
-  const cont=$('#cartTable');
-  cont.empty();
 
     function nuevaMesa(nombre='Mesa '+(MESAS.length+1)){
       const m={id:uid(), nombre, color:'#e11d48', items:[], cliente:'', pago:0, metodo:'Efectivo', lock:{by:CURRENT_USER.username, at:nowIso()}};
@@ -673,10 +523,6 @@ function renderCart(){
       if(!q) return true;
       return [p.nombre,p.categoria,p.subcategoria,p.sku].filter(Boolean).join(' ').toLowerCase().includes(q);
     }
-  m.items.forEach(it=>{
-    cont.append(`<div>${it.nombre} x${it.qty}</div>`);
-  });
-}
 
     function renderProducts(){
       const cont=$('#listaProductos'); cont.empty();
@@ -708,10 +554,6 @@ function renderCart(){
           </div>`);
       });
     }
-// ===== LOGIN =====
-async function login(u,p){
-  const res = await apiPost({ action:'login', payload: JSON.stringify({ username:u, password:p }) });
-  if(!res.ok) throw new Error('Login inválido');
 
     function addToCart(rowId){
       const m=mesaActual(); if(!m) return;
@@ -760,7 +602,6 @@ async function login(u,p){
       maybeAlertLow(p);
       renderCart(); debounceSave(); renderProducts();
     }
-  CURRENT_USER = res;
 
     function renderCart(){
       const m=mesaActual();
@@ -791,7 +632,6 @@ async function login(u,p){
       $('#vuelto').text($fmt(vuelto));
       updateLockUI();
     }
-  $('#loginOverlay').addClass('hidden');
 
     // ====== MENU ======
     function normalizeRow(row, idx){
@@ -830,9 +670,6 @@ async function login(u,p){
         });
       });
     }
-  await loadState();
-  startSync();
-}
 
     // ===== IMPRESIÓN =====
     function buildTicketHTML(m){
@@ -870,17 +707,7 @@ async function login(u,p){
         const url=URL.createObjectURL(blob);
         w.location.href=url;
       }
-// ===== EVENTS =====
-function bindEvents(){
-  $('#btnLogin').on('click', async()=>{
-    const u = $('#loginUser').val();
-    const p = $('#loginPass').val();
-    try{
-      await login(u,p);
-    }catch(e){
-      alert(e.message);
-}
-  });
+    }
 
     async function saveOrder(){
       const m = mesaActual();
@@ -954,9 +781,6 @@ function bindEvents(){
         $('#btnGuardar').prop('disabled', false).text('Guardar Pedido');
       }
     }
-  $('#listaMesas').on('click','button',function(){
-    selectMesa($(this).data('id'));
-  });
 
     // ===== Events =====
     function bindEvents(){
@@ -1038,22 +862,14 @@ function bindEvents(){
         selectMesa(MESA_ACTUAL, true);
       });
     }
-  $('#btnNuevaMesa').on('click', nuevaMesa);
-}
 
     $(function(){
       bindEvents();
       setAuthUI();
       initRememberUI(); // <-- precarga usuario por 30 días
     });
-// ===== INIT =====
-$(function(){
-  bindEvents();
-});
 
   })();
   </script>
-})();
-</script>
 </body>
 </html>
